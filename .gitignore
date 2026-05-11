@@ -1,0 +1,75 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Planilhas e Dados de Clientes (RIGOROSO)
+*.xls
+*.xlsx
+*.xlsm
+*.csv
+*.tsv
+*.txt
+*.json
+!dominio_tables.json
+!dominio_relationships.json
+!package.json
+!package-lock.json
+
+# Exceção para arquivos TXT ou JSON que não sejam dados sensíveis 
+# (Descomente se tiver algum arquivo de configuração específico que precise subir)
+# !meu_arquivo_de_configuracao.json
+
+# Ambiente Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Arquivos de ambiente virtuais
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Variáveis de Ambiente (NUNCA SUBIR)
+.env
+.env.test
+.env.production
+.env.local
+
+# Arquivos Temporários do Office / SO
+~$*.xls*
+~$*.docx
+~$*.pptx
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Planilha de exemplo permitida
+!exemplo_controle_de_horas.xlsx
+
+# Ignorando Dumps de Relatorios em MD
+relatorio_*.md
+calculos_*.md
+qtdlancamento*.md
