@@ -1,0 +1,67 @@
+import pyodbc
+import os
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class DominioDatabase:
+    """
+    Gerenciador resiliente de conexão ODBC com o banco Domínio (Sybase).
+    Isola falhas de conexão para não derrubar o motor principal.
+    """
+    def __init__(self):
+        self.dsn = os.environ.get("DOMINIO_DSN", "Contabil")
+        self.uid = os.environ.get("DOMINIO_UID", "EXTERNO")
+        self.pwd = os.environ.get("DOMINIO_PWD", "***REDACTED***") # Senha recuperada dos backups
+        self.connection_string = f"DSN={self.dsn};UID={self.uid};PWD={self.pwd}"
+        self.conn = None
+
+    def connect(self):
+        """Tenta estabelecer conexao, retorna True se sucesso."""
+        try:
+            # timeout rápido para não travar a execução local
+            self.conn = pyodbc.connect(self.connection_string, timeout=5)
+            logging.info("Conexão ODBC com Domínio estabelecida com sucesso.")
+            return True
+        except Exception as e:
+            logging.error(f"Falha ao conectar no banco Domínio (DSN={self.dsn}): {e}")
+            return False
+
+    def disconnect(self):
+        """Fecha a conexão."""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
+            logging.info("Conexão ODBC fechada.")
+
+    def fetch_all(self, query, params=None):
+        """
+        Executa a query e retorna uma lista de dicionários.
+        Se falhar, retorna lista vazia e não trava o script.
+        """
+        if not self.conn:
+            if not self.connect():
+                return []
+        
+        cursor = self.conn.cursor()
+        try:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            columns = [column[0] for column in cursor.description]
+            results = []
+            for row in cursor.fetchall():
+                # Converter None do Sybase para valores utilizáveis se necessário,
+                # ou manter None e tratar nos módulos.
+                results.append(dict(zip(columns, row)))
+            return results
+        except Exception as e:
+            logging.error(f"Erro ao executar query: {e}")
+            return []
+        finally:
+            cursor.close()
+
+# Instância global para uso nos módulos
+db = DominioDatabase()
