@@ -42,6 +42,9 @@ class ExcelParser:
                     total_ativos = funcionarios + estagiarios + contribuintes
                     
                     dados[cod_str] = {
+                        'func': funcionarios,
+                        'estag': estagiarios,
+                        'contrib': contribuintes,
                         'total_ativos': total_ativos
                     }
                 except Exception as e:

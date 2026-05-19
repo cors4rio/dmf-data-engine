@@ -12,18 +12,32 @@ class DominioDatabase:
     def __init__(self):
         self.dsn = os.environ.get("DOMINIO_DSN", "Contabil")
         self.uid = os.environ.get("DOMINIO_UID", "EXTERNO")
-        self.pwd = os.environ.get("DOMINIO_PWD", "***REDACTED***") # Senha recuperada dos backups
+        self.pwd = os.environ.get("DOMINIO_PWD", "***REDACTED***")
+        self.timeout = int(os.environ.get("DOMINIO_TIMEOUT", "5"))
         self.connection_string = f"DSN={self.dsn};UID={self.uid};PWD={self.pwd}"
         self.conn = None
+        self.ultimo_erro = None
+
+    def configurar(self, dsn=None, uid=None, pwd=None, timeout=None):
+        """Atualiza credenciais em runtime (sem reiniciar o app)."""
+        if dsn is not None: self.dsn = dsn
+        if uid is not None: self.uid = uid
+        if pwd is not None: self.pwd = pwd
+        if timeout is not None:
+            try: self.timeout = int(timeout)
+            except (TypeError, ValueError): pass
+        self.connection_string = f"DSN={self.dsn};UID={self.uid};PWD={self.pwd}"
+        self.disconnect()
 
     def connect(self):
         """Tenta estabelecer conexao, retorna True se sucesso."""
         try:
-            # timeout rápido para não travar a execução local
-            self.conn = pyodbc.connect(self.connection_string, timeout=5)
+            self.conn = pyodbc.connect(self.connection_string, timeout=self.timeout)
+            self.ultimo_erro = None
             logging.info("Conexão ODBC com Domínio estabelecida com sucesso.")
             return True
         except Exception as e:
+            self.ultimo_erro = str(e)
             logging.error(f"Falha ao conectar no banco Domínio (DSN={self.dsn}): {e}")
             return False
 

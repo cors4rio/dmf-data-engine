@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DMF Engine — Automação de Horas</title>
+  <!-- Google Fonts & Tabler Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <style>
+    :root {
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --color-background-app: #f4f6f8;
+      --color-background-card: #ffffff;
+      --color-background-side: #ffffff;
+      --color-border: #e2e8f0;
+      --color-border-soft: #edf2f7;
+      --color-text-main: #1e293b;
+      --color-text-muted: #64748b;
+      --color-text-light: #94a3b8;
+      --color-accent: #185FA5;
+      --color-success: #3B6D11;
+      --color-danger: #A32D2D;
+      --color-warning: #B06A00;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-pill: 50px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-sans); background: var(--color-background-app); color: var(--color-text-main); overflow: hidden; }
+
+    /* Layout Principal */
+    .app-container { display: flex; flex-direction: column; height: 100vh; }
+    
+    /* Topbar Superior Estilo Janela Nativa */
+    .window-topbar { 
+      height: 48px; 
+      background: #ffffff; 
+      border-bottom: 1px solid var(--color-border); 
+      display: flex; 
+      align-items: center; 
+      padding: 0 16px; 
+      gap: 16px; 
+      flex-shrink: 0;
+    }
+    .window-dots { display: flex; gap: 6px; align-items: center; }
+    .dot-mac { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .window-title { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--color-text-main); font-weight: 500; margin-left: 8px; }
+    .window-title i { font-size: 18px; color: var(--color-accent); }
+    .window-right { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text-muted); }
+    .period-dropdown { 
+      background: #ffffff; 
+      border: 1px solid var(--color-border); 
+      padding: 4px 10px; 
+      border-radius: var(--radius-sm); 
+      font-size: 13px; 
+      font-weight: 600; 
+      color: var(--color-text-main); 
+      font-family: var(--font-sans); 
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Corpo / Painéis */
+    .app-body { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar Esquerda */
+    .sidebar { 
+      width: 240px; 
+      background: var(--color-background-side); 
+      border-right: 1px solid var(--color-border); 
+      display: flex; 
+      flex-direction: column; 
+      padding: 16px 0; 
+      flex-shrink: 0; 
+      overflow-y: auto;
+    }
+    .logo-header { display: flex; align-items: center; gap: 10px; padding: 0 16px 20px; border-bottom: 1px solid var(--color-border-soft); margin-bottom: 16px; }
+    .logo-header i { font-size: 24px; color: var(--color-accent); }
+    .logo-text h1 { font-size: 15px; font-weight: 700; color: var(--color-text-main); leading-trim: both; text-edge: cap; line-height: 1.1; }
+    .logo-text span { font-size: 11px; color: var(--color-text-light); }
+
+    .nav-label { font-size: 11px; font-weight: 600; color: var(--color-text-light); letter-spacing: 0.05em; padding: 12px 16px 6px; text-transform: uppercase; }
+    
+    /* Botões Pílula da Sidebar idênticos ao print */
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      margin-bottom: 6px;
+      background: #ffffff;
+      border: 1px solid var(--color-border);
+      border-left: none;
+      border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-main);
+      cursor: pointer;
+      width: 92%;
+      text-align: left;
+      transition: all 0.15s ease;
+      font-family: var(--font-sans);
+      text-decoration: none;
+    }
+    .nav-pill:hover { background: #f8fafc; }
+    .nav-pill.active {
+      font-weight: 600;
+      background: #ffffff;
+      border-color: var(--color-border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .nav-pill i { font-size: 18px; color: var(--color-text-muted); }
+    .nav-pill.active i { color: var(--color-text-main); }
+    
+    .badge-circle {
+      margin-left: auto;
+      background: var(--color-danger);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Conteúdo Principal */
+    .main-view { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 24px; background: var(--color-background-app); }
+    
+    /* Barra de Ações Superior do Main */
+    .main-top-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--color-border); padding-bottom: 16px; }
+    .main-tab-title { font-size: 18px; font-weight: 700; color: var(--color-text-main); margin-right: 8px; }
+    .main-tab-desc { font-size: 12px; color: var(--color-text-muted); max-width: 200px; line-height: 1.3; border-left: 1px solid var(--color-border); padding-left: 12px; }
+    .action-group { margin-left: auto; display: flex; gap: 8px; }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      background: #ffffff;
+      color: var(--color-text-main);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: all 0.15s;
+    }
+    .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn i { font-size: 16px; color: var(--color-text-muted); }
+    .btn-primary { background: var(--color-accent); color: #ffffff; border-color: var(--color-accent); }
+    .btn-primary:hover { background: #0f4a82; border-color: #0f4a82; }
+    .btn-primary i { color: #ffffff; }
+    .btn-success { background: #ffffff; border: 1px solid var(--color-border); font-weight: 600; }
+    .btn-success i { color: var(--color-text-main); }
+
+    /* Grade de Métricas (4 colunas idênticas ao print) */
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .metric-card {
+      background: var(--color-background-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 20px 12px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .metric-val { font-size: 26px; font-weight: 700; color: var(--color-text-main); line-height: 1.1; }
+    .metric-lbl { font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-weight: 500; }
+
+    /* Cards Gerais de Lista */
+    .card { background: var(--color-background-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--color-text-main); display: flex; align-items: center; gap: 8px; }
+    .card-title i { font-size: 18px; color: var(--color-text-muted); }
+    
+    .badge-soft { background: #f1f5f9; border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; padding: 2px 10px; border-radius: var(--radius-pill); font-weight: 500; }
+    
+    .module-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--color-border-soft); }
+    .module-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .module-info { display: flex; flex-direction: column; gap: 2px; }
+    .module-name { font-size: 13px; font-weight: 600; color: var(--color-text-main); display: flex; align-items: center; gap: 6px; }
+    .module-name i { font-size: 16px; color: var(--color-text-muted); }
+    .module-desc { font-size: 11px; color: var(--color-text-light); }
+    
+    .module-side { display: flex; align-items: center; gap: 10px; }
+    .pill-col { font-size: 11px; font-weight: 600; color: var(--color-text-muted); background: #ffffff; border: 1px solid var(--color-border); padding: 2px 8px; border-radius: var(--radius-pill); }
+    .status-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: var(--radius-pill); }
+    .status-wait { background: #f1f5f9; color: var(--color-text-light); }
+    .status-done { background: #ecfccb; color: var(--color-success); }
+
+    /* Lista de Logs */
+    .log-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--color-border-soft); font-size: 12px; }
+    .log-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .log-time { color: var(--color-text-light); font-weight: 500; }
+    .log-txt { color: var(--color-text-muted); }
+    .log-txt b { color: var(--color-text-main); font-weight: 600; }
+    
+    /* Botão flutuante de rolagem idêntico ao print */
+    .scroll-down-float {
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 36px;
+      background: #ffffff;
+      border: 1px solid var(--color-border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      cursor: pointer;
+    }
+    .scroll-down-float i { color: var(--color-text-muted); font-size: 18px; }
+
+    /* Formulários de Parâmetros */
+    .param-row { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: var(--radius-sm); margin-bottom: 8px; border: 1px solid var(--color-border-soft); }
+    .param-name { font-size: 13px; font-weight: 500; color: var(--color-text-main); }
+    .param-hint { font-size: 11px; color: var(--color-text-light); margin-top: 2px; }
+    .param-input { width: 80px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); font-size: 13px; text-align: right; font-family: var(--font-sans); }
+    
+    /* Alternador (Toggle) */
+    .toggle { position: relative; width: 36px; height: 20px; cursor: pointer; display: inline-block; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track { position: absolute; inset: 0; border-radius: 20px; background: #cbd5e1; transition: .2s; }
+    .toggle-track:before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; border-radius: 50%; background: #ffffff; transition: .2s; }
+    .toggle input:checked + .toggle-track { background: var(--color-accent); }
+    .toggle input:checked + .toggle-track:before { transform: translateX(16px); }
+
+    /* Overlay de login */
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 10000;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-card {
+      background: #fff; padding: 32px 36px; border-radius: 12px;
+      width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,.28);
+    }
+    .login-card h2 { font-size: 18px; color: var(--color-text-main); margin-bottom: 4px; }
+    .login-card .subtitle { font-size: 12px; color: var(--color-text-muted); margin-bottom: 22px; }
+    .login-card label { display: block; font-size: 12px; color: var(--color-text-muted); margin-bottom: 4px; font-weight: 500; }
+    .login-card input {
+      width: 100%; padding: 9px 12px; font-size: 14px;
+      border: 1px solid var(--color-border); border-radius: 6px;
+      margin-bottom: 12px; font-family: var(--font-sans);
+      outline: none; transition: border-color .15s;
+    }
+    .login-card input:focus { border-color: var(--color-accent); }
+    .login-card .erro { font-size: 12px; color: var(--color-danger); min-height: 16px; margin-bottom: 8px; }
+    .login-card .login-btn {
+      width: 100%; padding: 10px; font-size: 14px; font-weight: 600;
+      background: var(--color-accent); color: #fff; border: none;
+      border-radius: 6px; cursor: pointer; font-family: var(--font-sans);
+    }
+    .login-card .login-btn:hover { background: #0f4a82; }
+    .login-card .link-alt {
+      text-align: center; margin-top: 14px; font-size: 12px;
+      color: var(--color-text-muted);
+    }
+    .login-card .link-alt a { color: var(--color-accent); text-decoration: none; cursor: pointer; }
+
+    /* Toast / Snackbar */
+    .toast-stack { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 9998; pointer-events: none; }
+    .toast {
+      pointer-events: auto;
+      background: #1e293b; color: #fff;
+      padding: 10px 14px; border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 6px 18px rgba(0,0,0,.18);
+      border-left: 4px solid #38bdf8;
+      min-width: 240px; max-width: 360px;
+      display: flex; align-items: center; gap: 10px;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .toast.show  { opacity: 1; transform: translateY(0); }
+    .toast i     { font-size: 18px; flex-shrink: 0; }
+    .toast.success { border-left-color: #3B6D11; }
+    .toast.error   { border-left-color: #A32D2D; }
+    .toast.warning { border-left-color: #B06A00; }
+    .toast.info    { border-left-color: #185FA5; }
+
+    /* Rodapé da Sidebar — status BD / Master */
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 12px 16px 14px;
+      border-top: 1px solid var(--color-border-soft);
+      font-size: 11px;
+      color: var(--color-text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: #cbd5e1;
+      vertical-align: middle;
+    }
+    .status-dot.ok    { background: #16a34a; }
+    .status-dot.warn  { background: #d97706; }
+    .status-dot.err   { background: #dc2626; }
+
+  </style>
+</head>
+<body>
+
+<!-- OVERLAY DE LOGIN — visível até autenticação concluir -->
+<div class="login-overlay" id="login-overlay" style="display:none">
+  <div class="login-card">
+    <h2 id="login-titulo"><i class="ti ti-shield-lock"></i> DMF Engine</h2>
+    <div class="subtitle" id="login-subtitulo">Faça login para continuar</div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <label>Usuário</label>
+      <input type="text" id="login-nome" autocomplete="username" autofocus placeholder="ex: nayane">
+      <label>Senha</label>
+      <input type="password" id="login-senha" autocomplete="current-password">
+      <div class="erro" id="login-erro"></div>
+      <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="link-alt">
+        <span style="color:var(--color-text-light)">
+          5 contas pré-cadastradas: carol, james, nayane, jailton, adriele.<br>
+          Primeiro acesso: senha = nome do usuário.
+        </span>
+      </div>
+    </div>
+
+    <!-- TROCA OBRIGATÓRIA DE SENHA -->
+    <div id="troca-senha-form" style="display:none">
+      <div style="background:#fef3c7;border:1px solid #fde68a;padding:10px;border-radius:6px;margin-bottom:14px;font-size:12px;color:#92400e">
+        <b>Primeiro acesso detectado.</b> Defina uma nova senha pessoal antes de continuar.
+        A conta será amarrada a esta máquina.
+      </div>
+      <label>Nova senha (mínimo 4 caracteres)</label>
+      <input type="password" id="troca-nova">
+      <label>Confirmar nova senha</label>
+      <input type="password" id="troca-nova2">
+      <div class="erro" id="troca-erro"></div>
+      <button class="login-btn" onclick="confirmarTrocaSenha()">Definir senha e entrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-container">
+  
+  <!-- 1. TOPBAR SUPERIOR (SIMULAÇÃO JANela NATIVA) -->
+  <header class="window-topbar">
+    <div class="window-dots">
+      <span class="dot-mac" style="background:#FF5F56"></span>
+      <span class="dot-mac" style="background:#FFBD2E"></span>
+      <span class="dot-mac" style="background:#27C93F"></span>
+    </div>
+    <div class="window-title">
+      <i class="ti ti-chart-dots"></i>
+      <span><b>DMF Engine</b> — Automação de Horas</span>
+    </div>
+    <div class="window-right">
+      <span>Competência:</span>
+      <select class="period-dropdown" id="competencia-select"></select>
+    </div>
+  </header>
+
+  <!-- 2. CORPO DO APLICATIVO -->
+  <div class="app-body">
+    
+    <!-- SIDEBAR ESQUERDA -->
+    <aside class="sidebar">
+      <div class="logo-header">
+        <i class="ti ti-layout-grid-add"></i>
+        <div class="logo-text">
+          <h1>DMF Engine</h1>
+          <span>v2.0 - local runner</span>
+        </div>
+      </div>
+
+      <div class="nav-label">Execução</div>
+      <button class="nav-pill active" onclick="showTab('dashboard')">
+        <i class="ti ti-layout-dashboard"></i> <span>Dashboard</span>
+      </button>
+      <button class="nav-pill" onclick="showTab('log')">
+        <i class="ti ti-file-text"></i> <span>Relatório</span>
+      </button>
+
+      <div class="nav-label">Parâmetros</div>
+      <button class="nav-pill" onclick="showTab('fiscal')">
+        <i class="ti ti-receipt-2"></i> <span>Fiscal</span>
+      </button>
+      <button class="nav-pill" onclick="showTab('contabil')">
+        <i class="ti ti-calculator"></i> <span>Contábil</span>
+      </button>
+      <button class="nav-pill" onclick="showTab('dp')">
+        <i class="ti ti-users"></i> <span>DP / Folha</span>
+      </button>
+
+      <div class="nav-label">Configuração</div>
+      <button class="nav-pill" onclick="showTab('config')">
+        <i class="ti ti-database"></i> <span>Conexão BD</span>
+      </button>
+      <button class="nav-pill" onclick="showTab('excecoes')">
+        <i class="ti ti-list-check"></i> <span>Exceções</span>
+      </button>
+      <button class="nav-pill" onclick="showTab('governanca')">
+        <i class="ti ti-shield-check"></i> <span>Governança</span>
+      </button>
+      <button class="nav-pill" id="nav-admin" onclick="showTab('admin')" style="display:none">
+        <i class="ti ti-key"></i> <span>Admin</span>
+      </button>
+
+      <div class="sidebar-footer">
+        <div id="footer-supervisor" style="display:flex;justify-content:space-between;align-items:center">
+          <span style="overflow:hidden;text-overflow:ellipsis">
+            <i class="ti ti-user-circle"></i>
+            <span id="supervisor-nome">—</span>
+            <span id="supervisor-papel" style="color:var(--color-text-light);font-size:10px"></span>
+          </span>
+          <a onclick="fazerLogout()" style="color:var(--color-accent);cursor:pointer;font-size:11px">sair</a>
+        </div>
+        <div id="footer-bd"><span class="status-dot"></span><span>BD Domínio: não testado</span></div>
+        <div id="footer-master"><span class="status-dot"></span><span>Master: nenhum arquivo</span></div>
+      </div>
+    </aside>
+
+    <!-- PAINEL CENTRAL (MAIN) -->
+    <main class="main-view">
+      
+      <!-- ABA: DASHBOARD -->
+      <div id="tab-dashboard">
+        
+        <!-- HEADER -->
+        <div class="main-top-actions">
+          <div class="main-tab-title">Dashboard</div>
+          <div class="main-tab-desc" id="dashboard-desc">visão geral do ciclo</div>
+          <div class="action-group">
+            <button class="btn" onclick="carregarDashboard()"><i class="ti ti-refresh"></i> Atualizar</button>
+            <button class="btn" onclick="selecionarMaster()"><i class="ti ti-file-spreadsheet"></i> Definir master</button>
+            <button class="btn" onclick="showTab('log')"><i class="ti ti-file-text"></i> Ver relatório</button>
+          </div>
+        </div>
+
+        <!-- MÉTRICAS (clicáveis nas alertas) -->
+        <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:16px;margin-bottom:24px">
+          <div class="metric-card">
+            <div class="metric-val" id="m-clientes">—</div>
+            <div class="metric-lbl">clientes na planilha</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val" id="m-matches" style="color:var(--color-success)">—</div>
+            <div class="metric-lbl">com match ≥ 2/3</div>
+          </div>
+          <div class="metric-card" id="card-pendencias" style="cursor:pointer" onclick="abrirDrill('pendencias')">
+            <div class="metric-val" id="m-pendencias" style="color:var(--color-danger)">—</div>
+            <div class="metric-lbl">pendências <i class="ti ti-eye" style="font-size:10px"></i></div>
+          </div>
+          <div class="metric-card" id="card-cnpj-dup" style="cursor:pointer" onclick="abrirDrill('cnpj_dup')">
+            <div class="metric-val" id="m-cnpj-dup" style="color:var(--color-warning)">—</div>
+            <div class="metric-lbl">CNPJ duplicados <i class="ti ti-eye" style="font-size:10px"></i></div>
+          </div>
+          <div class="metric-card" id="card-codigo-dup" style="cursor:pointer" onclick="abrirDrill('codigo_dup')">
+            <div class="metric-val" id="m-codigo-dup" style="color:var(--color-warning)">—</div>
+            <div class="metric-lbl">códigos duplicados <i class="ti ti-eye" style="font-size:10px"></i></div>
+          </div>
+        </div>
+
+        <!-- DRILL-DOWN: painel inline aberto ao clicar numa métrica -->
+        <div class="card" id="drill-painel" style="display:none">
+          <div class="card-header">
+            <div class="card-title" id="drill-titulo"><i class="ti ti-list-search"></i> Detalhes</div>
+            <button class="btn" onclick="fecharDrill()"><i class="ti ti-x"></i> Fechar</button>
+          </div>
+          <div id="drill-conteudo" style="font-size:12px;color:var(--color-text-muted);max-height:50vh;overflow:auto"></div>
+        </div>
+
+        <!-- CARD: VARIAÇÕES MÊS A MÊS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-arrows-up-down"></i> Maiores variações mês a mês</div>
+            <span class="badge-soft" id="var-label">—</span>
+          </div>
+          <div id="var-conteudo" style="font-size:12px;color:var(--color-text-muted)">
+            Carregando…
+          </div>
+        </div>
+
+        <!-- GRÁFICOS DA MASTER -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="card" style="margin-bottom:0">
+            <div class="card-header">
+              <div class="card-title"><i class="ti ti-chart-donut-3"></i> Horas totais por setor</div>
+              <span class="badge-soft" id="graf-aba">—</span>
+            </div>
+            <div style="position:relative;height:240px"><canvas id="graf-setores"></canvas></div>
+            <div id="graf-setores-total" style="text-align:center;font-size:11px;color:var(--color-text-light);margin-top:8px"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <div class="card-header">
+              <div class="card-title"><i class="ti ti-chart-bar"></i> Distribuição por faixa de horas</div>
+            </div>
+            <div style="position:relative;height:240px"><canvas id="graf-distribuicao"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-trophy"></i> Top 10 clientes — total de horas</div>
+            <span class="badge-soft">setores empilhados</span>
+          </div>
+          <div style="position:relative;height:340px"><canvas id="graf-top-clientes"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-checks"></i> Preenchimento por setor</div>
+            <span class="badge-soft">clientes com lançamento &gt; 0</span>
+          </div>
+          <div style="position:relative;height:200px"><canvas id="graf-preenchimento"></canvas></div>
+        </div>
+
+        <!-- CARD: ÚLTIMA EXECUÇÃO -->
+        <div class="card" style="position:relative;margin-bottom:40px">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-clock"></i> Última execução</div>
+            <div class="badge-soft" id="ultima-exec-data">—</div>
+          </div>
+          <div id="ultima-exec-lista">
+            <div class="log-item"><span class="log-txt" style="color:var(--color-text-light)">Nenhuma execução registrada ainda.</span></div>
+          </div>
+
+          <div class="scroll-down-float" onclick="showTab('log')">
+            <i class="ti ti-arrow-down"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ABA: RELATÓRIO -->
+      <div id="tab-log" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Relatório</div>
+          <div class="main-tab-desc">Resumo da competência ativa + arquivos .md gerados</div>
+          <div class="action-group">
+            <button class="btn" onclick="carregarRelatorio()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-clipboard-data"></i> Resumo da competência <span id="relatorio-comp">—</span></div>
+          </div>
+          <div id="relatorio-resumo" style="font-size:13px;color:var(--color-text-muted);line-height:1.8">
+            Carregando…
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-files"></i> Relatórios gerados pelo motor</div>
+          </div>
+          <div id="relatorio-mds" style="font-size:13px;color:var(--color-text-muted);line-height:1.6">
+            Carregando…
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title" style="color:var(--color-danger)"><i class="ti ti-bug"></i> Últimos erros e avisos</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="badge-soft" id="erros-contagem">—</span>
+              <button class="btn" onclick="limparLogErros()"><i class="ti ti-trash"></i> Limpar</button>
+            </div>
+          </div>
+          <div id="erros-lista" style="font-size:12px;line-height:1.5;max-height:280px;overflow:auto">
+            Carregando…
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-terminal"></i> Log técnico (últimas linhas)</div>
+          </div>
+          <pre id="log-conteudo" style="font-size:11px;color:var(--color-text-muted);line-height:1.5;font-family:'Consolas',ui-monospace,monospace;white-space:pre-wrap;max-height:280px;overflow:auto;margin:0">Carregando…</pre>
+        </div>
+      </div>
+
+      <!-- ABA: FISCAL -->
+      <div id="tab-fiscal" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Parâmetros Fiscais</div>
+          <div class="main-tab-desc">Coluna O · query em bethadba.geloguser · sist_log = 5</div>
+        </div>
+        <div class="card" style="background:#eff6ff;border-color:#bfdbfe">
+          <div class="card-header"><div class="card-title" style="color:var(--color-accent)"><i class="ti ti-calendar-stats"></i> Competência de processamento</div></div>
+          <div style="font-size:13px;color:var(--color-text-muted);line-height:1.7">
+            Regra do módulo Fiscal: <b>mês corrente − 2</b> (uma posição abaixo do Contábil/DP).
+            <br>Dropdown da topbar: <b id="fiscal-base">—</b>
+            <br>Janela aplicada ao Fiscal: <b style="color:var(--color-accent)" id="fiscal-derivado">—</b>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="ti ti-adjustments"></i> Acréscimo aplicado ao tempo bruto</div></div>
+          <div class="param-row">
+            <div>
+              <div class="param-name">Adicional Fator Fiscal (%)</div>
+              <div class="param-hint">Multiplicador aplicado sobre o total de segundos retornado pelo Domínio. Ex: 80 → tempo × 1.80.</div>
+            </div>
+            <input class="param-input" id="fiscal-fator" type="number" min="0" max="500" value="80">
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px" onclick="salvarFiscal()"><i class="ti ti-device-floppy"></i> Salvar</button>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-player-play"></i> Executar Fiscal</div>
+            <span class="status-badge" id="fiscal-exec-badge">pendente</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Consulta o Domínio na janela <b id="fiscal-exec-janela">—</b>, aplica adicional configurado,
+            filtra códigos em <code>FISCAL_NAO.txt</code> e grava na Coluna O da master.
+          </div>
+          <button class="btn btn-primary" id="btn-executar-fiscal" onclick="executarFiscal()">
+            <i class="ti ti-bolt"></i> Executar Fiscal agora
+          </button>
+          <div id="fiscal-exec-resumo" style="margin-top:10px;font-size:12px;color:var(--color-text-muted);line-height:1.6"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="ti ti-info-circle"></i> Lógica do módulo</div></div>
+          <div style="font-size:12px;color:var(--color-text-muted);line-height:1.6">
+            <p>• Origem: <code>bethadba.geloguser</code> (filtrado por <code>sist_log = 5</code> e <code>tfim_log IS NOT NULL</code>).</p>
+            <p>• Soma <code>DATEDIFF</code> em segundos entre <code>tini_log</code> e <code>tfim_log</code> agrupado por <code>codi_emp</code>.</p>
+            <p>• Resultado final na Master = <code>(segundos × (1 + adicional/100)) ÷ 86400</code> formatado como <code>[h]:mm:ss</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA: CONTÁBIL -->
+      <div id="tab-contabil" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Módulo Contábil</div>
+          <div class="main-tab-desc">Fluxo guiado em 3 passos · Spec_Contabil.md</div>
+          <div class="action-group">
+            <button class="btn" onclick="carregarFluxoContabil()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <!-- PASSO 1 — ANEXAR -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-paperclip"></i> Passo 1 · Anexar HORAS CONTABEIS.xlsx</div>
+            <span class="status-badge" id="passo1-badge">pendente</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Selecione o arquivo da planilha contábil (arquivo único com aba por competência <code>MM.AAAA</code>).
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="anexarHorasContabeis()">
+              <i class="ti ti-folder-open"></i> Selecionar arquivo
+            </button>
+            <span id="contabil-caminho" style="font-size:12px;color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis"></span>
+          </div>
+        </div>
+
+        <!-- PASSO 2 — PROCESSAR -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-database-import"></i> Passo 2 · Preencher F / I / O (lançamentos · folha · faturamento)</div>
+            <span class="status-badge" id="passo2-badge">pendente</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Consulta o Domínio para a competência ativa e grava SOMENTE as colunas
+            <b>F (QTD LANÇAMENTOS)</b>, <b>I (TEM FOLHA?)</b> e <b>O (TOTAL FATURAMENTO MÊS)</b>
+            na aba <code id="passo2-aba">—</code> da planilha contábil. Demais colunas são preservadas.
+          </div>
+          <button class="btn btn-primary" id="btn-processar-contabil" onclick="processarHorasContabeis()" disabled>
+            <i class="ti ti-bolt"></i> Processar lançamentos contábeis
+          </button>
+          <div id="passo2-resumo" style="margin-top:10px;font-size:12px;color:var(--color-text-muted);line-height:1.6"></div>
+        </div>
+
+        <!-- PASSO INTERMEDIÁRIO — VALIDAÇÃO HUMANA -->
+        <div class="card" style="background:#fffbeb;border-color:#fde68a">
+          <div class="card-header">
+            <div class="card-title" style="color:var(--color-warning)">
+              <i class="ti ti-user-check"></i> Validação manual (supervisor contábil)
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);line-height:1.6">
+            Depois do Passo 2, abra a planilha HORAS CONTABEIS no Excel e preencha
+            <b>manualmente a coluna R (HORAS VALIDADAS)</b> de cada cliente.
+            <b>Salve e feche</b> a planilha antes de executar o Passo 3.
+          </div>
+        </div>
+
+        <!-- PASSO 3 — LANÇAR NA MASTER (gate) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-arrow-right-circle"></i> Passo 3 · Lançar na CONTROLE DE HORAS DMF</div>
+            <span class="status-badge" id="passo3-badge">aguardando</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Lê a coluna R (Horas Validadas) e grava na Coluna P da master, com double match
+            por código + CNPJ (Spec 8.1). Só liberado após o Passo 2 concluir.
+          </div>
+          <button class="btn btn-primary" id="btn-injetar-master" onclick="injetarContabilMaster()" disabled>
+            <i class="ti ti-arrow-right"></i> Lançar na master
+          </button>
+          <div id="passo3-resumo" style="margin-top:10px;font-size:12px;color:var(--color-text-muted);line-height:1.6"></div>
+        </div>
+
+        <!-- DIAGNÓSTICO -->
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="ti ti-file-spreadsheet"></i> Diagnóstico do arquivo</div></div>
+          <div id="contabil-status" style="font-size:13px;color:var(--color-text-muted);line-height:1.7">
+            Anexe a planilha para ver o diagnóstico…
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA: DP -->
+      <div id="tab-dp" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Departamento Pessoal</div>
+          <div class="main-tab-desc">Fluxo guiado em 2 passos · Planilha Carol + Domínio</div>
+          <div class="action-group">
+            <button class="btn" onclick="carregarFluxoDp()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <!-- PASSO 1 — IMPORTAR CAROL -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-paperclip"></i> Passo 1 · Importar planilha Carol</div>
+            <span class="status-badge" id="dp-passo1-badge">pendente</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Selecione a planilha <code>Controle de Empregados (CAROL)</code> da competência ativa
+            (<b id="dp-comp-alvo">—</b>). O sistema lê funcionários, estagiários e contribuintes por empresa
+            e mapeia para uso no cálculo do DP.
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="importarCarol()">
+              <i class="ti ti-folder-open"></i> Selecionar Carol
+            </button>
+            <span id="dp-carol-caminho" style="font-size:12px;color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis"></span>
+          </div>
+          <div id="dp-passo1-resumo" style="margin-top:10px;font-size:12px;color:var(--color-text-muted);line-height:1.6"></div>
+        </div>
+
+        <!-- PASSO 2 — LANÇAR DP NA MASTER -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-arrow-right-circle"></i> Passo 2 · Lançar DP na master</div>
+            <span class="status-badge" id="dp-passo2-badge">aguardando</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Aplica a fórmula em cascata (sócios, ativos, sem movimento, consultorias),
+            cruza com o Domínio se conectado, e grava na Coluna Q da master.
+            Só liberado após o Passo 1.
+          </div>
+          <button class="btn btn-primary" id="btn-injetar-dp" onclick="injetarDpMaster()" disabled>
+            <i class="ti ti-arrow-right"></i> Lançar na master
+          </button>
+          <div id="dp-passo2-resumo" style="margin-top:10px;font-size:12px;color:var(--color-text-muted);line-height:1.6"></div>
+        </div>
+
+        <!-- PARÂMETROS DO CÁLCULO -->
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="ti ti-calculator"></i> Parâmetros da fórmula</div></div>
+          <div class="param-row">
+            <div><div class="param-name">Tempo por Colaborador Ativo (horas)</div><div class="param-hint">Tempo por funcionário/estagiário/sócio ativo no mês. Ex: <code>0.33</code> = 20 min.</div></div>
+            <input class="param-input" id="dp-fator-carga" type="number" step="0.01" value="0.33">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Tempo Fixo por Empresa (horas)</div><div class="param-hint">Somado a qualquer empresa com movimentação. Ex: <code>1.5</code> = 1h30.</div></div>
+            <input class="param-input" id="dp-overhead-fixo" type="number" step="0.1" value="1.5">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Tempo Fixo p/ Empresas só com Sócios (horas) <span style="font-size:10px;color:var(--color-text-light)">· reservado</span></div><div class="param-hint">Persiste no config para uso futuro. O cálculo atual trata sócios como 1 colaborador na fórmula padrão.</div></div>
+            <input class="param-input" id="dp-apenas-socios" type="number" step="0.1" value="1.0">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Tempo Mínimo p/ Empresas Sem Movimento (minutos)</div><div class="param-hint">Aplicado quando <code>total_ativos = 0</code>. Ex: <code>5</code> minutos.</div></div>
+            <input class="param-input" id="dp-tempo-minimo" type="number" value="5">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Tempo p/ Consultorias (horas)</div><div class="param-hint">Aplicado a empresas listadas em <code>config/nao_faz_setor/DP NAO.txt</code> com marcação <code>1:30</code>.</div></div>
+            <input class="param-input" id="dp-consultoria-horas" type="number" step="0.1" value="1.5">
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px" onclick="salvarDP()"><i class="ti ti-device-floppy"></i> Salvar</button>
+        </div>
+      </div>
+
+      <!-- ABA: CONEXÃO -->
+      <div id="tab-config" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Credenciais ODBC</div>
+          <div class="main-tab-desc">Driver Sybase para o BD Domínio</div>
+          <div class="action-group">
+            <button class="btn" onclick="rodarDiagnosticoODBC()"><i class="ti ti-stethoscope"></i> Diagnóstico</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="param-row">
+            <div><div class="param-name">DSN de Sistema</div><div class="param-hint">Nome do data source no ODBC Administrator.</div></div>
+            <input class="param-input" id="db-dsn" style="width:200px;text-align:left" value="Contabil">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Usuário Sybase</div><div class="param-hint">Login do servidor Domínio.</div></div>
+            <input class="param-input" id="db-uid" style="width:200px;text-align:left" value="EXTERNO">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Senha</div><div class="param-hint">Armazenada localmente em <code>dmf_engine/config.json</code>.</div></div>
+            <input class="param-input" id="db-pwd" type="password" style="width:200px;text-align:left" placeholder="(usar senha do código)">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Timeout (segundos)</div><div class="param-hint">Aborta tentativas longas para não travar o app.</div></div>
+            <input class="param-input" id="db-timeout" type="number" min="1" max="60" value="5">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" onclick="salvarConexao()"><i class="ti ti-device-floppy"></i> Salvar</button>
+            <button class="btn" onclick="testarConexao()"><i class="ti ti-plug"></i> Testar conexão</button>
+          </div>
+          <div id="db-status" style="margin-top:12px;font-size:12px;color:var(--color-text-muted);font-family:'Consolas',monospace;white-space:pre-wrap;word-break:break-word"></div>
+        </div>
+
+        <div class="card" id="card-odbc-diag" style="display:none">
+          <div class="card-header"><div class="card-title"><i class="ti ti-stethoscope"></i> Diagnóstico do ambiente ODBC</div></div>
+          <div id="odbc-diag" style="font-size:12px;color:var(--color-text-muted);line-height:1.7;font-family:'Consolas',monospace;white-space:pre-wrap"></div>
+        </div>
+      </div>
+
+      <!-- ABA: EXCEÇÕES -->
+      <div id="tab-excecoes" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Exceções por setor</div>
+          <div class="main-tab-desc">Códigos que NÃO devem ser lançados pelo respectivo módulo</div>
+          <div class="action-group">
+            <button class="btn" onclick="api()&&api().abrir_pasta_excecoes()"><i class="ti ti-folder"></i> Abrir pasta</button>
+            <button class="btn" onclick="carregarExcecoes()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <div class="card" style="background:#f8fafc">
+          <div style="font-size:12px;color:var(--color-text-muted);line-height:1.6">
+            Cada setor tem um arquivo <code>.txt</code> fixo em
+            <code>config/nao_faz_setor/</code>. Antes de qualquer lançamento, o motor
+            lê o arquivo do setor e <b>pula</b> os códigos listados.
+            Os arquivos são persistentes — sobrevivem entre execuções e
+            sessões. Para atualizar, importe um novo <code>.txt</code> (ele
+            sobrescreve o anterior).
+          </div>
+        </div>
+
+        <!-- DP -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-users-minus"></i> DP_NAO</div>
+            <span class="badge-soft" id="exc-dp-meta">—</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Arquivo: <code id="exc-dp-caminho">—</code>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-primary" onclick="importarExcecoes('dp')"><i class="ti ti-upload"></i> Importar TXT</button>
+            <button class="btn" onclick="alternarConteudoExcecoes('dp')"><i class="ti ti-list"></i> Ver códigos</button>
+          </div>
+          <pre id="exc-dp-conteudo" style="display:none;font-size:11px;font-family:'Consolas',monospace;color:var(--color-text-muted);max-height:200px;overflow:auto;background:#f1f5f9;padding:10px;border-radius:6px;margin:0"></pre>
+        </div>
+
+        <!-- CONTÁBIL -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-calculator-off"></i> CONTABIL_NAO</div>
+            <span class="badge-soft" id="exc-contabil-meta">—</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Arquivo: <code id="exc-contabil-caminho">—</code>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-primary" onclick="importarExcecoes('contabil')"><i class="ti ti-upload"></i> Importar TXT</button>
+            <button class="btn" onclick="alternarConteudoExcecoes('contabil')"><i class="ti ti-list"></i> Ver códigos</button>
+          </div>
+          <pre id="exc-contabil-conteudo" style="display:none;font-size:11px;font-family:'Consolas',monospace;color:var(--color-text-muted);max-height:200px;overflow:auto;background:#f1f5f9;padding:10px;border-radius:6px;margin:0"></pre>
+        </div>
+
+        <!-- FISCAL -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-receipt-off"></i> FISCAL_NAO</div>
+            <span class="badge-soft" id="exc-fiscal-meta">—</span>
+          </div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px">
+            Arquivo: <code id="exc-fiscal-caminho">—</code>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-primary" onclick="importarExcecoes('fiscal')"><i class="ti ti-upload"></i> Importar TXT</button>
+            <button class="btn" onclick="alternarConteudoExcecoes('fiscal')"><i class="ti ti-list"></i> Ver códigos</button>
+          </div>
+          <pre id="exc-fiscal-conteudo" style="display:none;font-size:11px;font-family:'Consolas',monospace;color:var(--color-text-muted);max-height:200px;overflow:auto;background:#f1f5f9;padding:10px;border-radius:6px;margin:0"></pre>
+        </div>
+      </div>
+
+      <!-- ABA: ADMIN (só visível para papel='admin') -->
+      <div id="tab-admin" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Administração de usuários</div>
+          <div class="main-tab-desc">Gerenciar contas, máquinas vinculadas e senhas</div>
+          <div class="action-group">
+            <button class="btn" onclick="carregarUsuariosAdmin()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:12px;color:var(--color-text-muted);line-height:1.6;margin-bottom:10px">
+            Lista fechada de usuários autorizados (definida no código). Cada conta fica
+            vinculada à máquina onde foi feito o primeiro acesso. Use <b>Liberar máquina</b>
+            quando o usuário precisar trocar de PC, e <b>Resetar senha</b> para forçar
+            uma nova troca de senha no próximo login.
+          </div>
+          <div id="admin-tabela" style="font-size:13px">Carregando…</div>
+        </div>
+      </div>
+
+      <!-- ABA: GOVERNANÇA -->
+      <div id="tab-governanca" style="display:none">
+        <div class="main-top-actions">
+          <div class="main-tab-title">Governança</div>
+          <div class="main-tab-desc">Regras de qualidade no preenchimento da Master</div>
+        </div>
+        <div class="card">
+          <div class="param-row">
+            <div><div class="param-name">Match mínimo por linha</div><div class="param-hint">Quantidade mínima de campos (codi_emp, nome, CNPJ) coincidentes para considerar a linha como válida.</div></div>
+            <input class="param-input" id="gov-match-min" type="number" min="1" max="3" value="2">
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Bloquear CNPJ duplicado</div><div class="param-hint">Se ativo, abortar gravação em linhas com CNPJ repetido.</div></div>
+            <label class="toggle"><input type="checkbox" id="gov-bloquear-dup" checked><span class="toggle-track"></span></label>
+          </div>
+          <div class="param-row">
+            <div><div class="param-name">Gravar zero quando sem dados</div><div class="param-hint">Limpa o valor antigo da célula em vez de manter resíduo do mês anterior.</div></div>
+            <label class="toggle"><input type="checkbox" id="gov-gravar-zero" checked><span class="toggle-track"></span></label>
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px" onclick="salvarGovernanca()"><i class="ti ti-device-floppy"></i> Salvar</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+/* ── Navegação SPA Interna ────────────────────────────────── */
+function showTab(t) {
+  document.querySelectorAll('main > div').forEach(el => el.style.display = 'none');
+  const el = document.getElementById('tab-' + t);
+  if (el) el.style.display = '';
+
+  document.querySelectorAll('.nav-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + t + "'"));
+  });
+
+  if (t === 'dashboard') carregarDashboard();
+  if (t === 'log')       carregarRelatorio();
+  if (t === 'contabil')  carregarFluxoContabil();
+  if (t === 'fiscal')    atualizarLabelsFiscal();
+  if (t === 'dp')        carregarFluxoDp();
+  if (t === 'excecoes')  carregarExcecoes();
+  if (t === 'admin')     carregarUsuariosAdmin();
+  // Reaplica permissões depois que a aba renderizou os botões dela
+  setTimeout(aplicarPermissoesUI, 0);
+}
+
+function atualizarLabelsFiscal() {
+  const base = janelaCompetencia('dp');
+  const deriv = janelaCompetencia('fiscal');
+  const elB = document.getElementById('fiscal-base');
+  const elD = document.getElementById('fiscal-derivado');
+  const elJ = document.getElementById('fiscal-exec-janela');
+  if (elB) elB.textContent = base.competencia;
+  if (elD) elD.textContent = deriv.competencia;
+  if (elJ) elJ.textContent = deriv.competencia;
+}
+
+/* ── Bridge com PyWebView ────────────────────────────────── */
+const api = () => window.pywebview && window.pywebview.api;
+
+/* ── Autenticação ────────────────────────────────────────── */
+
+window._sessao = null;  // {nome, label, papel, maquina}
+window._loginPendente = null;  // {nome, senha} durante troca obrigatória
+
+const PAPEL_LABEL = {
+  admin: 'Admin', contabil: 'Contábil', fiscal: 'Fiscal',
+  dp: 'DP', legalizacao: 'Legalização'
+};
+
+function mostrarOverlayLogin() {
+  document.getElementById('login-overlay').style.display = '';
+  document.getElementById('login-form').style.display = '';
+  document.getElementById('troca-senha-form').style.display = 'none';
+  document.getElementById('login-titulo').innerHTML = '<i class="ti ti-shield-lock"></i> DMF Engine';
+  document.getElementById('login-subtitulo').textContent = 'Faça login para continuar';
+  document.getElementById('login-erro').textContent = '';
+  setTimeout(() => document.getElementById('login-nome').focus(), 30);
+}
+
+function mostrarOverlayTroca() {
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('troca-senha-form').style.display = '';
+  document.getElementById('login-titulo').innerHTML = '<i class="ti ti-lock"></i> Definir senha pessoal';
+  document.getElementById('login-subtitulo').textContent = 'Necessário no primeiro acesso';
+  document.getElementById('troca-erro').textContent = '';
+  setTimeout(() => document.getElementById('troca-nova').focus(), 30);
+}
+
+function aplicarSessaoNoUI(sessao) {
+  window._sessao = sessao;
+  document.getElementById('supervisor-nome').textContent = sessao.label || sessao.nome;
+  document.getElementById('supervisor-papel').textContent =
+    '· ' + (PAPEL_LABEL[sessao.papel] || sessao.papel);
+  document.getElementById('login-overlay').style.display = 'none';
+  // Aba Admin só para o papel admin
+  const navAdmin = document.getElementById('nav-admin');
+  if (navAdmin) navAdmin.style.display = (sessao.papel === 'admin') ? '' : 'none';
+  aplicarPermissoesUI();
+}
+
+async function checarLogin() {
+  if (!api()) {
+    document.getElementById('login-overlay').style.display = 'none';
+    return false;
+  }
+  try {
+    const r = await api().verificar_estado_login();
+    if (r.sessao) {
+      aplicarSessaoNoUI(r.sessao);
+      return true;
+    }
+    mostrarOverlayLogin();
+    return false;
+  } catch (e) {
+    document.getElementById('login-overlay').style.display = '';
+    return false;
+  }
+}
+
+async function fazerLogin() {
+  const nome = document.getElementById('login-nome').value.trim().toLowerCase();
+  const senha = document.getElementById('login-senha').value;
+  const erro = document.getElementById('login-erro');
+  erro.textContent = '';
+  if (!nome || !senha) { erro.textContent = 'Informe usuário e senha.'; return; }
+  if (!api()) { erro.textContent = 'Bridge indisponível.'; return; }
+  const r = await api().login(nome, senha);
+
+  if (r.precisa_trocar_senha) {
+    window._loginPendente = {nome, senha};
+    mostrarOverlayTroca();
+    return;
+  }
+  if (!r.ok) {
+    erro.textContent = r.erro || 'Falha no login.';
+    return;
+  }
+  document.getElementById('login-senha').value = '';
+  aplicarSessaoNoUI({
+    nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina
+  });
+  toast('Bem-vindo, ' + (r.label || r.nome) + '.', 'success');
+  await bootApp();
+}
+
+async function confirmarTrocaSenha() {
+  const s1 = document.getElementById('troca-nova').value;
+  const s2 = document.getElementById('troca-nova2').value;
+  const erro = document.getElementById('troca-erro');
+  erro.textContent = '';
+  if (!s1 || s1.length < 4) { erro.textContent = 'Senha precisa ter pelo menos 4 caracteres.'; return; }
+  if (s1 !== s2) { erro.textContent = 'As senhas não coincidem.'; return; }
+  if (!window._loginPendente) { erro.textContent = 'Sessão expirou. Faça login de novo.'; return; }
+  const r = await api().trocar_senha_primeiro_acesso(
+    window._loginPendente.nome, window._loginPendente.senha, s1
+  );
+  if (!r.ok) { erro.textContent = r.erro || 'Falha ao trocar senha.'; return; }
+  window._loginPendente = null;
+  document.getElementById('troca-nova').value = '';
+  document.getElementById('troca-nova2').value = '';
+  document.getElementById('login-senha').value = '';
+  aplicarSessaoNoUI({nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina});
+  toast('Senha definida com sucesso. Conta vinculada a esta máquina.', 'success', 5000);
+  await bootApp();
+}
+
+async function fazerLogout() {
+  if (!api()) return;
+  await api().logout();
+  window._sessao = null;
+  document.getElementById('supervisor-nome').textContent = '—';
+  document.getElementById('supervisor-papel').textContent = '';
+  mostrarOverlayLogin();
+  toast('Sessão encerrada.', 'info');
+}
+
+/* ── Permissões por papel ─────────────────────────────────── */
+
+function podeExecutar(modulo) {
+  const s = window._sessao;
+  if (!s) return false;
+  if (s.papel === 'admin') return true;
+  if (modulo === 'fiscal'   && s.papel === 'fiscal')   return true;
+  if (modulo === 'contabil' && s.papel === 'contabil') return true;
+  if (modulo === 'dp'       && s.papel === 'dp')       return true;
+  return false;
+}
+
+function _bloquearBotao(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.disabled = true;
+  el.title = msg;
+}
+
+function aplicarPermissoesUI() {
+  const s = window._sessao;
+  if (!s) return;
+  const msgFiscal   = 'Apenas Nayane (Fiscal) ou Carol (Admin) podem executar.';
+  const msgContabil = 'Apenas James (Contábil) ou Carol (Admin) podem executar.';
+  const msgDp       = 'Apenas Jailton (DP) ou Carol (Admin) podem executar.';
+
+  // Fiscal
+  if (!podeExecutar('fiscal')) {
+    _bloquearBotao('btn-executar-fiscal', msgFiscal);
+  } else {
+    const el = document.getElementById('btn-executar-fiscal');
+    if (el) { el.disabled = false; el.title = ''; }
+  }
+  // Contábil (3 botões + file dialog; o gate de estado controla o disabled "natural"
+  // dos passos 2 e 3, então só bloqueamos por permissão se não for autorizado)
+  if (!podeExecutar('contabil')) {
+    ['btn-processar-contabil','btn-injetar-master'].forEach(id => _bloquearBotao(id, msgContabil));
+    // botões inline (anexar e qualquer outro) ganham um wrapper de aviso
+  }
+  // DP
+  if (!podeExecutar('dp')) {
+    _bloquearBotao('btn-injetar-dp', msgDp);
+  }
+}
+
+/* ── Aba Admin ───────────────────────────────────────────── */
+
+async function carregarUsuariosAdmin() {
+  if (!api()) return;
+  const el = document.getElementById('admin-tabela');
+  el.textContent = 'Carregando…';
+  const r = await api().admin_listar_usuarios();
+  if (!r.ok) {
+    el.innerHTML = `<span style="color:var(--color-danger)">${r.erro || 'Falha'}</span>`;
+    return;
+  }
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="text-align:left;color:var(--color-text-muted);border-bottom:1px solid var(--color-border)">
+        <th style="padding:8px">Nome</th><th>Papel</th><th>Máquina amarrada</th>
+        <th>Último login</th><th>Senha</th><th style="text-align:right">Ações</th>
+      </tr></thead>
+      <tbody>${r.usuarios.map(u => `
+        <tr style="border-bottom:1px solid var(--color-border-soft)">
+          <td style="padding:8px;font-weight:600">${u.label || u.nome}</td>
+          <td><span class="badge-soft">${PAPEL_LABEL[u.papel] || u.papel}</span></td>
+          <td style="font-family:'Consolas',monospace;font-size:11px">${u.maquina || '<i style="color:var(--color-text-light)">não amarrada</i>'}</td>
+          <td>${u.ultimo_login || '<i style="color:var(--color-text-light)">nunca</i>'}</td>
+          <td>${u.primeira_senha
+            ? '<span style="color:var(--color-warning)">padrão (pendente)</span>'
+            : '<span style="color:var(--color-success)">definida</span>'}</td>
+          <td style="text-align:right;white-space:nowrap">
+            ${u.maquina ? `<button class="btn" onclick="adminLiberarMaquina('${u.nome}')"><i class="ti ti-unlink"></i> Liberar máquina</button>` : ''}
+            <button class="btn" onclick="adminResetarSenha('${u.nome}','${(u.label || u.nome).replace(/'/g,"\\'")}')"><i class="ti ti-refresh"></i> Resetar senha</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function adminLiberarMaquina(nome) {
+  if (!api()) return;
+  if (!confirm(`Liberar a vinculação de máquina de "${nome}"? O usuário poderá entrar de qualquer PC no próximo login.`)) return;
+  const r = await api().admin_liberar_maquina(nome);
+  if (r.ok) { toast('Máquina liberada.', 'success'); carregarUsuariosAdmin(); }
+  else toast(r.erro || 'Falha', 'error');
+}
+
+async function adminResetarSenha(nome, label) {
+  if (!api()) return;
+  if (!confirm(`Resetar a senha de ${label}? A senha voltará para o padrão (= "${nome}") e será exigida nova troca no próximo login.`)) return;
+  const r = await api().admin_resetar_senha(nome);
+  if (r.ok) { toast(`Senha de ${label} resetada para o padrão.`, 'success'); carregarUsuariosAdmin(); }
+  else toast(r.erro || 'Falha', 'error');
+}
+
+async function bootApp() {
+  popularCompetencias(12);
+  carregarParametros();
+  carregarDashboard();
+  atualizarRodape();
+  const sel = document.getElementById('competencia-select');
+  if (sel && !sel._listener) {
+    sel.addEventListener('change', () => {
+      carregarDashboard();
+      const tabC = document.getElementById('tab-contabil');
+      if (tabC && tabC.style.display !== 'none') carregarFluxoContabil();
+      const tabF = document.getElementById('tab-fiscal');
+      if (tabF && tabF.style.display !== 'none') atualizarLabelsFiscal();
+      const tabD = document.getElementById('tab-dp');
+      if (tabD && tabD.style.display !== 'none') carregarFluxoDp();
+      const tabR = document.getElementById('tab-log');
+      if (tabR && tabR.style.display !== 'none') carregarRelatorio();
+    });
+    sel._listener = true;
+  }
+}
+
+/* ── Toast (substitui alert) ─────────────────────────────── */
+function toast(msg, tipo = 'info', ms = 3200) {
+  let stack = document.getElementById('toast-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.id = 'toast-stack';
+    stack.className = 'toast-stack';
+    document.body.appendChild(stack);
+  }
+  const icone = {
+    success: 'ti-circle-check',
+    error:   'ti-alert-circle',
+    warning: 'ti-alert-triangle',
+    info:    'ti-info-circle'
+  }[tipo] || 'ti-info-circle';
+  const el = document.createElement('div');
+  el.className = 'toast ' + tipo;
+  el.innerHTML = `<i class="ti ${icone}"></i><span>${msg}</span>`;
+  stack.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 220);
+  }, ms);
+}
+const semBridge = () => toast('Bridge PyWebView indisponível (rodando fora do container).', 'warning');
+
+async function salvarFiscal() {
+  if (!api()) return semBridge();
+  await api().salvar_parametros({ fiscal_adicional_pct: parseInt(document.getElementById('fiscal-fator').value) || 80 });
+  toast('Adicional fiscal salvo.', 'success');
+}
+
+function lerNum(id, fallback) {
+  const el = document.getElementById(id);
+  const v = el ? parseFloat(el.value) : NaN;
+  return Number.isFinite(v) ? v : fallback;
+}
+
+async function salvarDP() {
+  if (!api()) return semBridge();
+  const payload = {
+    dp_fator_carga: lerNum('dp-fator-carga', 0.33),
+    dp_overhead_fixo: lerNum('dp-overhead-fixo', 1.5),
+    dp_apenas_socios: lerNum('dp-apenas-socios', 1.0),
+    dp_tempo_minimo: lerNum('dp-tempo-minimo', 5.0),
+    dp_consultoria_horas: lerNum('dp-consultoria-horas', 1.5)
+  };
+  await api().salvar_parametros(payload);
+  toast('Regras do DP salvas.', 'success');
+}
+
+async function salvarConexao() {
+  if (!api()) return semBridge();
+  const payload = {
+    db_dsn: (document.getElementById('db-dsn').value || 'Contabil').trim(),
+    db_uid: (document.getElementById('db-uid').value || 'EXTERNO').trim(),
+    db_timeout: lerNum('db-timeout', 5)
+  };
+  const pwd = (document.getElementById('db-pwd').value || '').trim();
+  if (pwd) payload.db_pwd = pwd;
+  await api().salvar_parametros(payload);
+  const st = document.getElementById('db-status');
+  if (st) st.textContent = 'Credenciais salvas. Clique em "Testar conexão" para validar.';
+  toast('Credenciais salvas.', 'success');
+  atualizarRodape();
+}
+
+async function testarConexao() {
+  const st = document.getElementById('db-status');
+  if (!api()) { semBridge(); if (st) st.textContent = 'Bridge indisponível.'; return; }
+  if (st) st.textContent = 'Testando conexão ODBC…';
+  toast('Testando conexão ODBC…', 'info', 1500);
+  const res = await api().testar_conexao();
+  if (st) {
+    st.textContent = (res.ok ? '✓ ' : '✗ ') + res.msg
+      + (res.erro && !res.ok ? '\n\nErro detalhado:\n' + res.erro : '');
+  }
+  toast(res.ok ? res.msg : 'Falha na conexão — veja o detalhe abaixo dos botões.',
+        res.ok ? 'success' : 'error', 5500);
+  atualizarRodape();
+}
+
+async function rodarDiagnosticoODBC() {
+  const card = document.getElementById('card-odbc-diag');
+  const el = document.getElementById('odbc-diag');
+  if (!api()) { semBridge(); return; }
+  card.style.display = '';
+  el.textContent = 'Coletando informações do ambiente…';
+  try {
+    const d = await api().diagnosticar_odbc();
+    const drivers = (d.drivers || []).join('\n  • ') || '(nenhum)';
+    const dsns = Object.keys(d.dsns_user || {});
+    const listaDsns = dsns.length
+      ? dsns.map(n => `  • ${n}  →  ${d.dsns_user[n]}`).join('\n')
+      : '  (nenhum DSN visível para esta arquitetura)';
+    const ok = d.dsn_existe ? '✓' : '✗';
+    el.textContent =
+`Python: ${d.python_version} · ${d.python_bits}
+
+DSN configurado: ${d.dsn_configurado || '—'}   [${ok} ${d.dsn_existe ? 'encontrado' : 'NÃO encontrado nesta arquitetura'}]
+
+Drivers ODBC instalados:
+  • ${drivers}
+
+DSNs visíveis (User + System combinados):
+${listaDsns}
+
+${d.ultimo_erro ? 'Último erro de conexão:\n  ' + d.ultimo_erro : ''}
+${d.erro ? '\nAviso do diagnóstico: ' + d.erro : ''}`;
+
+    if (!d.dsn_existe) {
+      toast('DSN "' + (d.dsn_configurado || '?') +
+            '" não está visível para Python ' + (d.python_bits || '?') +
+            '. Provável mismatch 32/64-bit.', 'warning', 7000);
+    }
+  } catch (e) {
+    el.textContent = 'Erro ao executar diagnóstico: ' + e;
+  }
+}
+
+/* ── Fluxo DP em 2 etapas ────────────────────────────────── */
+
+async function importarCarol() {
+  if (!api()) return semBridge();
+  const comp = janelaCompetencia('dp');
+  setBadge('dp-passo1-badge', 'lendo…', 'status-wait');
+  const r = await api().importar_planilha_carol({
+    data_inicio: comp.data_inicio,
+    data_fim: comp.data_fim
+  });
+  if (r && r.cancelado) {
+    setBadge('dp-passo1-badge', 'pendente', 'status-wait');
+    return;
+  }
+  if (!r || r.ok === false) {
+    setBadge('dp-passo1-badge', 'erro', 'status-wait');
+    return toast(r && r.erro ? r.erro : 'Falha ao importar.', 'error', 6000);
+  }
+  if (r.aviso) toast(r.aviso, 'warning', 6500);
+  document.getElementById('dp-carol-caminho').textContent = r.caminho || '';
+  document.getElementById('dp-passo1-resumo').innerHTML = `
+    <div><b style="color:var(--color-success)">✓ Carol mapeada</b> · arquivo <code>${r.nome}</code></div>
+    <div>Empresas lidas: <b>${r.total}</b> · com ativos: <b>${r.com_ativos}</b> · sem ativos: <b>${r.sem_ativos}</b></div>
+  `;
+  setBadge('dp-passo1-badge', 'mapeada', 'status-done');
+  document.getElementById('btn-injetar-dp').disabled = false;
+  setBadge('dp-passo2-badge', 'liberado', 'status-wait');
+  toast(`${r.total} empresa(s) mapeadas da Carol.`, 'success');
+}
+
+async function injetarDpMaster() {
+  if (!api()) return semBridge();
+  const comp = janelaCompetencia('dp');
+  setBadge('dp-passo2-badge', 'lançando…', 'status-wait');
+  document.getElementById('btn-injetar-dp').disabled = true;
+  atualizarProgresso(0, 'Lançando DP na master…');
+  const r = await api().injetar_dp_master({
+    data_inicio: comp.data_inicio,
+    data_fim: comp.data_fim
+  });
+  if (r && r.ok === false) {
+    setBadge('dp-passo2-badge', 'erro', 'status-wait');
+    document.getElementById('btn-injetar-dp').disabled = false;
+    toast(r.erro || 'Falha ao iniciar', 'error');
+  }
+}
+
+window.dpFase2Concluido = function(res) {
+  const banner = document.getElementById('progresso-container');
+  if (banner) banner.remove();
+  if (!res || res.ok === false) {
+    setBadge('dp-passo2-badge', 'erro', 'status-wait');
+    document.getElementById('btn-injetar-dp').disabled = false;
+    const tipo = res && res.tipo === 'locked' ? 'warning' : 'error';
+    return toast(res && res.erro ? res.erro : 'Falha ao lançar DP.', tipo, 6000);
+  }
+  document.getElementById('dp-passo2-resumo').innerHTML = `
+    <div><b style="color:var(--color-success)">✓ DP lançado na master</b> · competência ${res.competencia}</div>
+  `;
+  toast('DP lançado na master com sucesso.', 'success');
+  carregarFluxoDp();
+  carregarDashboard();
+};
+
+async function carregarFluxoDp() {
+  if (!api()) return;
+  const comp = janelaCompetencia('dp');
+  const elComp = document.getElementById('dp-comp-alvo');
+  if (elComp) elComp.textContent = comp.competencia;
+
+  const estado = await api().obter_estado_dp(comp.data_inicio);
+  const cam = document.getElementById('dp-carol-caminho');
+  if (estado.importado && estado.caminho) {
+    cam.textContent = estado.caminho;
+    setBadge('dp-passo1-badge', `mapeada · ${estado.importado_em || ''}`, 'status-done');
+    document.getElementById('dp-passo1-resumo').innerHTML =
+      `<div>Carol já importada: <b>${estado.total ?? '—'}</b> empresas · <b>${estado.com_ativos ?? '—'}</b> com ativos</div>`;
+    document.getElementById('btn-injetar-dp').disabled = false;
+    setBadge('dp-passo2-badge',
+      estado.lancado ? `lançado · ${estado.lancado_em || ''}` : 'liberado',
+      estado.lancado ? 'status-done' : 'status-wait');
+  } else {
+    cam.textContent = 'Nenhum arquivo importado para esta competência.';
+    cam.style.color = 'var(--color-text-light)';
+    setBadge('dp-passo1-badge', 'pendente', 'status-wait');
+    setBadge('dp-passo2-badge', 'aguardando passo 1', 'status-wait');
+    document.getElementById('btn-injetar-dp').disabled = true;
+    document.getElementById('dp-passo1-resumo').textContent = '';
+    document.getElementById('dp-passo2-resumo').textContent = '';
+  }
+}
+
+/* ── Exceções por setor (DP / Contábil / Fiscal) ─────────── */
+
+function renderizarSetorExcecao(setor, info) {
+  const meta = document.getElementById('exc-' + setor + '-meta');
+  const cam  = document.getElementById('exc-' + setor + '-caminho');
+  const pre  = document.getElementById('exc-' + setor + '-conteudo');
+  if (cam) cam.textContent = info.caminho || '—';
+  if (meta) {
+    if (!info.existe) {
+      meta.textContent = 'arquivo ausente';
+    } else {
+      meta.textContent = `${info.total} código(s) · ${info.modificado_em || ''}`;
+    }
+  }
+  if (pre) {
+    pre.dataset.codigos = (info.codigos || []).join('\n');
+    if (pre.style.display !== 'none') {
+      pre.textContent = pre.dataset.codigos || '(vazio)';
+    }
+  }
+}
+
+async function carregarExcecoes() {
+  if (!api()) return;
+  try {
+    const todos = await api().listar_excecoes();
+    ['dp','contabil','fiscal'].forEach(s => {
+      if (todos[s]) renderizarSetorExcecao(s, todos[s]);
+    });
+  } catch (e) { /* silencioso */ }
+}
+
+function alternarConteudoExcecoes(setor) {
+  const pre = document.getElementById('exc-' + setor + '-conteudo');
+  if (!pre) return;
+  if (pre.style.display === 'none') {
+    pre.style.display = '';
+    pre.textContent = pre.dataset.codigos || '(vazio)';
+  } else {
+    pre.style.display = 'none';
+  }
+}
+
+async function importarExcecoes(setor) {
+  if (!api()) return semBridge();
+  const r = await api().importar_excecoes(setor);
+  if (r && r.cancelado) return;
+  if (!r || r.ok === false) {
+    return toast('Falha ao importar: ' + (r && r.erro ? r.erro : 'erro desconhecido'), 'error');
+  }
+  renderizarSetorExcecao(setor, r);
+  toast(`${r.total} código(s) importados para ${setor.toUpperCase()}_NAO.`, 'success');
+}
+
+async function salvarGovernanca() {
+  if (!api()) return semBridge();
+  const payload = {
+    governanca_match_minimo: lerNum('gov-match-min', 2),
+    governanca_bloquear_cnpj_dup: !!document.getElementById('gov-bloquear-dup').checked,
+    governanca_gravar_zero: !!document.getElementById('gov-gravar-zero').checked
+  };
+  await api().salvar_parametros(payload);
+  toast('Regras de governança salvas.', 'success');
+}
+
+async function carregarStatusContabil() {
+  const el = document.getElementById('contabil-status');
+  if (!el) return;
+  if (!api()) { el.innerHTML = '<i>Bridge indisponível.</i>'; return; }
+  el.textContent = 'Carregando diagnóstico…';
+  try {
+    const s = await api().obter_status_contabil();
+    if (!s.existe) {
+      el.innerHTML = `<b style="color:var(--color-danger)">✗ Planilha não encontrada</b><br>
+        <span style="color:var(--color-text-light)">Caminho avaliado: <code>${s.caminho || '—'}</code></span>`;
+      return;
+    }
+    const comp = janelaCompetencia();
+    const abaAlvo = comp.competencia.replace('/', '.');
+    const temAba = (s.abas || []).includes(abaAlvo);
+    el.innerHTML = `
+      <div><b style="color:var(--color-success)">✓ Planilha encontrada</b></div>
+      <div>Caminho: <code>${s.caminho}</code></div>
+      <div>Última modificação: <b>${s.modificado_em || '—'}</b></div>
+      <div>Tamanho: <b>${s.tamanho_kb ? s.tamanho_kb + ' KB' : '—'}</b></div>
+      <div>Linhas (incluindo cabeçalho): <b>${s.linhas ?? '—'}</b></div>
+      <div>Abas: <b>${(s.abas || []).join(', ') || '—'}</b></div>
+      <div>Aba alvo da competência (<code>${abaAlvo}</code>):
+        ${temAba
+          ? '<b style="color:var(--color-success)">✓ presente</b>'
+          : '<b style="color:var(--color-warning)">⚠ ausente — primeira aba será usada</b>'}
+      </div>
+      ${s.erro ? `<div style="color:var(--color-danger)">Aviso: ${s.erro}</div>` : ''}
+    `;
+  } catch (e) {
+    el.innerHTML = '<i>Erro ao carregar diagnóstico: ' + e + '</i>';
+  }
+}
+
+/* ── Fluxo Contábil em 3 etapas ─────────────────────────── */
+
+function setBadge(elId, texto, classe) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.className = 'status-badge ' + classe;
+  el.textContent = texto;
+}
+
+async function anexarHorasContabeis() {
+  if (!api()) return semBridge();
+  const res = await api().selecionar_horas_contabeis();
+  if (res && res.ok) {
+    toast('Planilha anexada: ' + res.caminho.split(/[\\/]/).pop(), 'success');
+    await carregarFluxoContabil();
+  }
+}
+
+async function processarHorasContabeis() {
+  if (!api()) return semBridge();
+  const comp = janelaCompetencia();
+  setBadge('passo2-badge', 'processando…', 'status-wait');
+  document.getElementById('btn-processar-contabil').disabled = true;
+  atualizarProgresso(0, 'Iniciando preenchimento contábil…');
+  const r = await api().processar_horas_contabeis({
+    data_inicio: comp.data_inicio,
+    data_fim: comp.data_fim
+  });
+  if (r && r.ok === false) {
+    toast(r.erro || 'Falha ao iniciar', 'error');
+    setBadge('passo2-badge', 'erro', 'status-wait');
+    document.getElementById('btn-processar-contabil').disabled = false;
+  }
+}
+
+async function injetarContabilMaster() {
+  if (!api()) return semBridge();
+  const comp = janelaCompetencia();
+  setBadge('passo3-badge', 'lançando…', 'status-wait');
+  document.getElementById('btn-injetar-master').disabled = true;
+  atualizarProgresso(0, 'Lançando horas na master…');
+  const r = await api().injetar_horas_contabeis_master({
+    data_inicio: comp.data_inicio,
+    data_fim: comp.data_fim
+  });
+  if (r && r.ok === false) {
+    toast(r.erro || 'Falha ao iniciar', 'error');
+    setBadge('passo3-badge', 'erro', 'status-wait');
+    document.getElementById('btn-injetar-master').disabled = false;
+  }
+}
+
+async function carregarFluxoContabil() {
+  if (!api()) return;
+  const comp = janelaCompetencia();
+  const aba = comp.competencia.replace('/', '.');
+  document.getElementById('passo2-aba').textContent = aba;
+
+  // Estado persistente
+  const estado = await api().obter_estado_contabil(comp.data_inicio);
+  const caminhoEl = document.getElementById('contabil-caminho');
+  if (estado.caminho) {
+    caminhoEl.textContent = estado.caminho;
+    caminhoEl.style.color = 'var(--color-text-main)';
+    setBadge('passo1-badge', 'anexada', 'status-done');
+    document.getElementById('btn-processar-contabil').disabled = false;
+  } else {
+    caminhoEl.textContent = 'Nenhum arquivo anexado.';
+    caminhoEl.style.color = 'var(--color-text-light)';
+    setBadge('passo1-badge', 'pendente', 'status-wait');
+    document.getElementById('btn-processar-contabil').disabled = true;
+  }
+
+  if (estado.processado) {
+    setBadge('passo2-badge', 'processado · ' + (estado.processado_em || ''), 'status-done');
+    document.getElementById('btn-injetar-master').disabled = false;
+    setBadge('passo3-badge', estado.lancado ? 'lançado · ' + (estado.lancado_em || '') : 'liberado',
+             estado.lancado ? 'status-done' : 'status-wait');
+  } else {
+    setBadge('passo2-badge', 'pendente', 'status-wait');
+    setBadge('passo3-badge', 'aguardando passo 2', 'status-wait');
+    document.getElementById('btn-injetar-master').disabled = true;
+  }
+
+  // Diagnóstico do arquivo
+  carregarStatusContabil();
+}
+
+/* ── Callbacks vindos do Python ─────────────────────────── */
+window.contabilFase2Concluido = function(res) {
+  const banner = document.getElementById('progresso-container');
+  if (banner) banner.remove();
+  if (!res || res.ok === false) {
+    setBadge('passo2-badge', 'erro', 'status-wait');
+    document.getElementById('btn-processar-contabil').disabled = false;
+    toast(res && res.erro ? res.erro : 'Falha ao processar.', 'error', 6000);
+    return;
+  }
+  const resumo = document.getElementById('passo2-resumo');
+  resumo.innerHTML = `
+    <div><b style="color:var(--color-success)">✓ Preenchimento concluído</b></div>
+    <div>Aba: <b>${res.aba}</b></div>
+    <div>Linhas processadas: <b>${res.total}</b></div>
+    <div>F/I/O escritas: <b style="color:var(--color-success)">${res.escritas}</b></div>
+    <div>Match 3/3: <b>${res.ok_count}</b> · Parcial 2/3: <b style="color:var(--color-warning)">${res.parcial}</b> · Rejeitadas 0-1/3: <b style="color:var(--color-danger)">${res.rejeitadas}</b></div>
+    ${res.relatorio ? `<div>Relatório: <code>${res.relatorio}</code></div>` : ''}
+  `;
+  toast('Passo 2 concluído. Agora preencha a coluna R na planilha manualmente.', 'success', 5500);
+  carregarFluxoContabil();
+};
+
+window.contabilFase5Concluido = function(res) {
+  const banner = document.getElementById('progresso-container');
+  if (banner) banner.remove();
+  if (!res || res.ok === false) {
+    setBadge('passo3-badge', 'erro', 'status-wait');
+    document.getElementById('btn-injetar-master').disabled = false;
+    const tipo = res && res.tipo === 'locked' ? 'warning' : 'error';
+    toast(res && res.erro ? res.erro : 'Falha ao lançar.', tipo, 6000);
+    return;
+  }
+  const resumo = document.getElementById('passo3-resumo');
+  resumo.innerHTML = `
+    <div><b style="color:var(--color-success)">✓ Lançamento concluído</b></div>
+    <div>Aba lida: <b>${res.aba}</b></div>
+    <div>Linhas gravadas na master: <b style="color:var(--color-success)">${res.gravadas}</b></div>
+    <div>Sem match: <b style="color:var(--color-warning)">${res.sem_match}</b></div>
+  `;
+  toast('Horas contábeis lançadas na master.', 'success', 4500);
+  carregarFluxoContabil();
+  carregarDashboard();
+};
+async function selecionarMaster() {
+  if (!api()) return semBridge();
+  const caminho = await api().selecionar_arquivo();
+  if (caminho) {
+    toast('Master configurada: ' + caminho.split(/[\\/]/).pop(), 'success');
+    atualizarRodape();
+    carregarDashboard();
+  }
+}
+function popularCompetencias(quantidade = 12) {
+  /* Regra de negócio (Spec_Contabil): em qualquer mês corrente, lançamos os dados
+     do mês ANTERIOR (mês_corrente - 1). Pré-selecionamos esse mês como default.
+     Inclui também o mês corrente como primeira opção (não-default), útil para
+     testes e antecipação de lançamento. Lista volta N meses para reprocessamento. */
+  const sel = document.getElementById('competencia-select');
+  if (!sel) return;
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth() + 1;       // 1..12
+
+  sel.innerHTML = '';
+
+  // 1) mês corrente — primeiro, marcado como "(em curso)", não-default
+  const mmAtual = String(mesAtual).padStart(2, '0');
+  const optAtual = document.createElement('option');
+  optAtual.value = `${anoAtual}-${mmAtual}`;
+  optAtual.textContent = `${mmAtual} / ${anoAtual} · em curso`;
+  sel.appendChild(optAtual);
+
+  // 2) mês corrente - 1, default selecionado (regra do negócio)
+  let alvoMes = mesAtual - 1;
+  let alvoAno = anoAtual;
+  if (alvoMes === 0) { alvoMes = 12; alvoAno = anoAtual - 1; }
+  for (let i = 0; i < quantidade; i++) {
+    let m = alvoMes - i;
+    let a = alvoAno;
+    while (m <= 0) { m += 12; a -= 1; }
+    const mm = String(m).padStart(2, '0');
+    const opt = document.createElement('option');
+    opt.value = `${a}-${mm}`;
+    opt.textContent = `${mm} / ${a}`;
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function montarJanelaMes(ano, mes) {
+  /* Gera janela de 1 mês a partir de (ano, mes 1..12). */
+  while (mes <= 0) { mes += 12; ano -= 1; }
+  while (mes > 12) { mes -= 12; ano += 1; }
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  const mm = String(mes).padStart(2, '0');
+  return {
+    data_inicio: `${ano}-${mm}-01`,
+    data_fim: `${ano}-${mm}-${String(ultimoDia).padStart(2, '0')}`,
+    competencia: `${mm}/${ano}`
+  };
+}
+
+function janelaCompetencia(modulo) {
+  /* Regra de defasamento (Spec):
+       Contábil / DP / default → mês selecionado (que já é mês_atual - 1 por default).
+       Fiscal                  → mês selecionado - 1 (efetivamente mês_atual - 2).
+     O dropdown global vale como "alvo do Contábil/DP". O Fiscal SEMPRE deriva
+     uma posição a menos para refletir o atraso natural dos lançamentos. */
+  const sel = document.getElementById('competencia-select');
+  let ano, mes;
+  if (sel && sel.value) {
+    [ano, mes] = sel.value.split('-').map(Number);
+  } else {
+    // fallback defensivo: mês atual - 1
+    const h = new Date();
+    mes = h.getMonth();   // 0..11 → já é "mês atual - 1" em base 1..12
+    ano = h.getFullYear();
+    if (mes === 0) { mes = 12; ano -= 1; }
+  }
+  if (modulo === 'fiscal') {
+    return montarJanelaMes(ano, mes - 1);
+  }
+  return montarJanelaMes(ano, mes);
+}
+
+/* ── Execução individual do Fiscal ───────────────────────── */
+
+async function executarFiscal() {
+  if (!api()) return semBridge();
+  const comp = janelaCompetencia('fiscal');
+  setBadge('fiscal-exec-badge', 'executando…', 'status-wait');
+  document.getElementById('btn-executar-fiscal').disabled = true;
+  atualizarProgresso(0, 'Iniciando Fiscal…');
+  const r = await api().executar_fiscal_individual({
+    data_inicio: comp.data_inicio,
+    data_fim: comp.data_fim
+  });
+  if (r && r.ok === false) {
+    toast(r.erro || 'Falha ao iniciar', 'error');
+    setBadge('fiscal-exec-badge', 'erro', 'status-wait');
+    document.getElementById('btn-executar-fiscal').disabled = false;
+  }
+}
+
+window.fiscalIndividualConcluido = function(res) {
+  const banner = document.getElementById('progresso-container');
+  if (banner) banner.remove();
+  document.getElementById('btn-executar-fiscal').disabled = false;
+  if (!res || res.ok === false) {
+    setBadge('fiscal-exec-badge', 'erro', 'status-wait');
+    const tipo = res && res.tipo === 'locked' ? 'warning' : 'error';
+    return toast(res && res.erro ? res.erro : 'Falha ao executar Fiscal.', tipo, 6000);
+  }
+  setBadge('fiscal-exec-badge', `concluído · ${res.competencia || ''}`, 'status-done');
+  document.getElementById('fiscal-exec-resumo').innerHTML =
+    `<div><b style="color:var(--color-success)">✓ Fiscal concluído</b> · veja o relatório para os contadores detalhados.</div>`;
+  toast('Fiscal executado com sucesso.', 'success');
+  carregarDashboard();
+};
+
+/* ── Variações mês a mês (substitui Estado dos módulos) ──── */
+
+async function carregarVariacoes(competencia) {
+  if (!api()) return;
+  const conteudo = document.getElementById('var-conteudo');
+  const lbl = document.getElementById('var-label');
+  try {
+    const r = await api().obter_variacoes_mes_a_mes(competencia, 8);
+    if (!r.ok) {
+      lbl.textContent = 'indisponível';
+      conteudo.innerHTML = `<span style="color:var(--color-text-light)">${r.msg || 'Não foi possível comparar'}${r.aba_atual ? '' : ' — aba do mês atual ausente'}${r.aba_anterior ? '' : ' / mês anterior ausente'}.</span>`;
+      return;
+    }
+    lbl.textContent = `${r.aba_atual} vs ${r.aba_anterior}`;
+    const tabela = (lista, sinal) => lista.length === 0
+      ? '<span style="color:var(--color-text-light)">nenhum</span>'
+      : `<table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="text-align:left;color:var(--color-text-light);border-bottom:1px solid var(--color-border)">
+            <th style="padding:6px">Código</th><th>Cliente</th>
+            <th style="text-align:right">Atual</th><th style="text-align:right">Anterior</th>
+            <th style="text-align:right">Δ</th><th style="text-align:right">Δ%</th>
+          </tr></thead>
+          <tbody>${lista.map(c => `
+            <tr style="border-bottom:1px solid var(--color-border-soft)">
+              <td style="padding:6px">${c.codigo}</td>
+              <td>${c.nome || '—'}</td>
+              <td style="text-align:right">${c.horas_atual}h</td>
+              <td style="text-align:right">${c.horas_anterior}h</td>
+              <td style="text-align:right;color:${sinal === '+' ? 'var(--color-success)' : 'var(--color-danger)'};font-weight:600">${c.delta_horas > 0 ? '+' : ''}${c.delta_horas}h</td>
+              <td style="text-align:right">${c.delta_pct > 0 ? '+' : ''}${c.delta_pct}%</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+    conteudo.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-weight:600;color:var(--color-success);margin-bottom:6px"><i class="ti ti-trending-up"></i> Top altas</div>
+          ${tabela(r.top_altas, '+')}
+        </div>
+        <div>
+          <div style="font-weight:600;color:var(--color-danger);margin-bottom:6px"><i class="ti ti-trending-down"></i> Top quedas</div>
+          ${tabela(r.top_quedas, '-')}
+        </div>
+      </div>`;
+  } catch (e) {
+    conteudo.textContent = 'Erro: ' + e;
+  }
+}
+
+/* ── Drill-down das métricas ──────────────────────────────── */
+
+function fecharDrill() {
+  document.getElementById('drill-painel').style.display = 'none';
+}
+
+function abrirDrill(tipo) {
+  const d = window._ultimoDashboard;
+  if (!d || !d.drill) return;
+  const painel = document.getElementById('drill-painel');
+  const titulo = document.getElementById('drill-titulo');
+  const conteudo = document.getElementById('drill-conteudo');
+  painel.style.display = '';
+
+  if (tipo === 'pendencias') {
+    const lista = d.drill.pendencias || [];
+    titulo.innerHTML = `<i class="ti ti-alert-triangle" style="color:var(--color-danger)"></i> Pendências (${lista.length})`;
+    if (!lista.length) {
+      conteudo.innerHTML = '<span style="color:var(--color-text-light)">Nenhuma linha com menos de 2 campos identificadores.</span>';
+    } else {
+      conteudo.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="text-align:left;color:var(--color-text-light);border-bottom:1px solid var(--color-border)">
+            <th style="padding:6px">Linha</th><th>Código</th><th>Nome</th><th>CNPJ</th><th>Campos</th>
+          </tr></thead>
+          <tbody>${lista.map(p => `
+            <tr style="border-bottom:1px solid var(--color-border-soft)">
+              <td style="padding:6px">${p.linha}</td>
+              <td>${p.codigo || '<i style="color:var(--color-text-light)">—</i>'}</td>
+              <td>${p.nome || '<i style="color:var(--color-text-light)">—</i>'}</td>
+              <td>${p.cnpj || '<i style="color:var(--color-text-light)">—</i>'}</td>
+              <td><b>${p.campos_preenchidos}/3</b></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ${lista.length === 200 ? '<div style="font-size:11px;color:var(--color-text-light);margin-top:8px">Mostrando primeiras 200 entradas.</div>' : ''}
+      `;
+    }
+  } else if (tipo === 'cnpj_dup') {
+    const lista = d.drill.cnpj_dup || [];
+    titulo.innerHTML = `<i class="ti ti-copy" style="color:var(--color-warning)"></i> CNPJs duplicados (${lista.length})`;
+    if (!lista.length) {
+      conteudo.innerHTML = '<span style="color:var(--color-text-light)">Nenhum CNPJ duplicado.</span>';
+    } else {
+      conteudo.innerHTML = lista.map(g => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--color-border-soft)">
+          <div style="font-weight:600">CNPJ <code>${g.cnpj}</code> · ${g.ocorrencias.length} ocorrências</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
+            <thead><tr style="color:var(--color-text-light);text-align:left">
+              <th style="padding:4px">Linha</th><th>Código</th><th>Nome</th>
+            </tr></thead>
+            <tbody>${g.ocorrencias.map(o => `
+              <tr><td style="padding:4px">${o.linha}</td><td>${o.codigo}</td><td>${o.nome}</td></tr>
+            `).join('')}</tbody>
+          </table>
+        </div>
+      `).join('');
+    }
+  } else if (tipo === 'codigo_dup') {
+    const lista = d.drill.codigo_dup || [];
+    titulo.innerHTML = `<i class="ti ti-copy" style="color:var(--color-warning)"></i> Códigos duplicados (${lista.length})`;
+    if (!lista.length) {
+      conteudo.innerHTML = '<span style="color:var(--color-text-light)">Nenhum código duplicado.</span>';
+    } else {
+      conteudo.innerHTML = lista.map(g => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--color-border-soft)">
+          <div style="font-weight:600">Código <code>${g.codigo}</code> · ${g.ocorrencias.length} ocorrências</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
+            <thead><tr style="color:var(--color-text-light);text-align:left">
+              <th style="padding:4px">Linha</th><th>Nome</th><th>CNPJ</th>
+            </tr></thead>
+            <tbody>${g.ocorrencias.map(o => `
+              <tr><td style="padding:4px">${o.linha}</td><td>${o.nome}</td><td>${o.cnpj}</td></tr>
+            `).join('')}</tbody>
+          </table>
+        </div>
+      `).join('');
+    }
+  }
+  painel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+/* ── Gráficos do Dashboard (Chart.js) ─────────────────────── */
+const _graficos = {};  // id → instância Chart para destruir antes de re-render
+
+function _destroyChart(id) {
+  if (_graficos[id]) {
+    try { _graficos[id].destroy(); } catch (e) {}
+    delete _graficos[id];
+  }
+}
+
+const _CORES = {
+  fiscal:   '#185FA5',
+  contabil: '#3B6D11',
+  dp:       '#B06A00',
+  neutro:   '#94a3b8',
+  grade:    '#e2e8f0',
+};
+
+function _fmtH(horas) {
+  // Formata horas decimais como "Xh YYmin" curto
+  if (horas == null) return '—';
+  const sinal = horas < 0 ? '-' : '';
+  const abs = Math.abs(horas);
+  const h = Math.floor(abs);
+  const m = Math.round((abs - h) * 60);
+  if (h === 0) return `${sinal}${m}min`;
+  if (m === 0) return `${sinal}${h}h`;
+  return `${sinal}${h}h ${m}min`;
+}
+
+function renderizarGraficos(d) {
+  if (typeof Chart === 'undefined') return;  // CDN ainda carregando
+
+  // 1) Donut — horas totais por setor
+  _destroyChart('setores');
+  const hs = d.horas_por_setor || {fiscal: 0, contabil: 0, dp: 0};
+  const total = (hs.fiscal || 0) + (hs.contabil || 0) + (hs.dp || 0);
+  _graficos.setores = new Chart(document.getElementById('graf-setores'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Fiscal', 'Contábil', 'DP'],
+      datasets: [{
+        data: [hs.fiscal || 0, hs.contabil || 0, hs.dp || 0],
+        backgroundColor: [_CORES.fiscal, _CORES.contabil, _CORES.dp],
+        borderWidth: 2, borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 11} } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${_fmtH(ctx.parsed)}` } }
+      }
+    }
+  });
+  const elTotal = document.getElementById('graf-setores-total');
+  if (elTotal) elTotal.textContent = total > 0 ? 'Total: ' + _fmtH(total) : '';
+
+  // 2) Barras verticais — distribuição por faixa de horas
+  _destroyChart('distribuicao');
+  const dist = d.distribuicao || [];
+  _graficos.distribuicao = new Chart(document.getElementById('graf-distribuicao'), {
+    type: 'bar',
+    data: {
+      labels: dist.map(x => x.faixa),
+      datasets: [{
+        label: 'clientes',
+        data: dist.map(x => x.qtd),
+        backgroundColor: _CORES.fiscal,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: _CORES.grade }, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  // 3) Top 10 — barras horizontais empilhadas (breakdown por setor)
+  _destroyChart('top_clientes');
+  const top = d.top_clientes || [];
+  _graficos.top_clientes = new Chart(document.getElementById('graf-top-clientes'), {
+    type: 'bar',
+    data: {
+      labels: top.map(c => `${c.codigo} · ${c.nome}`),
+      datasets: [
+        { label: 'Fiscal',   data: top.map(c => c.horas_fiscal),   backgroundColor: _CORES.fiscal,   stack: 's' },
+        { label: 'Contábil', data: top.map(c => c.horas_contabil), backgroundColor: _CORES.contabil, stack: 's' },
+        { label: 'DP',       data: top.map(c => c.horas_dp),       backgroundColor: _CORES.dp,       stack: 's' },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 11} } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${_fmtH(ctx.parsed.x)}` } }
+      },
+      scales: {
+        x: { stacked: true, beginAtZero: true, grid: { color: _CORES.grade },
+             ticks: { callback: v => v + 'h' } },
+        y: { stacked: true, grid: { display: false }, ticks: { font: {size: 11} } }
+      }
+    }
+  });
+
+  // 4) Preenchimento por setor — barras simples
+  _destroyChart('preenchimento');
+  const pr = d.preenchimento_setor || {fiscal: 0, contabil: 0, dp: 0};
+  _graficos.preenchimento = new Chart(document.getElementById('graf-preenchimento'), {
+    type: 'bar',
+    data: {
+      labels: ['Fiscal', 'Contábil', 'DP'],
+      datasets: [{
+        label: 'clientes com lançamento',
+        data: [pr.fiscal || 0, pr.contabil || 0, pr.dp || 0],
+        backgroundColor: [_CORES.fiscal, _CORES.contabil, _CORES.dp],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: _CORES.grade }, ticks: { precision: 0 } }
+      }
+    }
+  });
+}
+
+/* ── Dashboard dinâmico ──────────────────────────────────── */
+function badgeStatus(st) {
+  if (st === true)  return { cls: 'status-done', txt: 'concluído' };
+  if (st === false) return { cls: 'status-wait', txt: 'sem dados' };
+  return { cls: 'status-wait', txt: 'aguardando' };
+}
+
+window._ultimoDashboard = null;
+
+async function carregarDashboard() {
+  if (!api()) return;
+  const comp = janelaCompetencia('dp');
+  try {
+    const d = await api().obter_dashboard_completo(comp.data_inicio.slice(0,7));
+    window._ultimoDashboard = d;
+    document.getElementById('m-clientes').textContent    = d.clientes ?? '—';
+    document.getElementById('m-matches').textContent     = d.matches ?? '—';
+    document.getElementById('m-pendencias').textContent  = d.pendencias ?? '—';
+    document.getElementById('m-cnpj-dup').textContent    = d.cnpj_dup ?? '—';
+    document.getElementById('m-codigo-dup').textContent  = d.codigo_dup ?? '—';
+    const desc = document.getElementById('dashboard-desc');
+    if (desc) desc.textContent = 'visão geral · ' + comp.competencia
+      + (d.aba_usada ? ' · aba ' + d.aba_usada : '')
+      + (d.ok ? '' : ' · ' + (d.msg || 'master indisponível'));
+    const badgeAba = document.getElementById('graf-aba');
+    if (badgeAba) badgeAba.textContent = d.aba_usada || '—';
+    renderizarGraficos(d);
+  } catch (e) { /* silencioso */ }
+
+  carregarVariacoes(comp.data_inicio.slice(0,7));
+
+  try {
+    const ult = await api().obter_ultima_execucao();
+    const lista = document.getElementById('ultima-exec-lista');
+    const dataLbl = document.getElementById('ultima-exec-data');
+    if (lista) {
+      if (!ult.eventos || ult.eventos.length === 0) {
+        lista.innerHTML = '<div class="log-item"><span class="log-txt" style="color:var(--color-text-light)">Nenhuma execução registrada ainda.</span></div>';
+        if (dataLbl) dataLbl.textContent = '—';
+      } else {
+        lista.innerHTML = ult.eventos.map(ev => `
+          <div class="log-item">
+            <span class="log-time">${ev.hora}</span>
+            <span class="log-txt"><b>${ev.modulo}</b> — ${ev.msg.replace(/</g,'&lt;')}</span>
+          </div>`).join('');
+        if (dataLbl) {
+          const ultimo = ult.eventos[ult.eventos.length - 1];
+          dataLbl.textContent = `${ultimo.data} ${ultimo.hora}`;
+        }
+      }
+    }
+  } catch (e) { /* silencioso */ }
+}
+
+async function atualizarRodape() {
+  if (!api()) return;
+  try {
+    const s = await api().obter_status_geral();
+    const bdEl = document.getElementById('footer-bd');
+    if (bdEl) {
+      const dot = bdEl.querySelector('.status-dot');
+      const txt = bdEl.querySelector('span:last-child');
+      if (s.db_ultimo_teste_ok === true) {
+        dot.className = 'status-dot ok';
+        txt.textContent = `BD ${s.db_dsn || 'Domínio'}: conectado · ${s.db_ultimo_teste_em || ''}`;
+      } else if (s.db_ultimo_teste_ok === false) {
+        dot.className = 'status-dot err';
+        txt.textContent = `BD ${s.db_dsn || 'Domínio'}: falha · ${s.db_ultimo_teste_em || ''}`;
+      } else {
+        dot.className = 'status-dot';
+        txt.textContent = `BD ${s.db_dsn || 'Domínio'}: não testado`;
+      }
+    }
+    const masterEl = document.getElementById('footer-master');
+    if (masterEl) {
+      const dot = masterEl.querySelector('.status-dot');
+      const txt = masterEl.querySelector('span:last-child');
+      if (s.master_nome) {
+        dot.className = 'status-dot ok';
+        txt.textContent = 'Master: ' + s.master_nome;
+        masterEl.title = s.master_path || '';
+      } else {
+        dot.className = 'status-dot warn';
+        txt.textContent = 'Master: nenhum arquivo';
+        masterEl.title = '';
+      }
+    }
+  } catch (e) { /* silencioso */ }
+}
+
+function _formatarStatus(b) {
+  if (b === true)  return '<b style="color:var(--color-success)">✓ sim</b>';
+  if (b === false) return '<b style="color:var(--color-warning)">○ não</b>';
+  return '<span style="color:var(--color-text-light)">—</span>';
+}
+
+async function carregarRelatorio() {
+  if (!api()) {
+    document.getElementById('relatorio-resumo').textContent = 'Bridge indisponível.';
+    document.getElementById('relatorio-mds').textContent = '';
+    document.getElementById('log-conteudo').textContent = '';
+    return;
+  }
+  const compDp = janelaCompetencia('dp');
+  const compFiscal = janelaCompetencia('fiscal');
+  const lblComp = document.getElementById('relatorio-comp');
+  if (lblComp) lblComp.textContent =
+    `${compDp.competencia} (Fiscal: ${compFiscal.competencia})`;
+
+  // 1) Resumo
+  try {
+    const r = await api().obter_resumo_competencia(compDp.data_inicio);
+    const c = r.contabil || {};
+    const d = r.dp || {};
+    const ult = (r.fiscal && r.fiscal.ultimo_ciclo) || {};
+    const mods = (ult.modulos) || {};
+    document.getElementById('relatorio-resumo').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+        <div>
+          <div style="font-weight:600;color:var(--color-text-main);margin-bottom:6px">
+            <i class="ti ti-receipt-2"></i> Fiscal · ${compFiscal.competencia}
+          </div>
+          Último ciclo: ${ult.timestamp || '—'}<br>
+          Status: ${_formatarStatus(mods.fiscal)}<br>
+          <span style="color:var(--color-text-light)">Detalhes em log técnico.</span>
+        </div>
+        <div>
+          <div style="font-weight:600;color:var(--color-text-main);margin-bottom:6px">
+            <i class="ti ti-calculator"></i> Contábil · ${compDp.competencia}
+          </div>
+          F/I/O processadas: ${_formatarStatus(c.processado)} · ${c.processado_em || ''}<br>
+          Lançado na master: ${_formatarStatus(c.lancado)} · ${c.lancado_em || ''}<br>
+          Arquivo: <code style="font-size:11px">${(c.caminho || '—').slice(-50)}</code>
+        </div>
+        <div>
+          <div style="font-weight:600;color:var(--color-text-main);margin-bottom:6px">
+            <i class="ti ti-users"></i> DP · ${compDp.competencia}
+          </div>
+          Carol importada: ${_formatarStatus(d.importado)} · ${d.importado_em || ''}<br>
+          Empresas: <b>${d.total ?? '—'}</b> (com ativos: <b>${d.com_ativos ?? '—'}</b>)<br>
+          Lançado na master: ${_formatarStatus(d.lancado)} · ${d.lancado_em || ''}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    document.getElementById('relatorio-resumo').textContent = 'Erro ao carregar resumo: ' + e;
+  }
+
+  // 2) Lista de .md gerados
+  try {
+    const r = await api().listar_relatorios_md();
+    const lista = r.relatorios || [];
+    const el = document.getElementById('relatorio-mds');
+    if (!lista.length) {
+      el.innerHTML = '<span style="color:var(--color-text-light)">Nenhum relatório .md gerado ainda. Eles aparecem aqui após o Passo 2 do Contábil.</span>';
+    } else {
+      el.innerHTML = lista.map(x => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border-soft)">
+          <div>
+            <a href="javascript:void(0)" onclick="abrirRelatorioMd('${x.nome.replace(/'/g,"\\'")}')" style="color:var(--color-accent);font-weight:500;text-decoration:none">${x.nome}</a>
+            <div style="font-size:11px;color:var(--color-text-light)">${x.modificado_em} · ${x.tamanho_kb} KB</div>
+          </div>
+          <button class="btn" onclick="abrirRelatorioMd('${x.nome.replace(/'/g,"\\'")}')"><i class="ti ti-eye"></i> Abrir</button>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    document.getElementById('relatorio-mds').textContent = 'Erro: ' + e;
+  }
+
+  // 3) Erros recentes
+  try {
+    const er = await api().ler_log_erros(40);
+    const el = document.getElementById('erros-lista');
+    const cnt = document.getElementById('erros-contagem');
+    const eventos = (er && er.eventos) || [];
+    if (cnt) cnt.textContent = eventos.length === 0
+      ? 'sem registros'
+      : `${eventos.length} entrada(s) · total ${er.total_arquivo || eventos.length}`;
+    if (!eventos.length) {
+      el.innerHTML = '<span style="color:var(--color-text-light)">Nenhum erro ou aviso registrado.</span>';
+    } else {
+      const cor = lvl => lvl === 'CRITICAL' ? 'var(--color-danger)'
+                       : lvl === 'ERROR'    ? 'var(--color-danger)'
+                       : 'var(--color-warning)';
+      el.innerHTML = eventos.slice().reverse().map(ev => `
+        <div style="padding:6px 0;border-bottom:1px solid var(--color-border-soft)">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:2px">
+            <span style="font-size:10px;font-weight:700;color:${cor(ev.nivel)};text-transform:uppercase">${ev.nivel}</span>
+            <span style="font-size:10px;color:var(--color-text-light)">${ev.timestamp}</span>
+          </div>
+          <pre style="margin:0;font-size:11px;font-family:'Consolas',monospace;color:var(--color-text-main);white-space:pre-wrap;line-height:1.4">${ev.linha.replace(/</g,'&lt;')}</pre>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    document.getElementById('erros-lista').textContent = 'Erro ao ler: ' + e;
+  }
+
+  // 4) Log técnico (últimas linhas)
+  try {
+    const res = await api().ler_log();
+    const el = document.getElementById('log-conteudo');
+    const linhas = (res && res.conteudo) ? res.conteudo.split('\n') : [];
+    el.textContent = linhas.slice(-30).join('\n') || 'Log vazio.';
+  } catch (e) {
+    document.getElementById('log-conteudo').textContent = 'Erro: ' + e;
+  }
+}
+
+async function limparLogErros() {
+  if (!api()) return semBridge();
+  const r = await api().limpar_log_erros();
+  if (r && r.ok) {
+    toast('Log de erros limpo.', 'success');
+    carregarRelatorio();
+  } else {
+    toast(r && r.erro ? r.erro : 'Falha ao limpar', 'error');
+  }
+}
+
+async function abrirRelatorioMd(nome) {
+  if (!api()) return semBridge();
+  const r = await api().ler_relatorio_md(nome);
+  if (!r || r.ok === false) return toast(r && r.erro ? r.erro : 'Falha ao abrir', 'error');
+  // Substitui temporariamente o card de lista por uma visualização do .md.
+  const el = document.getElementById('relatorio-mds');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <b>${r.nome}</b>
+      <button class="btn" onclick="carregarRelatorio()"><i class="ti ti-arrow-left"></i> Voltar à lista</button>
+    </div>
+    <pre style="font-size:12px;font-family:'Consolas',monospace;white-space:pre-wrap;color:var(--color-text-main);background:#f8fafc;padding:14px;border-radius:6px;border:1px solid var(--color-border-soft);max-height:60vh;overflow:auto">${r.conteudo.replace(/</g,'&lt;')}</pre>
+  `;
+}
+function setVal(id, valor) {
+  if (valor === undefined || valor === null) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.type === 'checkbox') el.checked = !!valor;
+  else el.value = valor;
+}
+
+async function carregarParametros() {
+  if (!api()) return;
+  const cfg = await api().carregar_parametros();
+  setVal('fiscal-fator', cfg.fiscal_adicional_pct);
+  setVal('dp-fator-carga', cfg.dp_fator_carga);
+  setVal('dp-overhead-fixo', cfg.dp_overhead_fixo);
+  setVal('dp-apenas-socios', cfg.dp_apenas_socios);
+  setVal('dp-tempo-minimo', cfg.dp_tempo_minimo);
+  setVal('dp-consultoria-horas', cfg.dp_consultoria_horas);
+  setVal('db-dsn', cfg.db_dsn);
+  setVal('db-uid', cfg.db_uid);
+  setVal('db-timeout', cfg.db_timeout);
+  setVal('gov-match-min', cfg.governanca_match_minimo);
+  setVal('gov-bloquear-dup', cfg.governanca_bloquear_cnpj_dup);
+  setVal('gov-gravar-zero', cfg.governanca_gravar_zero);
+}
+
+/* ── Feedback Visual em Tempo Real (Chamado pelo Python) ── */
+window.atualizarProgresso = function(pct, label) {
+  let bar = document.getElementById('progresso-bar');
+  if (!bar) {
+    const banner = document.createElement('div');
+    banner.id = 'progresso-container';
+    banner.style.cssText = 'position:fixed;top:16px;right:24px;background:#1e293b;color:#ffffff;padding:16px 20px;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.2);z-index:9999;width:320px;border:1px solid #334155;font-family:var(--font-sans);';
+    banner.innerHTML = `
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between">
+        <span id="progresso-label">Iniciando ciclo...</span>
+        <span id="progresso-pct" style="color:#38bdf8">0%</span>
+      </div>
+      <div style="width:100%;background:#334155;height:6px;border-radius:4px;overflow:hidden">
+        <div id="progresso-bar" style="width:0%;background:#38bdf8;height:100%;transition:width 0.3s ease"></div>
+      </div>
+    `;
+    document.body.appendChild(banner);
+    bar = document.getElementById('progresso-bar');
+  }
+  
+  const elLabel = document.getElementById('progresso-label');
+  const elPct = document.getElementById('progresso-pct');
+  if (bar) bar.style.width = pct + '%';
+  if (elLabel) elLabel.innerText = label;
+  if (elPct) elPct.innerText = pct + '%';
+};
+
+window.execucaoConcluida = function(resObj) {
+  window.atualizarProgresso(100, "Processamento Concluído!");
+  setTimeout(() => {
+    const banner = document.getElementById('progresso-container');
+    if (banner) banner.remove();
+    showTab('dashboard');
+    carregarDashboard();
+    if (resObj && resObj.salvo === false) {
+      toast('Ciclo executado, mas a planilha master não foi salva. Veja o relatório.', 'warning', 5500);
+    } else {
+      toast('Ciclo concluído com sucesso.', 'success');
+    }
+  }, 800);
+};
+
+window.execucaoFalhou = function(erro) {
+  const banner = document.getElementById('progresso-container');
+  if (banner) banner.remove();
+  const tipo = (erro && erro.tipo) || 'erro';
+  const msg = (erro && erro.msg) || 'Falha desconhecida no ciclo.';
+  toast(msg, tipo === 'locked' ? 'warning' : 'error', 6500);
+};
+
+window.addEventListener('pywebviewready', async () => {
+  const autenticado = await checarLogin();
+  if (autenticado) await bootApp();
+  ['login-nome','login-senha'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+  });
+  ['troca-nova','troca-nova2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') confirmarTrocaSenha(); });
+  });
+});
+
+/* Permite popular o dropdown mesmo quando rodando fora do PyWebView (debug em browser). */
+document.addEventListener('DOMContentLoaded', () => {
+  if (!window.pywebview) {
+    popularCompetencias(12);
+    document.getElementById('login-overlay').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>

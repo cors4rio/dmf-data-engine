@@ -73,3 +73,8 @@ desktop.ini
 relatorio_*.md
 calculos_*.md
 qtdlancamento*.md
+
+# Rascunhos, scripts locais temporários e arquivos de execução
+scratch/
+skills/
+log_execucao.md
