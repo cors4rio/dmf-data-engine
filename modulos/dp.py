@@ -103,7 +103,8 @@ def extrair_e_preencher_dp(writer, data_inicio, data_fim, fator_carga=0.33, over
 
 def _ler_dp_nao(consultoria_horas=1.5):
     """Lê a lista de exceções do DP NÃO."""
-    arquivo = os.path.join("config", "nao_faz_setor", "DP_NAO.txt")
+    from modulos.excecoes import caminho_excecao
+    arquivo = caminho_excecao("dp")
     excecoes = {}
     if os.path.exists(arquivo):
         with open(arquivo, 'r', encoding='utf-8', errors='ignore') as f:

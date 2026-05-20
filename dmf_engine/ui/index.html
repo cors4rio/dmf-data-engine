@@ -328,16 +328,15 @@
     <!-- LOGIN -->
     <div id="login-form">
       <label>Usuário</label>
-      <input type="text" id="login-nome" autocomplete="username" autofocus placeholder="ex: nayane">
+      <input type="text" id="login-nome" autocomplete="username" autofocus>
       <label>Senha</label>
       <input type="password" id="login-senha" autocomplete="current-password">
       <div class="erro" id="login-erro"></div>
       <button class="login-btn" onclick="fazerLogin()">Entrar</button>
       <div class="link-alt">
-        <span style="color:var(--color-text-light)">
-          5 contas pré-cadastradas: carol, james, nayane, jailton, adriele.<br>
-          Primeiro acesso: senha = nome do usuário.
-        </span>
+        <a onclick="abrirGuiaUso()" style="cursor:pointer">
+          <i class="ti ti-book-2"></i> Guia de uso
+        </a>
       </div>
     </div>
 
@@ -433,6 +432,7 @@
         </div>
         <div id="footer-bd"><span class="status-dot"></span><span>BD Domínio: não testado</span></div>
         <div id="footer-master"><span class="status-dot"></span><span>Master: nenhum arquivo</span></div>
+        <div id="footer-lock" style="display:none"><span class="status-dot warn"></span><span id="footer-lock-text">—</span></div>
       </div>
     </aside>
 
@@ -997,6 +997,18 @@ function atualizarLabelsFiscal() {
 /* ── Bridge com PyWebView ────────────────────────────────── */
 const api = () => window.pywebview && window.pywebview.api;
 
+/* ── Link externo do Guia de Uso ──────────────────────────── */
+async function abrirGuiaUso() {
+  if (api() && api().abrir_guia_uso) {
+    await api().abrir_guia_uso();
+  } else {
+    window.open(
+      'https://any.coop/AAKr8LpD6zoPuFhRs2EXVjQQEVdcaqM2JW8XPhRpS9JjL4FV/guia-de-uso-controle-de-horas-dmf',
+      '_blank'
+    );
+  }
+}
+
 /* ── Autenticação ────────────────────────────────────────── */
 
 window._sessao = null;  // {nome, label, papel, maquina}
@@ -1395,9 +1407,13 @@ async function injetarDpMaster() {
     data_fim: comp.data_fim
   });
   if (r && r.ok === false) {
-    setBadge('dp-passo2-badge', 'erro', 'status-wait');
+    const tipo = r.tipo === 'locked_concorrente' ? 'warning' : 'error';
+    setBadge('dp-passo2-badge',
+      r.tipo === 'locked_concorrente' ? 'em uso por outro' : 'erro',
+      'status-wait');
     document.getElementById('btn-injetar-dp').disabled = false;
-    toast(r.erro || 'Falha ao iniciar', 'error');
+    toast(r.erro || 'Falha ao iniciar', tipo, 7000);
+    document.getElementById('progresso-container')?.remove();
   }
 }
 
@@ -1591,9 +1607,13 @@ async function injetarContabilMaster() {
     data_fim: comp.data_fim
   });
   if (r && r.ok === false) {
-    toast(r.erro || 'Falha ao iniciar', 'error');
-    setBadge('passo3-badge', 'erro', 'status-wait');
+    const tipo = r.tipo === 'locked_concorrente' ? 'warning' : 'error';
+    toast(r.erro || 'Falha ao iniciar', tipo, 7000);
+    setBadge('passo3-badge',
+      r.tipo === 'locked_concorrente' ? 'em uso por outro' : 'erro',
+      'status-wait');
     document.getElementById('btn-injetar-master').disabled = false;
+    document.getElementById('progresso-container')?.remove();
   }
 }
 
@@ -1772,9 +1792,13 @@ async function executarFiscal() {
     data_fim: comp.data_fim
   });
   if (r && r.ok === false) {
-    toast(r.erro || 'Falha ao iniciar', 'error');
-    setBadge('fiscal-exec-badge', 'erro', 'status-wait');
+    const tipo = r.tipo === 'locked_concorrente' ? 'warning' : 'error';
+    toast(r.erro || 'Falha ao iniciar', tipo, 7000);
+    setBadge('fiscal-exec-badge',
+      r.tipo === 'locked_concorrente' ? 'em uso por outro' : 'erro',
+      'status-wait');
     document.getElementById('btn-executar-fiscal').disabled = false;
+    document.getElementById('progresso-container')?.remove();
   }
 }
 
@@ -2116,6 +2140,22 @@ async function carregarDashboard() {
 
 async function atualizarRodape() {
   if (!api()) return;
+  // Indicador de lock concorrente (master em uso por outro)
+  try {
+    const lk = await api().obter_lock_master();
+    const div = document.getElementById('footer-lock');
+    const txt = document.getElementById('footer-lock-text');
+    if (lk && lk.lock) {
+      const sessaoNome = (window._sessao && window._sessao.nome) || null;
+      const ehMeu = sessaoNome && lk.lock.usuario === sessaoNome;
+      div.style.display = '';
+      txt.textContent = ehMeu
+        ? `master em uso por você (${lk.lock.modulo})`
+        : `master em uso · ${lk.lock.usuario} (${lk.lock.modulo})`;
+    } else {
+      div.style.display = 'none';
+    }
+  } catch (e) { /* silencioso */ }
   try {
     const s = await api().obter_status_geral();
     const bdEl = document.getElementById('footer-bd');
@@ -2174,33 +2214,32 @@ async function carregarRelatorio() {
     const r = await api().obter_resumo_competencia(compDp.data_inicio);
     const c = r.contabil || {};
     const d = r.dp || {};
-    const ult = (r.fiscal && r.fiscal.ultimo_ciclo) || {};
-    const mods = (ult.modulos) || {};
+    const f = r.fiscal || {};
+    const fmtPor = p => p ? `<span style="color:var(--color-text-light)">por ${p}</span>` : '';
     document.getElementById('relatorio-resumo').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
         <div>
           <div style="font-weight:600;color:var(--color-text-main);margin-bottom:6px">
             <i class="ti ti-receipt-2"></i> Fiscal · ${compFiscal.competencia}
           </div>
-          Último ciclo: ${ult.timestamp || '—'}<br>
-          Status: ${_formatarStatus(mods.fiscal)}<br>
-          <span style="color:var(--color-text-light)">Detalhes em log técnico.</span>
+          Lançado na master: ${_formatarStatus(f.lancado)} · ${f.lancado_em || ''}<br>
+          ${fmtPor(f.lancado_por)}
         </div>
         <div>
           <div style="font-weight:600;color:var(--color-text-main);margin-bottom:6px">
             <i class="ti ti-calculator"></i> Contábil · ${compDp.competencia}
           </div>
-          F/I/O processadas: ${_formatarStatus(c.processado)} · ${c.processado_em || ''}<br>
-          Lançado na master: ${_formatarStatus(c.lancado)} · ${c.lancado_em || ''}<br>
-          Arquivo: <code style="font-size:11px">${(c.caminho || '—').slice(-50)}</code>
+          F/I/O processadas: ${_formatarStatus(c.processado)} · ${c.processado_em || ''} ${fmtPor(c.processado_por)}<br>
+          Lançado na master: ${_formatarStatus(c.lancado)} · ${c.lancado_em || ''} ${fmtPor(c.lancado_por)}<br>
+          <code style="font-size:11px">${(c.caminho || '—').slice(-50)}</code>
         </div>
         <div>
           <div style="font-weight:600;color:var(--color-text-main);margin-bottom:6px">
             <i class="ti ti-users"></i> DP · ${compDp.competencia}
           </div>
-          Carol importada: ${_formatarStatus(d.importado)} · ${d.importado_em || ''}<br>
+          Carol importada: ${_formatarStatus(d.importado)} · ${d.importado_em || ''} ${fmtPor(d.importado_por)}<br>
           Empresas: <b>${d.total ?? '—'}</b> (com ativos: <b>${d.com_ativos ?? '—'}</b>)<br>
-          Lançado na master: ${_formatarStatus(d.lancado)} · ${d.lancado_em || ''}
+          Lançado na master: ${_formatarStatus(d.lancado)} · ${d.lancado_em || ''} ${fmtPor(d.lancado_por)}
         </div>
       </div>
     `;

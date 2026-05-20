@@ -13,14 +13,27 @@ import logging
 import traceback
 from datetime import datetime, timedelta
 
-# Resolve o diretório base (funciona tanto em dev quanto empacotado via PyInstaller)
+# Fix para o ícone na barra de tarefas do Windows
+if platform.system() == "Windows":
+    import ctypes
+    try:
+        myappid = "dmf.engine.app.1"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    except Exception:
+        pass
+
+# Resolve diretórios:
+#   BASE_DIR      → escrita (logs, config.json, supervisores.json) — ao lado do .exe em frozen
+#   RESOURCES_DIR → leitura de assets empacotados (HTML, .ico) — dentro de _internal em frozen
+#   PROJECT_ROOT  → raiz para importar engine/ e modulos/
 if getattr(sys, "frozen", False):
     BASE_DIR = os.path.dirname(sys.executable)
+    RESOURCES_DIR = os.path.join(sys._MEIPASS, "dmf_engine")
+    PROJECT_ROOT = BASE_DIR
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Adiciona a raiz do projeto ao path para importar engine/ e modulos/
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
+    RESOURCES_DIR = BASE_DIR
+    PROJECT_ROOT = os.path.dirname(BASE_DIR)
 sys.path.insert(0, PROJECT_ROOT)
 
 from engine.database import db
@@ -31,6 +44,8 @@ from modulos.contabil_integrador import injetar_contabil_na_master
 from modulos.excecoes import caminho_excecao, ler_codigos_setor, metadados_setor, PASTA as PASTA_EXCECOES
 from engine.master_writer import MasterWriter
 from engine.onedrive_helper import esta_online_only, forcar_download
+from engine.lock_master import adquirir_lock, liberar_lock, verificar_lock
+from engine import estado_compartilhado as estado_sh
 from dmf_engine import auth as auth_mod
 
 _log_geral = logging.FileHandler(os.path.join(BASE_DIR, "dmf_engine.log"), encoding="utf-8")
@@ -116,6 +131,18 @@ class Api:
 
     def verificar_estado_login(self):
         return {"sessao": self._sessao}
+
+    def abrir_guia_uso(self):
+        """Abre o guia de uso no navegador padrão (fora da janela do app)."""
+        import webbrowser
+        url = ("https://any.coop/AAKr8LpD6zoPuFhRs2EXVjQQEVdcaqM2JW8XPhRpS9JjL4FV/"
+               "guia-de-uso-controle-de-horas-dmf")
+        try:
+            webbrowser.open(url, new=2)
+            return {"ok": True}
+        except Exception as e:
+            logging.error(f"[GUIA] Falha ao abrir navegador: {e}")
+            return {"ok": False, "erro": str(e)}
 
     def login(self, nome, senha):
         r = auth_mod.autenticar(BASE_DIR, nome, senha)
@@ -321,6 +348,16 @@ class Api:
                 progresso(95, "Finalizando...")
                 if resultado.get("ok"):
                     competencia = data_inicio[:7]
+                    cfg_atual = self._ler_config()
+                    master_path_estado = cfg_atual.get("master_path") or os.path.join(
+                        PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm"
+                    )
+                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
+                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    estado_sh.marcar(master_path_estado, "contabil", competencia,
+                                     "processado", por=usuario_atual, host=host_atual)
+                    estado_sh.remover(master_path_estado, "contabil", competencia, evento="lancado")
+                    # Mantém também no config local por compatibilidade com instalações em transição
                     self.salvar_parametros({
                         f"contabil_processado_{competencia}": True,
                         f"contabil_processado_em_{competencia}": datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -361,6 +398,11 @@ class Api:
             return {"ok": False, "erro": "Planilha HORAS CONTABEIS não encontrada."}
         if not os.path.exists(master_path):
             return {"ok": False, "erro": "Planilha master não encontrada."}
+
+        usuario, host = self._id_usuario_host()
+        ok_lock, info_lock = adquirir_lock(master_path, usuario, host, "Contábil (lançamento)")
+        if not ok_lock:
+            return self._erro_lock_alheio(info_lock)
 
         def _run():
             def progresso(pct, label):
@@ -410,6 +452,10 @@ class Api:
 
                 if resultado.get("ok"):
                     competencia = data_inicio[:7]
+                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
+                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    estado_sh.marcar(master_path, "contabil", competencia,
+                                     "lancado", por=usuario_atual, host=host_atual)
                     self.salvar_parametros({
                         f"contabil_lancado_{competencia}": True,
                         f"contabil_lancado_em_{competencia}": datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -427,20 +473,28 @@ class Api:
                         + json.dumps({"ok": False, "erro": str(e)})
                         + ")"
                     )
+            finally:
+                liberar_lock(master_path, usuario, host)
 
         threading.Thread(target=_run, daemon=True).start()
         return {"ok": True, "msg": "Lançamento iniciado em background."}
 
     def obter_estado_contabil(self, data_inicio):
-        """Retorna estado persistente da competência (processado / lançado)."""
+        """Retorna estado persistente da competência (processado / lançado).
+        Lê o estado compartilhado no OneDrive (visível para todos) e cai no
+        config local como fallback de compatibilidade."""
         cfg = self._ler_config()
         comp = (data_inicio or "")[:7]
+        master_path = cfg.get("master_path") or os.path.join(PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm")
+        sh = estado_sh.obter(master_path, "contabil", comp)
         return {
             "competencia": comp,
-            "processado": bool(cfg.get(f"contabil_processado_{comp}")),
-            "processado_em": cfg.get(f"contabil_processado_em_{comp}"),
-            "lancado": bool(cfg.get(f"contabil_lancado_{comp}")),
-            "lancado_em": cfg.get(f"contabil_lancado_em_{comp}"),
+            "processado": bool(sh.get("processado")) or bool(cfg.get(f"contabil_processado_{comp}")),
+            "processado_em": (sh.get("processado") or {}).get("em") or cfg.get(f"contabil_processado_em_{comp}"),
+            "processado_por": (sh.get("processado") or {}).get("por"),
+            "lancado": bool(sh.get("lancado")) or bool(cfg.get(f"contabil_lancado_{comp}")),
+            "lancado_em": (sh.get("lancado") or {}).get("em") or cfg.get(f"contabil_lancado_em_{comp}"),
+            "lancado_por": (sh.get("lancado") or {}).get("por"),
             "caminho": cfg.get("contabil_origem_path"),
         }
 
@@ -549,6 +603,32 @@ class Api:
 
     # ── Execução individual Fiscal ──────────────────────────────
 
+    def _id_usuario_host(self):
+        """Retorna (usuario, host) da sessão atual para uso no lock."""
+        if not self._sessao:
+            return None, None
+        return self._sessao.get("nome"), self._sessao.get("maquina") or auth_mod.identificar_maquina()
+
+    def _erro_lock_alheio(self, info_lock):
+        """Monta mensagem padronizada quando o lock pertence a outro usuário."""
+        return {
+            "ok": False, "tipo": "locked_concorrente",
+            "erro": (f"A planilha master está sendo usada por {info_lock.get('usuario', '?')} "
+                     f"({info_lock.get('modulo', '?')}) desde {info_lock.get('iniciado_em', '?')}. "
+                     f"Aguarde ele(a) terminar (máx. 5 min)."),
+            "lock": info_lock,
+        }
+
+    def obter_lock_master(self):
+        """Para a UI consultar quem (se alguém) está com a master agora."""
+        cfg = self._ler_config()
+        master_path = cfg.get("master_path") or os.path.join(
+            PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm"
+        )
+        if not os.path.exists(master_path):
+            return {"lock": None}
+        return {"lock": verificar_lock(master_path)}
+
     def executar_fiscal_individual(self, opcoes=None):
         """Roda apenas o módulo Fiscal na janela informada (ou mês_atual - 2)."""
         if not self._autorizado("fiscal"):
@@ -564,6 +644,11 @@ class Api:
             return {"ok": False, "erro": "Competência ausente."}
         if not os.path.exists(master_path):
             return {"ok": False, "erro": "Planilha master não encontrada."}
+
+        usuario, host = self._id_usuario_host()
+        ok_lock, info_lock = adquirir_lock(master_path, usuario, host, "Fiscal")
+        if not ok_lock:
+            return self._erro_lock_alheio(info_lock)
 
         def _run():
             def progresso(pct, label):
@@ -615,6 +700,11 @@ class Api:
                             {"ok": False, **writer.ultimo_erro}) + ")")
                     return
 
+                if ok:
+                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
+                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    estado_sh.marcar(master_path, "fiscal", data_inicio[:7], "lancado",
+                                     por=usuario_atual, host=host_atual)
                 progresso(100, "Concluído.")
                 if window: window.evaluate_js(
                     "window.fiscalIndividualConcluido(" + json.dumps(
@@ -624,6 +714,8 @@ class Api:
                 if window: window.evaluate_js(
                     "window.fiscalIndividualConcluido(" + json.dumps(
                         {"ok": False, "erro": str(e)}) + ")")
+            finally:
+                liberar_lock(master_path, usuario, host)
 
         threading.Thread(target=_run, daemon=True).start()
         return {"ok": True, "msg": "Execução iniciada em background."}
@@ -668,6 +760,16 @@ class Api:
         sem_ativos = total_empresas - com_ativos
 
         competencia = data_inicio[:7]
+        cfg_now = self._ler_config()
+        master_path_estado = cfg_now.get("master_path") or os.path.join(
+            PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm"
+        )
+        usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
+        host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+        estado_sh.marcar(master_path_estado, "dp", competencia, "carol_importada",
+                         por=usuario_atual, host=host_atual,
+                         total=total_empresas, com_ativos=com_ativos)
+        estado_sh.remover(master_path_estado, "dp", competencia, evento="lancado")
         self.salvar_parametros({
             f"dp_carol_path_{competencia}": caminho,
             f"dp_carol_importado_{competencia}": True,
@@ -708,6 +810,11 @@ class Api:
         )
         if not os.path.exists(master_path):
             return {"ok": False, "erro": "Planilha master não encontrada."}
+
+        usuario, host = self._id_usuario_host()
+        ok_lock, info_lock = adquirir_lock(master_path, usuario, host, "DP")
+        if not ok_lock:
+            return self._erro_lock_alheio(info_lock)
 
         def _run():
             def progresso(pct, label):
@@ -761,6 +868,10 @@ class Api:
                     return
 
                 if ok:
+                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
+                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    estado_sh.marcar(master_path, "dp", competencia, "lancado",
+                                     por=usuario_atual, host=host_atual)
                     self.salvar_parametros({
                         f"dp_lancado_{competencia}": True,
                         f"dp_lancado_em_{competencia}": datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -775,38 +886,67 @@ class Api:
                 if window: window.evaluate_js(
                     "window.dpFase2Concluido(" + json.dumps(
                         {"ok": False, "erro": str(e)}) + ")")
+            finally:
+                liberar_lock(master_path, usuario, host)
 
         threading.Thread(target=_run, daemon=True).start()
         return {"ok": True, "msg": "Execução iniciada em background."}
 
     def obter_estado_dp(self, data_inicio):
-        """Estado persistente do fluxo DP para a competência."""
+        """Estado persistente do fluxo DP para a competência.
+        Combina estado compartilhado (visível para todos) + caminho local da Carol."""
         cfg = self._ler_config()
         comp = (data_inicio or "")[:7]
+        master_path = cfg.get("master_path") or os.path.join(PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm")
+        sh = estado_sh.obter(master_path, "dp", comp)
+        carol = sh.get("carol_importada") or {}
+        lancado = sh.get("lancado") or {}
         return {
             "competencia": comp,
-            "importado": bool(cfg.get(f"dp_carol_importado_{comp}")),
-            "importado_em": cfg.get(f"dp_carol_importado_em_{comp}"),
+            "importado": bool(carol) or bool(cfg.get(f"dp_carol_importado_{comp}")),
+            "importado_em": carol.get("em") or cfg.get(f"dp_carol_importado_em_{comp}"),
+            "importado_por": carol.get("por"),
+            # `caminho` continua local — cada máquina pode ter a Carol em local diferente
             "caminho": cfg.get(f"dp_carol_path_{comp}"),
-            "total": cfg.get(f"dp_carol_total_{comp}"),
-            "com_ativos": cfg.get(f"dp_carol_com_ativos_{comp}"),
-            "lancado": bool(cfg.get(f"dp_lancado_{comp}")),
-            "lancado_em": cfg.get(f"dp_lancado_em_{comp}"),
+            "total": carol.get("total") or cfg.get(f"dp_carol_total_{comp}"),
+            "com_ativos": carol.get("com_ativos") or cfg.get(f"dp_carol_com_ativos_{comp}"),
+            "lancado": bool(lancado) or bool(cfg.get(f"dp_lancado_{comp}")),
+            "lancado_em": lancado.get("em") or cfg.get(f"dp_lancado_em_{comp}"),
+            "lancado_por": lancado.get("por"),
+        }
+
+    def obter_estado_fiscal(self, data_inicio):
+        """Estado de lançamento do Fiscal por competência."""
+        cfg = self._ler_config()
+        master_path = cfg.get("master_path") or os.path.join(PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm")
+        comp = (data_inicio or "")[:7]
+        sh = estado_sh.obter(master_path, "fiscal", comp)
+        lancado = sh.get("lancado") or {}
+        return {
+            "competencia": comp,
+            "lancado": bool(lancado),
+            "lancado_em": lancado.get("em"),
+            "lancado_por": lancado.get("por"),
         }
 
     # ── Relatório consolidado ───────────────────────────────────
 
     def obter_resumo_competencia(self, data_inicio):
-        """Resumo consolidado da competência: estado de cada módulo."""
-        cfg = self._ler_config()
+        """Resumo consolidado da competência: estado de cada módulo
+        (visível para todos os supervisores via estado compartilhado)."""
         comp = (data_inicio or "")[:7]
+        # Fiscal usa janela -1 da competência alvo
+        try:
+            ano_f, mes_f = int(comp[:4]), int(comp[5:7]) - 1
+            if mes_f == 0:
+                mes_f, ano_f = 12, ano_f - 1
+            comp_fiscal = f"{ano_f}-{mes_f:02d}"
+        except Exception:
+            comp_fiscal = comp
         return {
             "competencia": comp,
-            "fiscal": {
-                # Fiscal é executado direto, sem gate; não há flag dedicada — o último
-                # ciclo registrado serve como referência.
-                "ultimo_ciclo": self.obter_estado_modulos(),
-            },
+            "competencia_fiscal": comp_fiscal,
+            "fiscal": self.obter_estado_fiscal(f"{comp_fiscal}-01"),
             "contabil": self.obter_estado_contabil(data_inicio),
             "dp": self.obter_estado_dp(data_inicio),
         }
@@ -1460,7 +1600,7 @@ api = Api()
 
 window = webview.create_window(
     title="DMF Engine — Automação de Horas",
-    url=os.path.join(BASE_DIR, "ui", "index.html"),
+    url=os.path.join(RESOURCES_DIR, "ui", "index.html"),
     js_api=api,
     width=1100,
     height=720,
@@ -1469,4 +1609,4 @@ window = webview.create_window(
 )
 
 if __name__ == "__main__":
-    webview.start(debug=False)
+    webview.start(debug=False, icon=os.path.join(RESOURCES_DIR, "ui", "logo.ico"))

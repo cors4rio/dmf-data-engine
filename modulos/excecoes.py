@@ -12,9 +12,19 @@ descritivos como ' LTDA', '1:30' ou anotações são ignorados pelo parser).
 
 import os
 import re
+import sys
 import logging
 
-PASTA = os.path.join("config", "nao_faz_setor")
+def _resolver_pasta():
+    """Resolve a pasta de exceções tanto em dev quanto após PyInstaller.
+    Em frozen: ao lado do .exe. Em dev: 1 nível acima de modulos/."""
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, "config", "nao_faz_setor")
+
+PASTA = _resolver_pasta()
 NOMES = {
     "dp": "DP_NAO.txt",
     "contabil": "CONTABIL_NAO.txt",
