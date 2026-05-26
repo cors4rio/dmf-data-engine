@@ -29,16 +29,35 @@ def _caminho_lock(caminho_master):
 
 
 def _ler_lock(caminho_master):
-    """Retorna dict do lock, ou None se ausente / inválido / expirado."""
+    """Retorna dict do lock, ou None se ausente / inválido / expirado.
+
+    B06: validação dupla contra clock skew entre máquinas (OneDrive):
+      1. mtime do arquivo (visto localmente em todas as máquinas com o mesmo offset
+         relativo) — se mais antigo que LOCK_TIMEOUT + margem, descarta.
+      2. `expira_em` ISO interno — protege contra mtime alterado por OneDrive sync.
+    Lock é considerado expirado se QUALQUER um dos dois disser que expirou.
+    """
     p = _caminho_lock(caminho_master)
     if not os.path.exists(p):
         return None
     try:
+        # Check 1: mtime do arquivo (resistente a clock skew, sensível a OneDrive sync delay)
+        try:
+            idade_segundos = time.time() - os.path.getmtime(p)
+            limite = LOCK_TIMEOUT_MINUTOS * 60 + 60  # +60s de margem para skew
+            if idade_segundos > limite:
+                logging.info(f"[LOCK] Lock descartado por idade do arquivo "
+                             f"({idade_segundos:.0f}s > {limite}s) em {p}.")
+                return None
+        except OSError:
+            pass  # se mtime falhar, cai no check ISO
+
         with open(p, encoding="utf-8") as f:
             data = json.load(f)
+
+        # Check 2: timestamp ISO interno (resistente a alterações de mtime pelo OneDrive)
         expira = datetime.fromisoformat(data["expira_em"])
         if datetime.now() >= expira:
-            # Lock expirou — considera como inexistente
             logging.info(f"[LOCK] Lock expirado encontrado em {p} (de {data.get('usuario')}). Ignorando.")
             return None
         return data

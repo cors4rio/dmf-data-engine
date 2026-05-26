@@ -78,3 +78,15 @@ qtdlancamento*.md
 scratch/
 skills/
 log_execucao.md
+
+# Backups gerados pelo editor / ferramentas
+*.bak
+*.bak2
+
+# Documentos de trabalho / sessões de análise
+AUDITORIA_*.md
+ESTUDO_*.md
+DMF_DESIGN_SYSTEM.md
+DMF_UI_SPEC.md
+DOC_TECNICA.md
+"DMF Platform*.html"

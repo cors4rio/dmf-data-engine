@@ -10,8 +10,10 @@ import sys
 import platform
 import threading
 import logging
+from logging.handlers import RotatingFileHandler
 import traceback
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 # Fix para o ícone na barra de tarefas do Windows
 if platform.system() == "Windows":
@@ -48,12 +50,21 @@ from engine.lock_master import adquirir_lock, liberar_lock, verificar_lock
 from engine import estado_compartilhado as estado_sh
 from dmf_engine import auth as auth_mod
 
-_log_geral = logging.FileHandler(os.path.join(BASE_DIR, "dmf_engine.log"), encoding="utf-8")
+# B09: RotatingFileHandler em vez de FileHandler — impede crescimento ilimitado.
+# 10MB por arquivo × 5 backups = 50MB máximo por handler. Suficiente para meses
+# de operação dos 5 supervisores, e ler_log() não fica lento com arquivo gigante.
+_log_geral = RotatingFileHandler(
+    os.path.join(BASE_DIR, "dmf_engine.log"),
+    maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8",
+)
 _log_geral.setLevel(logging.INFO)
 _log_geral.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
 
 # Handler dedicado a WARNING/ERROR/CRITICAL para facilitar depuração.
-_log_erros = logging.FileHandler(os.path.join(BASE_DIR, "dmf_engine_errors.log"), encoding="utf-8")
+_log_erros = RotatingFileHandler(
+    os.path.join(BASE_DIR, "dmf_engine_errors.log"),
+    maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8",
+)
 _log_erros.setLevel(logging.WARNING)
 _log_erros.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s · %(message)s"))
 
@@ -95,6 +106,32 @@ CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 window = None
 
 
+# B08: serializador JSON robusto contra tipos não-padrão.
+# Usar SEMPRE para resultados que vão para window.evaluate_js (que recebem o JSON
+# embutido na string JS executada). datetime/timedelta/Decimal/bytes/set quebravam
+# json.dumps puro com TypeError, e o except Exception engolia o erro → callback JS
+# nunca era invocada → UI travava em spinner indefinidamente.
+def _json_default(o):
+    """Converte tipos não-serializáveis em representações JSON-safe."""
+    if isinstance(o, datetime):
+        return o.isoformat()
+    if isinstance(o, timedelta):
+        return str(o)  # ex: "0:30:00"
+    if isinstance(o, Decimal):
+        return float(o)
+    if isinstance(o, bytes):
+        return o.decode("utf-8", errors="replace")
+    if isinstance(o, set):
+        return list(o)
+    # Último recurso: força string. Garante que NUNCA propaga TypeError.
+    return str(o)
+
+
+def _json_safe(obj, **kwargs):
+    """Wrapper sobre json.dumps com default tolerante. Mesma assinatura: passa kwargs."""
+    return json.dumps(obj, default=_json_default, ensure_ascii=False, **kwargs)
+
+
 class Api:
     """
     Cada método público aqui fica disponível no JS como:
@@ -120,7 +157,6 @@ class Api:
             )
         except Exception as e:
             logging.error(f"[BOOT] Falha ao aplicar credenciais do config: {e}")
-
     # ── Autenticação ────────────────────────────────────────────
 
     def _autorizado(self, modulo):
@@ -339,7 +375,7 @@ class Api:
                     if window:
                         window.evaluate_js(
                             "window.contabilFase2Concluido("
-                            + json.dumps({"ok": False, "erro": "Falha na conexão ODBC com o Domínio."})
+                            + _json_safe({"ok": False, "erro": "Falha na conexão ODBC com o Domínio."})
                             + ")"
                         )
                     return
@@ -352,8 +388,7 @@ class Api:
                     master_path_estado = cfg_atual.get("master_path") or os.path.join(
                         PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm"
                     )
-                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
-                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    usuario_atual, host_atual = self._id_label_host()
                     estado_sh.marcar(master_path_estado, "contabil", competencia,
                                      "processado", por=usuario_atual, host=host_atual)
                     estado_sh.remover(master_path_estado, "contabil", competencia, evento="lancado")
@@ -366,14 +401,14 @@ class Api:
                 progresso(100, "Concluído.")
                 if window:
                     window.evaluate_js(
-                        "window.contabilFase2Concluido(" + json.dumps(resultado) + ")"
+                        "window.contabilFase2Concluido(" + _json_safe(resultado) + ")"
                     )
             except Exception as e:
                 logging.error(f"[CONTÁBIL-FASE2] Erro: {traceback.format_exc()}")
                 if window:
                     window.evaluate_js(
                         "window.contabilFase2Concluido("
-                        + json.dumps({"ok": False, "erro": str(e)})
+                        + _json_safe({"ok": False, "erro": str(e)})
                         + ")"
                     )
 
@@ -417,7 +452,7 @@ class Api:
                     if window:
                         window.evaluate_js(
                             "window.contabilFase5Concluido("
-                            + json.dumps({"ok": False, "erro": "Master está aberta no Excel. Feche o arquivo.", "tipo": "locked"})
+                            + _json_safe({"ok": False, "erro": "Master está aberta no Excel. Feche o arquivo.", "tipo": "locked"})
                             + ")"
                         )
                     return
@@ -428,7 +463,7 @@ class Api:
                     if window:
                         window.evaluate_js(
                             "window.contabilFase5Concluido("
-                            + json.dumps({"ok": False, "erro": "Falha ao abrir master."})
+                            + _json_safe({"ok": False, "erro": "Falha ao abrir master."})
                             + ")"
                         )
                     return
@@ -445,15 +480,14 @@ class Api:
                     if window:
                         window.evaluate_js(
                             "window.contabilFase5Concluido("
-                            + json.dumps({"ok": False, **writer.ultimo_erro})
+                            + _json_safe({"ok": False, **writer.ultimo_erro})
                             + ")"
                         )
                     return
 
                 if resultado.get("ok"):
                     competencia = data_inicio[:7]
-                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
-                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    usuario_atual, host_atual = self._id_label_host()
                     estado_sh.marcar(master_path, "contabil", competencia,
                                      "lancado", por=usuario_atual, host=host_atual)
                     self.salvar_parametros({
@@ -463,14 +497,14 @@ class Api:
                 progresso(100, "Concluído.")
                 if window:
                     window.evaluate_js(
-                        "window.contabilFase5Concluido(" + json.dumps(resultado) + ")"
+                        "window.contabilFase5Concluido(" + _json_safe(resultado) + ")"
                     )
             except Exception as e:
                 logging.error(f"[CONTÁBIL-FASE5] Erro: {traceback.format_exc()}")
                 if window:
                     window.evaluate_js(
                         "window.contabilFase5Concluido("
-                        + json.dumps({"ok": False, "erro": str(e)})
+                        + _json_safe({"ok": False, "erro": str(e)})
                         + ")"
                     )
             finally:
@@ -609,6 +643,16 @@ class Api:
             return None, None
         return self._sessao.get("nome"), self._sessao.get("maquina") or auth_mod.identificar_maquina()
 
+    def _id_label_host(self):
+        """B07: snapshot atômico de (label, host) — uso em estado_sh.marcar dentro
+        de threads daemon. Evita TOCTOU se o usuário fizer logout durante a operação
+        (que zera self._sessao mid-flight, levando self._sessao.get(...) a AttributeError
+        ou label/host divergentes entre duas linhas consecutivas)."""
+        s = dict(self._sessao) if self._sessao else {}
+        label = s.get("label") or s.get("nome") or "?"
+        host = s.get("maquina") or auth_mod.identificar_maquina()
+        return label, host
+
     def _erro_lock_alheio(self, info_lock):
         """Monta mensagem padronizada quando o lock pertence a outro usuário."""
         return {
@@ -659,7 +703,7 @@ class Api:
                                         "~$" + os.path.basename(master_path))
                 if os.path.exists(lockfile):
                     if window: window.evaluate_js(
-                        "window.fiscalIndividualConcluido(" + json.dumps(
+                        "window.fiscalIndividualConcluido(" + _json_safe(
                             {"ok": False, "tipo": "locked",
                              "erro": "Master aberta no Excel. Feche e tente de novo."}) + ")")
                     return
@@ -667,7 +711,7 @@ class Api:
                 progresso(15, "Conectando ao Domínio...")
                 if not db.connect():
                     if window: window.evaluate_js(
-                        "window.fiscalIndividualConcluido(" + json.dumps(
+                        "window.fiscalIndividualConcluido(" + _json_safe(
                             {"ok": False, "erro": "Falha na conexão ODBC."}) + ")")
                     return
 
@@ -675,7 +719,7 @@ class Api:
                 writer = MasterWriter(master_path)
                 if not writer.carregar():
                     if window: window.evaluate_js(
-                        "window.fiscalIndividualConcluido(" + json.dumps(
+                        "window.fiscalIndividualConcluido(" + _json_safe(
                             {"ok": False, "erro": "Falha ao abrir master."}) + ")")
                     return
 
@@ -696,23 +740,22 @@ class Api:
                 salvo = writer.salvar()
                 if not salvo and writer.ultimo_erro:
                     if window: window.evaluate_js(
-                        "window.fiscalIndividualConcluido(" + json.dumps(
+                        "window.fiscalIndividualConcluido(" + _json_safe(
                             {"ok": False, **writer.ultimo_erro}) + ")")
                     return
 
                 if ok:
-                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
-                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    usuario_atual, host_atual = self._id_label_host()
                     estado_sh.marcar(master_path, "fiscal", data_inicio[:7], "lancado",
                                      por=usuario_atual, host=host_atual)
                 progresso(100, "Concluído.")
                 if window: window.evaluate_js(
-                    "window.fiscalIndividualConcluido(" + json.dumps(
+                    "window.fiscalIndividualConcluido(" + _json_safe(
                         {"ok": bool(ok), "competencia": data_inicio[:7]}) + ")")
             except Exception as e:
                 logging.error(f"[FISCAL-IND] {traceback.format_exc()}")
                 if window: window.evaluate_js(
-                    "window.fiscalIndividualConcluido(" + json.dumps(
+                    "window.fiscalIndividualConcluido(" + _json_safe(
                         {"ok": False, "erro": str(e)}) + ")")
             finally:
                 liberar_lock(master_path, usuario, host)
@@ -731,7 +774,7 @@ class Api:
         if not data_inicio:
             return {"ok": False, "erro": "Competência ausente."}
 
-        tipos = ["Planilha Carol (*.xls;*.xlsx)", "Todos os arquivos (*.*)"]
+        tipos = ["Planilha Carol (*.xls;*.xlsx;*.xlsm)", "Todos os arquivos (*.*)"]
         result = window.create_file_dialog(
             webview.OPEN_DIALOG, allow_multiple=False, file_types=tipos
         )
@@ -764,8 +807,7 @@ class Api:
         master_path_estado = cfg_now.get("master_path") or os.path.join(
             PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm"
         )
-        usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
-        host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+        usuario_atual, host_atual = self._id_label_host()
         estado_sh.marcar(master_path_estado, "dp", competencia, "carol_importada",
                          por=usuario_atual, host=host_atual,
                          total=total_empresas, com_ativos=com_ativos)
@@ -825,7 +867,7 @@ class Api:
                                         "~$" + os.path.basename(master_path))
                 if os.path.exists(lockfile):
                     if window: window.evaluate_js(
-                        "window.dpFase2Concluido(" + json.dumps(
+                        "window.dpFase2Concluido(" + _json_safe(
                             {"ok": False, "tipo": "locked",
                              "erro": "Master aberta no Excel. Feche e tente de novo."}) + ")")
                     return
@@ -837,7 +879,7 @@ class Api:
                 writer = MasterWriter(master_path)
                 if not writer.carregar():
                     if window: window.evaluate_js(
-                        "window.dpFase2Concluido(" + json.dumps(
+                        "window.dpFase2Concluido(" + _json_safe(
                             {"ok": False, "erro": "Falha ao abrir master."}) + ")")
                     return
 
@@ -863,13 +905,12 @@ class Api:
                 salvo = writer.salvar()
                 if not salvo and writer.ultimo_erro:
                     if window: window.evaluate_js(
-                        "window.dpFase2Concluido(" + json.dumps(
+                        "window.dpFase2Concluido(" + _json_safe(
                             {"ok": False, **writer.ultimo_erro}) + ")")
                     return
 
                 if ok:
-                    usuario_atual = (self._sessao or {}).get("label") or (self._sessao or {}).get("nome") or "?"
-                    host_atual = (self._sessao or {}).get("maquina") or auth_mod.identificar_maquina()
+                    usuario_atual, host_atual = self._id_label_host()
                     estado_sh.marcar(master_path, "dp", competencia, "lancado",
                                      por=usuario_atual, host=host_atual)
                     self.salvar_parametros({
@@ -879,12 +920,12 @@ class Api:
 
                 progresso(100, "Concluído.")
                 if window: window.evaluate_js(
-                    "window.dpFase2Concluido(" + json.dumps(
+                    "window.dpFase2Concluido(" + _json_safe(
                         {"ok": bool(ok), "competencia": competencia}) + ")")
             except Exception as e:
                 logging.error(f"[DP-IND] {traceback.format_exc()}")
                 if window: window.evaluate_js(
-                    "window.dpFase2Concluido(" + json.dumps(
+                    "window.dpFase2Concluido(" + _json_safe(
                         {"ok": False, "erro": str(e)}) + ")")
             finally:
                 liberar_lock(master_path, usuario, host)
@@ -1126,7 +1167,7 @@ class Api:
                     if window:
                         window.evaluate_js(
                             "window.execucaoFalhou("
-                            + json.dumps({"tipo": "locked", "msg": "Planilha master está aberta no Excel. Feche o arquivo antes de executar o ciclo."})
+                            + _json_safe({"tipo": "locked", "msg": "Planilha master está aberta no Excel. Feche o arquivo antes de executar o ciclo."})
                             + ")"
                         )
                     return
@@ -1137,7 +1178,7 @@ class Api:
                     if window:
                         window.evaluate_js(
                             "window.execucaoFalhou("
-                            + json.dumps({"tipo": "erro", "msg": "Não foi possível abrir a planilha master. Verifique o caminho e se ela não está corrompida."})
+                            + _json_safe({"tipo": "erro", "msg": "Não foi possível abrir a planilha master. Verifique o caminho e se ela não está corrompida."})
                             + ")"
                         )
                     return
@@ -1224,7 +1265,7 @@ class Api:
                 salvo = writer.salvar()
                 if not salvo and writer.ultimo_erro and window:
                     window.evaluate_js(
-                        "window.execucaoFalhou(" + json.dumps(writer.ultimo_erro) + ")"
+                        "window.execucaoFalhou(" + _json_safe(writer.ultimo_erro) + ")"
                     )
 
                 # Geração de log consolidado em markdown (Fase 4 concluída)
@@ -1263,7 +1304,7 @@ class Api:
                     logging.error(f"[CICLO] Falha ao persistir estado: {e_est}")
 
                 progresso(100, "Concluído!")
-                resultado = json.dumps({"status": status, "salvo": salvo})
+                resultado = _json_safe({"status": status, "salvo": salvo})
                 if window:
                     window.evaluate_js(f"window.execucaoConcluida({resultado})")
 
@@ -1516,6 +1557,35 @@ class Api:
         except Exception as e:
             logging.error(f"[ESTADO] {e}")
             return {"modulos": {}, "timestamp": None, "competencia": None}
+
+    def listar_competencias_master(self):
+        """Retorna abas MM.YYYY da planilha Master como lista de competências, mais recente primeiro."""
+        cfg = self._ler_config()
+        master_path = cfg.get('master_path') or os.path.join(PROJECT_ROOT, "CONTROLE DE HORAS DMF.xlsm")
+        if not master_path or not os.path.exists(master_path):
+            return {"ok": False, "msg": "Master não encontrada", "competencias": []}
+        if esta_online_only(master_path):
+            forcar_download(master_path, timeout=20)
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(master_path, read_only=True, data_only=True)
+            padrao = re.compile(r'^(\d{2})\.(\d{4})$')
+            result = []
+            for aba in wb.sheetnames:
+                m = padrao.match(aba)
+                if m:
+                    mes, ano = m.group(1), m.group(2)
+                    result.append({
+                        "aba": aba,
+                        "value": f"{ano}-{mes}",
+                        "label": f"{mes}/{ano}"
+                    })
+            wb.close()
+            result.sort(key=lambda x: x["value"], reverse=True)
+            return {"ok": True, "competencias": result}
+        except Exception as e:
+            logging.error(f"[COMPETENCIAS] {e}")
+            return {"ok": False, "msg": str(e), "competencias": []}
 
     def obter_ultima_execucao(self):
         """Extrai os últimos eventos por módulo do dmf_engine.log."""

@@ -315,9 +315,442 @@
     .status-dot.warn  { background: #d97706; }
     .status-dot.err   { background: #dc2626; }
 
+  /* ============================================================ */
+  /* CENTRAL DMF — TELAS DE PLATAFORMA (Phase 1)                  */
+  /* ============================================================ */
+  :root {
+    --color-dmf-blue:   #2B65B5;
+    --color-dmf-green:  #2A7A45;
+    --color-dmf-navy:   #1B3461;
+    --color-bg-app-pf:  #F0F4F9;
+    --color-bg-sidebar-pf: #0E1B33;
+    --color-border-pf:  #D4DDED;
+    --color-text-sidebar-pf: #C8D6EC;
+    --radius-lg: 16px;
+  }
+
+  .screen { display: none; min-height: 100vh; flex-direction: column; background: var(--color-bg-app-pf); }
+  .screen.active { display: flex; }
+  #screen-module.active { height: 100vh; min-height: 0; overflow: hidden; }
+  #screen-module .pf-shell-wrap { min-height: 0; }
+
+  .platform-topbar { height: 48px; background: #ffffff; border-bottom: 1px solid var(--color-border-pf); display: flex; align-items: center; padding: 0 16px; flex-shrink: 0; }
+  .platform-topbar .topbar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .platform-topbar .topbar-left i { font-size: 18px; color: var(--color-dmf-blue); }
+  .platform-topbar .topbar-title { font-size: 14px; font-weight: 700; color: var(--color-dmf-navy); letter-spacing: -0.01em; }
+  .platform-topbar .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .platform-topbar .topbar-user { font-size: 13px; color: var(--color-text-muted); }
+  .btn-logout-pf { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--color-border-pf); color: var(--color-text-muted); border-radius: var(--radius-sm); padding: 6px 12px; font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s ease; }
+  .btn-logout-pf i { font-size: 15px; }
+  .btn-logout-pf:hover { border-color: var(--color-danger); color: var(--color-danger); }
+
+  /* Logos */
+  .logo-pf    { display: block; width: 320px; height: 140px; object-fit: cover; object-position: center 48%; margin: 0 auto 12px; mix-blend-mode: multiply; }
+  .logo-pf-sm { display: block; width: 220px; height:  96px; object-fit: cover; object-position: center 48%; margin: 0 auto;       mix-blend-mode: multiply; }
+
+  /* Tela 1 — Seleção de Setor */
+  .sector-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 24px; position: relative; overflow: hidden; }
+  .sector-decor { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .sector-decor svg { position: absolute; }
+  .sector-decor svg.right { right: -80px; top: 50%; transform: translateY(-50%); width: 760px; height: 760px; opacity: 0.6; }
+  .sector-decor svg.left  { left: -120px; bottom: -80px; width: 460px; height: 460px; opacity: 0.45; }
+  .sector-container { width: 100%; max-width: 700px; position: relative; }
+  .identity-block { text-align: center; margin-bottom: 48px; }
+  .identity-sep { height: 20px; }
+  .identity-instruction { font-size: 14px; color: var(--color-text-muted); margin: 0; }
+  .sector-block-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .sector-block { background: #ffffff; border-radius: var(--radius-md); overflow: hidden; cursor: pointer; transition: all 0.18s ease; display: flex; flex-direction: column; min-height: 260px; border: none; padding: 0; font-family: inherit; text-align: left; }
+  .sector-block:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(27,52,97,0.18); }
+  .sector-block .blk-top { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 18px; text-align: center; color: #ffffff; }
+  .sector-block .blk-top i { font-size: 44px; margin-bottom: 16px; display: block; line-height: 1; }
+  .sector-block .blk-top h3 { font-size: 15px; font-weight: 800; margin: 0; letter-spacing: 0.10em; text-transform: uppercase; color: #ffffff; }
+  .sector-block .blk-bottom { padding: 13px 18px; background: #ffffff; display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid rgba(0,0,0,0.04); }
+  .sector-block .blk-bottom p { font-size: 11.5px; color: var(--color-text-muted); margin: 0; line-height: 1.4; }
+  .sector-block .blk-bottom i { color: var(--color-text-light); font-size: 16px; flex-shrink: 0; transition: transform 0.18s ease; }
+  .sector-block:hover .blk-bottom i { transform: translateX(3px); color: var(--color-text-main); }
+  .sector-block.gestao   .blk-top { background: var(--color-dmf-blue); }
+  .sector-block.fiscal   .blk-top { background: #B06A00; }
+  .sector-block.contabil .blk-top { background: var(--color-dmf-green); }
+  .sector-block.pessoal  .blk-top { background: #8B3A3A; }
+
+  /* Tela 2 — Login */
+  .login-pf-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 24px; position: relative; overflow: hidden; }
+  .login-pf-decor { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .login-pf-decor svg { position: absolute; right: -120px; top: 50%; transform: translateY(-50%); width: 820px; height: 820px; opacity: 0.55; }
+  .login-pf-decor svg.left { right: auto; left: -260px; top: -120px; transform: none; width: 520px; height: 520px; opacity: 0.35; }
+  .login-pf-card { position: relative; z-index: 1; width: 100%; max-width: 420px; background: #ffffff; border: 1px solid var(--color-border-pf); border-radius: var(--radius-lg); padding: 40px 36px; box-shadow: 0 8px 32px rgba(27,52,97,0.12); }
+  .login-pf-logo-block { text-align: center; margin-bottom: 24px; }
+  .login-pf-sep { height: 16px; }
+  .sector-badge-pf { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 12px; border-radius: var(--radius-pill); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .sector-badge-pf i { font-size: 14px; }
+  .login-pf-title { font-size: 20px; font-weight: 700; color: var(--color-dmf-navy); margin: 0 0 4px; }
+  .login-pf-subtitle { font-size: 13px; color: var(--color-text-muted); margin: 0 0 24px; }
+  .pf-field { margin-bottom: 16px; }
+  .pf-field label { display: block; font-size: 12px; font-weight: 600; color: var(--color-dmf-navy); margin-bottom: 6px; }
+  .pf-field input { width: 100%; border: 1px solid var(--color-border-pf); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--color-dmf-navy); background: #ffffff; transition: border-color 0.15s, box-shadow 0.15s; }
+  .pf-field input:focus { outline: none; border-color: var(--color-dmf-blue); box-shadow: 0 0 0 3px rgba(43,101,181,0.12); }
+  .pf-remember { display: flex; align-items: center; gap: 8px; margin: 8px 0 20px; font-size: 13px; color: var(--color-text-muted); cursor: pointer; }
+  .pf-remember input { accent-color: var(--color-dmf-blue); }
+  .btn-pf-primary { background: var(--color-dmf-blue); color: #ffffff; width: 100%; height: 44px; border-radius: var(--radius-md); border: none; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+  .btn-pf-primary:hover { background: #245299; }
+  .pf-erro { font-size: 12px; color: var(--color-danger); margin-bottom: 12px; min-height: 16px; }
+  .pf-back-link { display: block; text-align: center; font-size: 13px; color: var(--color-text-muted); cursor: pointer; text-decoration: none; margin-top: 20px; transition: color 0.15s; background: none; border: none; width: 100%; font-family: inherit; }
+  .pf-back-link:hover { color: var(--color-dmf-blue); }
+
+  /* Tela 3 — Módulos (shell) */
+  .pf-shell-wrap { flex: 1; display: flex; min-height: 0; }
+  .pf-sidebar { width: 240px; background: var(--color-bg-sidebar-pf); color: #ffffff; display: flex; flex-direction: column; flex-shrink: 0; }
+  .pf-sidebar-header { padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; }
+  .pf-sb-wordmark { display: inline-flex; gap: 3px; margin-bottom: 10px; }
+  .pf-sb-wordmark span { width: 24px; height: 24px; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 800; font-size: 12px; font-family: var(--font-sans); }
+  .pf-sb-wordmark .b1 { background: #2B65B5; } .pf-sb-wordmark .b2 { background: #2A7A45; } .pf-sb-wordmark .b3 { background: #1B3461; }
+  .pf-sidebar-app-name { font-size: 13px; color: #ffffff; font-weight: 700; margin: 0 0 8px; }
+  .pf-sidebar-sector-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.15); color: #ffffff; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.04em; }
+  .pf-sidebar-sector-badge i { font-size: 12px; }
+  .pf-sidebar-nav { padding: 16px 0; flex: 1; }
+  .pf-nav-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 16px 6px; font-weight: 600; }
+  .pf-nav-pill { display: flex; align-items: center; gap: 10px; padding: 9px 16px; margin: 2px 8px; border-radius: var(--radius-md); color: var(--color-text-sidebar-pf); font-size: 13px; font-weight: 400; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .pf-nav-pill i { font-size: 18px; opacity: 0.7; }
+  .pf-nav-pill:hover { background: rgba(255,255,255,0.07); }
+  .pf-nav-pill.active { background: rgba(255,255,255,0.12); color: #ffffff; font-weight: 600; }
+  .pf-nav-pill.active i { opacity: 1; }
+  .pf-sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.15s; border-radius: 0 0 0 0; }
+  .pf-sidebar-footer:hover { background: rgba(255,255,255,0.06); }
+
+  /* Modal de Perfil */
+  .pf-profile-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 9999; display: none; align-items: center; justify-content: center; }
+  .pf-profile-bg.open { display: flex; }
+  .pf-profile-card { background: #fff; border-radius: var(--radius-lg); padding: 32px; width: 420px; max-width: 92vw; box-shadow: 0 8px 40px rgba(0,0,0,0.18); }
+  .pf-profile-card h3 { font-size: 16px; font-weight: 700; color: var(--color-dmf-navy); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .pf-profile-user-row { display: flex; align-items: center; gap: 12px; background: #f8fafc; border-radius: var(--radius-md); padding: 14px; margin-bottom: 20px; border: 1px solid var(--color-border); }
+  .pf-profile-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--color-dmf-blue); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+  .pf-profile-avatar i { font-size: 20px; }
+  .pf-profile-uname { font-size: 14px; font-weight: 600; color: var(--color-text-main); }
+  .pf-profile-urole { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+  .pf-profile-divider { border: none; border-top: 1px solid var(--color-border); margin: 0 0 18px; }
+  .pf-profile-section-title { font-size: 12px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+  .pf-profile-field { margin-bottom: 12px; }
+  .pf-profile-field label { display: block; font-size: 12px; font-weight: 600; color: var(--color-text-muted); margin-bottom: 5px; }
+  .pf-profile-field input { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; font-family: inherit; color: var(--color-text-main); outline: none; transition: border-color 0.15s; }
+  .pf-profile-field input:focus { border-color: var(--color-dmf-blue); }
+  .pf-profile-msg { font-size: 12px; min-height: 16px; margin: 10px 0 0; }
+  .pf-profile-msg.ok { color: #2A7A45; }
+  .pf-profile-msg.err { color: #A32D2D; }
+  .pf-profile-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .pf-btn-cancel { flex: 1; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: #fff; font-size: 13px; font-family: inherit; cursor: pointer; color: var(--color-text-muted); transition: background 0.15s; }
+  .pf-btn-cancel:hover { background: #f8fafc; }
+  .pf-btn-save { flex: 1; padding: 10px; border: none; border-radius: var(--radius-sm); background: var(--color-dmf-blue); font-size: 13px; font-family: inherit; cursor: pointer; color: #fff; font-weight: 600; transition: background 0.15s; }
+  .pf-btn-save:hover { background: #245299; }
+  .pf-sb-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; color: #ffffff; flex-shrink: 0; }
+  .pf-sb-avatar i { font-size: 18px; }
+  .pf-sb-user { flex: 1; min-width: 0; }
+  .pf-sb-user .name { font-size: 13px; color: #ffffff; font-weight: 600; margin: 0 0 2px; }
+  .pf-sb-user .role-chip-pf { display: inline-block; font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 500; }
+  .pf-main-view { flex: 1; background: var(--color-bg-app-pf); padding: 32px 32px 80px; overflow-y: auto; min-width: 0; position: relative; }
+  .pf-main-decor { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .pf-main-decor::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(27,52,97,0.10) 1px, transparent 1px); background-size: 22px 22px; opacity: 0.55; }
+  .pf-main-view > * { position: relative; z-index: 1; }
+  .pf-breadcrumb { font-size: 12px; color: var(--color-text-light); margin: 0 0 16px; }
+  .pf-main-title { font-size: 24px; font-weight: 800; color: var(--color-dmf-navy); margin: 0 0 4px; letter-spacing: -0.02em; }
+  .pf-main-sub { font-size: 14px; color: var(--color-text-muted); margin: 0 0 28px; }
+  .pf-grid-b { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; max-width: 820px; }
+  .pf-card-b { background: #ffffff; border: 1px solid var(--color-border-pf); border-radius: var(--radius-md); overflow: hidden; cursor: pointer; transition: all 0.18s ease; }
+  .pf-card-b:hover { box-shadow: 0 10px 28px rgba(27,52,97,0.12); transform: translateY(-2px); }
+  .pf-card-b-header { background: #F4F7FB; padding: 22px 22px 0; display: flex; align-items: flex-end; gap: 4px; height: 88px; border-bottom: 1px solid var(--color-border-soft); }
+  .pf-card-b-header span { display: block; border-radius: 3px 3px 0 0; flex: 1; }
+  .pf-card-b-header .blk1 { background: #2B65B5; height: 42px; } .pf-card-b-header .blk2 { background: #2A7A45; height: 62px; } .pf-card-b-header .blk3 { background: #1B3461; height: 54px; }
+  .pf-card-b-body { padding: 18px 22px 20px; }
+  .pf-card-b .meta { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-text-light); margin: 0 0 6px; }
+  .pf-card-b h3 { font-size: 17px; font-weight: 700; color: var(--color-dmf-navy); margin: 0 0 6px; }
+  .pf-card-b p.desc { font-size: 13px; color: var(--color-text-muted); margin: 0 0 16px; line-height: 1.5; }
+  .pf-card-b .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .pf-card-b .badge-status { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--color-dmf-green); text-transform: uppercase; letter-spacing: 0.04em; }
+  .pf-card-b .badge-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-dmf-green); }
+  .pf-card-b .access-chev { color: var(--color-dmf-blue); font-size: 20px; transition: transform 0.18s; }
+  .pf-card-b:hover .access-chev { transform: translateX(4px); }
+  .pf-card-b.disabled { cursor: default; opacity: 0.65; }
+  .pf-card-b.disabled:hover { box-shadow: none; transform: none; }
+  .pf-card-b.disabled .pf-card-b-header .blk1,
+  .pf-card-b.disabled .pf-card-b-header .blk2,
+  .pf-card-b.disabled .pf-card-b-header .blk3 { background: #C8D1E0; }
+  .pf-card-b.disabled .badge-status { color: var(--color-text-light); }
+  .pf-card-b.disabled .badge-status .dot { background: var(--color-text-light); }
+  .pf-card-b.disabled .access-chev { color: var(--color-text-light); }
+  .pf-module-empty { border: 1px dashed var(--color-border-pf); background: rgba(255,255,255,0.55); border-radius: var(--radius-md); padding: 32px 24px; text-align: center; max-width: 320px; }
+  .pf-module-empty > i { font-size: 32px; color: var(--color-text-light); display: block; margin-bottom: 12px; }
+  .pf-module-empty h3 { font-size: 15px; color: var(--color-text-muted); margin: 0 0 8px; font-weight: 600; }
+  .pf-module-empty p { font-size: 13px; color: var(--color-text-light); margin: 0 0 14px; line-height: 1.5; }
+  .badge-soon-pf { display: inline-block; background: #E8EDF6; color: var(--color-text-muted); padding: 3px 10px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; }
+
+  /* ====== TEMA ESCURO ====== */
+  body.theme-dark {
+    --color-background-app: #0f172a; --color-background-card: #1e293b; --color-background-side: #1e293b;
+    --color-border: #334155; --color-border-soft: #293548; --color-text-main: #f1f5f9;
+    --color-text-muted: #94a3b8; --color-text-light: #64748b;
+    --color-bg-app-pf: #0f172a; --color-border-pf: #1e293b;
+  }
+  body.theme-dark .pf-main-view { background: var(--color-bg-app-pf); }
+  body.theme-dark .pf-card-b { background: #1e293b; border-color: #334155; }
+  body.theme-dark .pf-card-b-header { background: #293548; }
+  body.theme-dark .pf-card-b h3 { color: #e2e8f0; }
+  body.theme-dark .pf-card-b p.desc { color: #94a3b8; }
+  body.theme-dark .window-topbar, body.theme-dark .platform-topbar { background: #1e293b; border-color: #334155; }
+  body.theme-dark .window-title { color: #f1f5f9; }
+  body.theme-dark .sidebar { background: #1e293b; border-color: #334155; }
+  body.theme-dark .nav-pill { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+  body.theme-dark .nav-pill:hover { background: #293548; }
+  body.theme-dark .main-view, body.theme-dark .card, body.theme-dark .metric-card { background: #1e293b; }
+  body.theme-dark .main-view { background: #0f172a; }
+  body.theme-dark .card, body.theme-dark .metric-card { border-color: #334155; }
+  body.theme-dark .metric-val, body.theme-dark .topbar-title { color: #f1f5f9; }
+  body.theme-dark .period-dropdown { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+  body.theme-dark .pf-profile-card { background: #1e293b; }
+  body.theme-dark .pf-profile-card h3, body.theme-dark .pf-profile-header h3 { color: #e2e8f0; }
+  body.theme-dark .pf-profile-uname { color: #f1f5f9; }
+  body.theme-dark .pf-profile-field input, body.theme-dark .pf-profile-field select { background: #0f172a; color: #f1f5f9; border-color: #334155; }
+  body.theme-dark .pf-profile-tab:hover:not(.active) { background: #293548; }
+  body.theme-dark .pf-pref-label { color: #f1f5f9; }
+
+  /* ====== VIEW INÍCIO (HOME) ====== */
+  .pf-home-section { margin-bottom: 32px; }
+  .pf-home-section-title { font-size: 12px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .pf-home-section-title i { font-size: 15px; }
+  .pf-recentes-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .pf-card-recente { background: #ffffff; border: 1px solid var(--color-border-pf); border-radius: var(--radius-md); padding: 14px 16px; flex: 1; min-width: 180px; max-width: 240px; cursor: pointer; transition: all 0.18s; display: flex; align-items: flex-start; gap: 12px; }
+  .pf-card-recente:hover { box-shadow: 0 6px 18px rgba(27,52,97,0.12); transform: translateY(-2px); }
+  .pf-card-recente-icon { width: 34px; height: 34px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pf-card-recente-icon i { font-size: 17px; color: #ffffff; }
+  .pf-card-recente-name { font-size: 13px; font-weight: 600; color: var(--color-dmf-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pf-card-recente-setor { font-size: 11px; color: var(--color-text-light); margin-top: 2px; }
+  .pf-recente-empty { background: rgba(255,255,255,0.6); border: 1px dashed var(--color-border-pf); border-radius: var(--radius-md); padding: 18px 22px; font-size: 13px; color: var(--color-text-light); display: flex; align-items: center; gap: 10px; }
+  .pf-recente-empty i { font-size: 20px; }
+  .pf-comunicado-list { display: flex; flex-direction: column; gap: 10px; max-width: 620px; }
+  .pf-comunicado { background: #ffffff; border: 1px solid var(--color-border-pf); border-radius: var(--radius-md); padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
+  .pf-comunicado-icon { width: 34px; height: 34px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pf-comunicado-icon i { font-size: 16px; color: #ffffff; }
+  .pf-comunicado-body { flex: 1; min-width: 0; }
+  .pf-comunicado-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .pf-comunicado-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.04em; }
+  .pf-comunicado-pill.aviso    { background: #fef3c7; color: #92400e; }
+  .pf-comunicado-pill.novidade { background: #dcfce7; color: #166534; }
+  .pf-comunicado-pill.evento   { background: #dbeafe; color: #1e40af; }
+  .pf-comunicado-date { font-size: 11px; color: var(--color-text-light); margin-left: auto; flex-shrink: 0; }
+  .pf-comunicado-desc { font-size: 13px; color: var(--color-text-muted); line-height: 1.5; }
+  body.theme-dark .pf-card-recente, body.theme-dark .pf-comunicado { background: #1e293b; border-color: #334155; }
+  body.theme-dark .pf-card-recente-name { color: #e2e8f0; }
+  body.theme-dark .pf-recente-empty { background: rgba(30,41,59,0.6); border-color: #334155; }
+
+  /* ====== MODAL DE PERFIL EXPANDIDO ====== */
+  .pf-profile-card.expanded { width: 560px; max-height: 92vh; overflow-y: auto; }
+  .pf-profile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .pf-profile-header h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--color-dmf-navy); display: flex; align-items: center; gap: 8px; }
+  .pf-profile-close { background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--color-text-muted); padding: 0 4px; transition: color 0.15s; }
+  .pf-profile-close:hover { color: var(--color-text-main); }
+  .pf-profile-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--color-border); padding-bottom: 10px; }
+  .pf-profile-tab { padding: 7px 16px; border-radius: var(--radius-sm); border: none; background: transparent; font-size: 13px; font-family: inherit; cursor: pointer; color: var(--color-text-muted); font-weight: 500; transition: all 0.15s; }
+  .pf-profile-tab.active { background: var(--color-dmf-blue); color: #ffffff; font-weight: 600; }
+  .pf-profile-tab:hover:not(.active) { background: #f1f5f9; }
+  .pf-profile-tab-content { display: none; }
+  .pf-profile-tab-content.active { display: block; }
+  .pf-profile-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pf-profile-avatar-upload { width: 72px; height: 72px; border-radius: 50%; background: var(--color-dmf-blue); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; position: relative; flex-shrink: 0; transition: opacity 0.15s; }
+  .pf-profile-avatar-upload:hover { opacity: 0.85; }
+  .pf-profile-avatar-upload img { width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; inset: 0; }
+  .pf-profile-avatar-upload .overlay-cam { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s; border-radius: 50%; }
+  .pf-profile-avatar-upload:hover .overlay-cam { opacity: 1; }
+  .pf-profile-avatar-upload .overlay-cam i { font-size: 18px; color: #ffffff; }
+  .pf-profile-avatar-row { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
+  .pf-profile-avatar-info p { font-size: 12px; color: var(--color-text-muted); line-height: 1.5; margin: 0 0 6px; }
+  .pf-profile-avatar-info button { font-size: 11px; background: none; border: none; cursor: pointer; color: var(--color-danger); padding: 0; }
+  .pf-profile-field select { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; font-family: inherit; color: var(--color-text-main); outline: none; transition: border-color 0.15s; background: #ffffff; }
+  .pf-profile-field select:focus { border-color: var(--color-dmf-blue); }
+  .pf-pref-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--color-border-soft); gap: 16px; }
+  .pf-pref-row:last-child { border-bottom: none; }
+  .pf-pref-label { font-size: 13px; font-weight: 500; color: var(--color-text-main); }
+  .pf-pref-hint { font-size: 11px; color: var(--color-text-light); margin-top: 2px; }
+  .pf-msg-info, .pf-msg-prefs { font-size: 12px; min-height: 14px; margin: 10px 0 0; }
+  .pf-msg-info.ok, .pf-msg-prefs.ok { color: #2A7A45; }
+  .pf-msg-info.err, .pf-msg-prefs.err { color: #A32D2D; }
+
   </style>
 </head>
 <body>
+
+<!-- ===== CENTRAL DMF — TELA 1: SELEÇÃO DE SETOR ===== -->
+<div class="screen" id="screen-sector">
+  <div class="platform-topbar">
+    <div class="topbar-left">
+      <i class="ti ti-building-skyscraper"></i>
+      <span class="topbar-title">Central DMF</span>
+    </div>
+  </div>
+  <div class="sector-body">
+    <div class="sector-decor" aria-hidden="true">
+      <svg class="right" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="secVBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2B65B5" stop-opacity="0.45"/><stop offset="100%" stop-color="#1B3461" stop-opacity="0.55"/></linearGradient>
+          <linearGradient id="secVGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2A7A45" stop-opacity="0.45"/><stop offset="100%" stop-color="#1B3461" stop-opacity="0.45"/></linearGradient>
+        </defs>
+        <g stroke-linecap="square" fill="none">
+          <rect x="360" y="300" width="64" height="280" stroke="url(#secVBlue)" stroke-width="1.5" rx="3"/>
+          <rect x="434" y="220" width="64" height="360" stroke="url(#secVGreen)" stroke-width="1.4" rx="3"/>
+          <rect x="508" y="340" width="64" height="240" stroke="#2B65B5" stroke-opacity="0.40" stroke-width="1.3" rx="3"/>
+          <rect x="582" y="180" width="64" height="400" stroke="#1B3461" stroke-opacity="0.50" stroke-width="1.4" rx="3"/>
+          <rect x="656" y="280" width="64" height="300" stroke="#2A7A45" stroke-opacity="0.40" stroke-width="1.3" rx="3"/>
+          <line x1="300" y1="600" x2="790" y2="600" stroke="#1B3461" stroke-opacity="0.50" stroke-width="1"/>
+        </g>
+      </svg>
+      <svg class="left" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke-linecap="square">
+          <rect x="60"  y="60"  width="40" height="40" stroke="#2B65B5" stroke-opacity="0.35" stroke-width="1.2" rx="3"/>
+          <rect x="110" y="110" width="50" height="50" stroke="#2A7A45" stroke-opacity="0.35" stroke-width="1.2" rx="3"/>
+          <rect x="170" y="170" width="60" height="60" stroke="#1B3461" stroke-opacity="0.40" stroke-width="1.3" rx="3"/>
+          <rect x="240" y="240" width="70" height="70" stroke="#2B65B5" stroke-opacity="0.30" stroke-width="1.2" rx="3"/>
+        </g>
+      </svg>
+    </div>
+    <div class="sector-container">
+      <div class="identity-block">
+        <img class="logo-pf" src="_LOGO_202605191148.jpeg" alt="DMF Soluções Empresariais">
+        <div class="identity-sep"></div>
+        <p class="identity-instruction">Selecione seu setor para continuar</p>
+      </div>
+      <div id="sector-grid-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CENTRAL DMF — TELA 2: LOGIN ===== -->
+<div class="screen" id="screen-login">
+  <div class="platform-topbar">
+    <div class="topbar-left">
+      <i class="ti ti-building-skyscraper"></i>
+      <span class="topbar-title">Central DMF</span>
+    </div>
+  </div>
+  <div class="login-pf-body">
+    <div class="login-pf-decor" aria-hidden="true">
+      <svg viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="dmfG1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2B65B5" stop-opacity="0.55"/><stop offset="100%" stop-color="#1B3461" stop-opacity="0.75"/></linearGradient>
+          <linearGradient id="dmfG2" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#2A7A45" stop-opacity="0.55"/><stop offset="100%" stop-color="#2B65B5" stop-opacity="0.5"/></linearGradient>
+        </defs>
+        <g stroke-linecap="round" fill="none">
+          <circle cx="400" cy="400" r="360" stroke="url(#dmfG1)" stroke-width="1.4"/>
+          <circle cx="400" cy="400" r="300" stroke="url(#dmfG2)" stroke-width="1.2"/>
+          <circle cx="400" cy="400" r="240" stroke="#2B65B5" stroke-opacity="0.35" stroke-width="1"/>
+          <circle cx="400" cy="400" r="180" stroke="#2A7A45" stroke-opacity="0.30" stroke-width="1"/>
+          <path d="M -20 520 Q 200 360, 400 440 T 820 320" stroke="url(#dmfG1)" stroke-width="1.6"/>
+          <path d="M 40 200 Q 240 340, 460 280 T 840 460" stroke="url(#dmfG2)" stroke-width="1.4"/>
+        </g>
+      </svg>
+      <svg class="left" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g stroke-linecap="round" fill="none">
+          <circle cx="250" cy="250" r="220" stroke="#2B65B5" stroke-opacity="0.35" stroke-width="1"/>
+          <circle cx="250" cy="250" r="170" stroke="#2A7A45" stroke-opacity="0.30" stroke-width="1"/>
+          <path d="M -20 280 Q 140 180, 280 240 T 540 180" stroke="#1B3461" stroke-opacity="0.40" stroke-width="1.2"/>
+        </g>
+      </svg>
+    </div>
+    <div class="login-pf-card">
+      <div class="login-pf-logo-block">
+        <img class="logo-pf-sm" src="_LOGO_202605191148.jpeg" alt="DMF Soluções Empresariais">
+        <div class="login-pf-sep"></div>
+        <span class="sector-badge-pf" id="pf-login-sector-badge">
+          <i class="ti ti-layout-dashboard" id="pf-login-sector-icon"></i>
+          <span id="pf-login-sector-name">GESTÃO</span>
+        </span>
+      </div>
+      <h2 class="login-pf-title">Acesso ao sistema</h2>
+      <p class="login-pf-subtitle">Entre com suas credenciais</p>
+      <div class="pf-field">
+        <label for="pf-usuario">Usuário</label>
+        <input type="text" id="pf-usuario" autocomplete="username" placeholder="seu.usuario">
+      </div>
+      <div class="pf-field">
+        <label for="pf-senha">Senha</label>
+        <input type="password" id="pf-senha" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <label class="pf-remember">
+        <input type="checkbox" id="pf-keep-session">
+        <span>Manter sessão nesta máquina</span>
+      </label>
+      <div class="pf-erro" id="pf-login-erro"></div>
+      <button class="btn-pf-primary" onclick="pfDoLogin()">Entrar</button>
+      <button class="pf-back-link" onclick="goToPlatformScreen('screen-sector')">← Voltar para seleção de setor</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CENTRAL DMF — TELA 3: SELEÇÃO DE MÓDULO ===== -->
+<div class="screen" id="screen-module">
+  <div class="platform-topbar">
+    <div class="topbar-left">
+      <i id="pf-top-sector-icon" class="ti ti-layout-dashboard"></i>
+      <span class="topbar-title">Central DMF</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="pf-topbar-user">—</span>
+      <button class="btn-logout-pf" onclick="pfDoLogout()">
+        <i class="ti ti-logout"></i><span>Sair</span>
+      </button>
+    </div>
+  </div>
+  <div class="pf-shell-wrap">
+    <aside class="pf-sidebar">
+      <div class="pf-sidebar-header">
+        <div class="pf-sb-wordmark" aria-label="DMF">
+          <span class="b1">D</span><span class="b2">M</span><span class="b3">F</span>
+        </div>
+        <p class="pf-sidebar-app-name">Central DMF</p>
+        <span class="pf-sidebar-sector-badge" id="pf-sidebar-sector-badge">
+          <i id="pf-sidebar-sector-icon" class="ti ti-layout-dashboard"></i>
+          <span id="pf-sidebar-sector-name">GESTÃO</span>
+        </span>
+      </div>
+      <nav class="pf-sidebar-nav">
+        <div class="pf-nav-label">Navegação</div>
+        <div class="pf-nav-pill active" id="pf-pill-home" onclick="pfNavParaHome()"><i class="ti ti-home"></i><span>Início</span></div>
+        <div class="pf-nav-pill" id="pf-pill-modulos" onclick="pfNavParaModulos()"><i class="ti ti-apps"></i><span>Módulos</span></div>
+      </nav>
+      <div class="pf-sidebar-footer" onclick="pfOpenProfile()" title="Editar perfil">
+        <div class="pf-sb-avatar"><i class="ti ti-user"></i></div>
+        <div class="pf-sb-user">
+          <p class="name" id="pf-sb-user-name">—</p>
+          <span class="role-chip-pf" id="pf-sb-user-role"></span>
+        </div>
+        <i class="ti ti-settings" style="font-size:15px;color:rgba(255,255,255,0.3);flex-shrink:0"></i>
+      </div>
+    </aside>
+    <main class="pf-main-view">
+      <div class="pf-main-decor" aria-hidden="true"></div>
+
+      <!-- VIEW: INÍCIO -->
+      <div id="pf-view-home">
+        <h1 class="pf-main-title" id="pf-home-title">Bom dia!</h1>
+        <p class="pf-main-sub" id="pf-home-sub">Bem-vindo à Central DMF.</p>
+
+        <div class="pf-home-section">
+          <div class="pf-home-section-title"><i class="ti ti-history"></i> Últimos acessados</div>
+          <div class="pf-recentes-row" id="pf-recentes-row"></div>
+        </div>
+
+        <div class="pf-home-section">
+          <div class="pf-home-section-title"><i class="ti ti-speakerphone"></i> Comunicados internos</div>
+          <div class="pf-comunicado-list" id="pf-comunicados-list"></div>
+        </div>
+      </div>
+
+      <!-- VIEW: MÓDULOS -->
+      <div id="pf-view-modulos" style="display:none">
+        <p class="pf-breadcrumb" id="pf-breadcrumb">Central DMF / — / Módulos</p>
+        <h1 class="pf-main-title">Módulos disponíveis</h1>
+        <p class="pf-main-sub">Selecione o módulo que deseja acessar</p>
+        <div id="pf-modules-area"></div>
+      </div>
+    </main>
+  </div>
+</div>
 
 <!-- OVERLAY DE LOGIN — visível até autenticação concluir -->
 <div class="login-overlay" id="login-overlay" style="display:none">
@@ -333,11 +766,6 @@
       <input type="password" id="login-senha" autocomplete="current-password">
       <div class="erro" id="login-erro"></div>
       <button class="login-btn" onclick="fazerLogin()">Entrar</button>
-      <div class="link-alt">
-        <a onclick="abrirGuiaUso()" style="cursor:pointer">
-          <i class="ti ti-book-2"></i> Guia de uso
-        </a>
-      </div>
     </div>
 
     <!-- TROCA OBRIGATÓRIA DE SENHA -->
@@ -356,7 +784,7 @@
   </div>
 </div>
 
-<div class="app-container">
+<div class="app-container" id="app-container" style="display:none">
   
   <!-- 1. TOPBAR SUPERIOR (SIMULAÇÃO JANela NATIVA) -->
   <header class="window-topbar">
@@ -370,8 +798,10 @@
       <span><b>DMF Engine</b> — Automação de Horas</span>
     </div>
     <div class="window-right">
+      <button onclick="pfVoltarParaModulos()" style="background:none;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 10px;font-size:12px;color:var(--color-text-muted);cursor:pointer;font-family:var(--font-sans);">← Módulos</button>
       <span>Competência:</span>
       <select class="period-dropdown" id="competencia-select"></select>
+      <button onclick="popularCompetenciasDaMaster()" title="Recarregar competências da Master" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px;color:var(--color-text-muted)">⟳</button>
     </div>
   </header>
 
@@ -380,7 +810,12 @@
     
     <!-- SIDEBAR ESQUERDA -->
     <aside class="sidebar">
-      <div class="logo-header">
+      <!-- Botão voltar ao seletor de módulos do departamento -->
+      <button id="btn-voltar-modulos" class="nav-pill" onclick="pfVoltarParaModulos()" style="margin:10px 8px 4px;width:calc(100% - 16px);border-radius:var(--radius-md);border:1px solid var(--color-border);background:#f0f4f9;color:var(--color-accent);font-weight:600;">
+        <i class="ti ti-arrow-left" style="color:var(--color-accent)"></i> <span>← Módulos</span>
+      </button>
+
+      <div class="logo-header" style="margin-top:8px">
         <i class="ti ti-layout-grid-add"></i>
         <div class="logo-text">
           <h1>DMF Engine</h1>
@@ -417,6 +852,9 @@
       <button class="nav-pill" onclick="showTab('governanca')">
         <i class="ti ti-shield-check"></i> <span>Governança</span>
       </button>
+      <button class="nav-pill" onclick="abrirGuiaUso()">
+        <i class="ti ti-book-2"></i> <span>Guia de Uso</span>
+      </button>
       <button class="nav-pill" id="nav-admin" onclick="showTab('admin')" style="display:none">
         <i class="ti ti-key"></i> <span>Admin</span>
       </button>
@@ -428,7 +866,7 @@
             <span id="supervisor-nome">—</span>
             <span id="supervisor-papel" style="color:var(--color-text-light);font-size:10px"></span>
           </span>
-          <a onclick="fazerLogout()" style="color:var(--color-accent);cursor:pointer;font-size:11px">sair</a>
+          <a onclick="pfVoltarParaModulos()" style="color:var(--color-accent);cursor:pointer;font-size:11px">← módulos</a>
         </div>
         <div id="footer-bd"><span class="status-dot"></span><span>BD Domínio: não testado</span></div>
         <div id="footer-master"><span class="status-dot"></span><span>Master: nenhum arquivo</span></div>
@@ -1020,7 +1458,10 @@ const PAPEL_LABEL = {
 };
 
 function mostrarOverlayLogin() {
-  document.getElementById('login-overlay').style.display = '';
+  /* Redirecionado para a nova tela de plataforma */
+  pfRenderSectorScreen();
+  goToPlatformScreen('screen-sector');
+  /* Mantém o overlay acessível apenas para troca de senha */
   document.getElementById('login-form').style.display = '';
   document.getElementById('troca-senha-form').style.display = 'none';
   document.getElementById('login-titulo').innerHTML = '<i class="ti ti-shield-lock"></i> DMF Engine';
@@ -1117,13 +1558,7 @@ async function confirmarTrocaSenha() {
 }
 
 async function fazerLogout() {
-  if (!api()) return;
-  await api().logout();
-  window._sessao = null;
-  document.getElementById('supervisor-nome').textContent = '—';
-  document.getElementById('supervisor-papel').textContent = '';
-  mostrarOverlayLogin();
-  toast('Sessão encerrada.', 'info');
+  await pfDoLogout();
 }
 
 /* ── Permissões por papel ─────────────────────────────────── */
@@ -1224,7 +1659,7 @@ async function adminResetarSenha(nome, label) {
 }
 
 async function bootApp() {
-  popularCompetencias(12);
+  await popularCompetenciasDaMaster();
   carregarParametros();
   carregarDashboard();
   atualizarRodape();
@@ -1741,6 +2176,31 @@ function popularCompetencias(quantidade = 12) {
     if (i === 0) opt.selected = true;
     sel.appendChild(opt);
   }
+}
+
+async function popularCompetenciasDaMaster() {
+  const sel = document.getElementById('competencia-select');
+  if (!sel) return;
+  if (api()) {
+    try {
+      const r = await api().listar_competencias_master();
+      if (r && r.ok && r.competencias && r.competencias.length > 0) {
+        sel.innerHTML = '';
+        r.competencias.forEach((c, i) => {
+          const opt = document.createElement('option');
+          opt.value = c.value;
+          opt.textContent = c.label;
+          if (i === 1) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        return;
+      }
+      if (r && !r.ok) console.warn('[COMPETENCIAS] Master indisponível:', r.msg);
+    } catch(e) {
+      console.error('[COMPETENCIAS] Erro ao listar abas da Master:', e);
+    }
+  }
+  popularCompetencias(12);
 }
 
 function montarJanelaMes(ano, mes) {
@@ -2410,12 +2870,30 @@ window.execucaoFalhou = function(erro) {
 };
 
 window.addEventListener('pywebviewready', async () => {
-  const autenticado = await checarLogin();
-  if (autenticado) await bootApp();
-  ['login-nome','login-senha'].forEach(id => {
+  /* Inicia sempre na seleção de setor */
+  pfRenderSectorScreen();
+  goToPlatformScreen('screen-sector');
+
+  /* Verifica sessão ativa — se existir, vai direto para módulos */
+  if (api()) {
+    try {
+      const r = await api().verificar_estado_login();
+      if (r.sessao) {
+        aplicarSessaoNoUI(r.sessao);
+        _pfCurrentSector = 'GESTÃO';
+        pfRenderModules();
+        pfNavParaHome();
+        goToPlatformScreen('screen-module');
+      }
+    } catch(e) { /* sem sessão, fica em screen-sector */ }
+  }
+
+  /* Tecla Enter nas novas telas de plataforma */
+  ['pf-usuario', 'pf-senha'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') pfDoLogin(); });
   });
+  /* Tecla Enter no formulário de troca de senha (overlay legado) */
   ['troca-nova','troca-nova2'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') confirmarTrocaSenha(); });
@@ -2424,11 +2902,632 @@ window.addEventListener('pywebviewready', async () => {
 
 /* Permite popular o dropdown mesmo quando rodando fora do PyWebView (debug em browser). */
 document.addEventListener('DOMContentLoaded', () => {
+  pfRenderSectorScreen();
+  goToPlatformScreen('screen-sector');
   if (!window.pywebview) {
     popularCompetencias(12);
     document.getElementById('login-overlay').style.display = 'none';
   }
+  /* Botão voltar para módulos */
+  const btnV = document.getElementById('btn-voltar-modulos');
+  if (btnV) btnV.addEventListener('click', pfVoltarParaModulos);
+
+  /* Aplica tema salvo e avatar na carga inicial */
+  try {
+    const prefs = JSON.parse(localStorage.getItem('dmf_prefs') || '{}');
+    pfAplicarTema(prefs.tema || 'auto');
+    const avatar = localStorage.getItem('dmf_avatar');
+    if (avatar) pfAtualizarAvatarSidebar(avatar);
+  } catch(e) {}
 });
+
+/* ======================================================= */
+/* CENTRAL DMF — PLATFORM NAVIGATION JS (Phase 1)         */
+/* ======================================================= */
+
+let _pfCurrentSector = '';
+
+const _pfSectorConfig = {
+  'GESTÃO':   { icon: 'ti-layout-dashboard', color: '#2B65B5', bgAlpha: 'rgba(43,101,181,0.10)' },
+  'FISCAL':   { icon: 'ti-file-invoice',     color: '#B06A00', bgAlpha: 'rgba(176,106,0,0.10)'  },
+  'CONTÁBIL': { icon: 'ti-calculator',       color: '#2A7A45', bgAlpha: 'rgba(42,122,69,0.10)'  },
+  'PESSOAL':  { icon: 'ti-users',            color: '#8B3A3A', bgAlpha: 'rgba(139,58,58,0.10)'  }
+};
+
+const _pfSectors = [
+  { name: 'GESTÃO',   label: 'Gestão',   sub: 'Controle de Horas • Financeiro', icon: 'ti-layout-dashboard', cls: 'gestao'   },
+  { name: 'FISCAL',   label: 'Fiscal',   sub: 'Apuração • Declarações',         icon: 'ti-file-invoice',     cls: 'fiscal'   },
+  { name: 'CONTÁBIL', label: 'Contábil', sub: 'Lançamentos • Balancetes',       icon: 'ti-calculator',       cls: 'contabil' },
+  { name: 'PESSOAL',  label: 'Pessoal',  sub: 'DP • Folha • Admissões',         icon: 'ti-users',            cls: 'pessoal'  }
+];
+
+const _pfModuleCatalog = {
+  'GESTÃO': [
+    { id: 'controle-horas', nome: 'Controle de Horas',      desc: 'Automação de lançamento de horas — Fiscal, Contábil e DP.', status: 'disponivel', icon: 'ti-clock-hour-4', color: '#2B65B5' },
+    { id: 'financeiro',     nome: 'Financeiro',              desc: 'Contas a pagar, receber e fluxo de caixa.',                 status: 'breve',      icon: 'ti-cash',         color: '#2A7A45' },
+    { id: 'faturamento',    nome: 'Faturamento',             desc: 'Emissão de notas fiscais e controle de faturamento.',       status: 'breve',      icon: 'ti-file-invoice', color: '#1B3461' },
+    { id: 'relatorios',     nome: 'Relatórios Gerenciais',   desc: 'Dashboards e relatórios consolidados de gestão.',           status: 'breve',      icon: 'ti-chart-bar',    color: '#B06A00' }
+  ],
+  'FISCAL': [
+    { id: 'apuracao',   nome: 'Apuração de Impostos',    desc: 'Cálculo e apuração de ICMS, PIS, COFINS e outros.',              status: 'breve', icon: 'ti-calculator',       color: '#B06A00' },
+    { id: 'declaracoes',nome: 'Declarações',              desc: 'SPED Fiscal, EFD Contribuições e obrigações acessórias.',        status: 'breve', icon: 'ti-file-text',         color: '#8B3A3A' },
+    { id: 'obrigacoes', nome: 'Obrigações Acessórias',   desc: 'Calendário e controle de vencimentos fiscais.',                  status: 'breve', icon: 'ti-calendar-check',   color: '#2A7A45' }
+  ],
+  'CONTÁBIL': [
+    { id: 'lancamentos', nome: 'Lançamentos Contábeis', desc: 'Registro e conciliação de lançamentos contábeis.',               status: 'breve', icon: 'ti-notes',           color: '#2A7A45' },
+    { id: 'balancetes',  nome: 'Balancetes e DRE',      desc: 'Geração de balancetes mensais e DRE comparativo.',               status: 'breve', icon: 'ti-trending-up',     color: '#2B65B5' },
+    { id: 'conciliacao', nome: 'Conciliação Bancária',  desc: 'Conciliação automática de extratos bancários.',                  status: 'breve', icon: 'ti-building-bank',   color: '#1B3461' }
+  ],
+  'PESSOAL': [
+    { id: 'folha',     nome: 'Folha de Pagamento',       desc: 'Processamento de folha, proventos e descontos.',               status: 'breve', icon: 'ti-receipt',     color: '#8B3A3A' },
+    { id: 'admissoes', nome: 'Admissões e Demissões',    desc: 'Contratos, admissões, rescisões e documentação.',              status: 'breve', icon: 'ti-user-plus',   color: '#2B65B5' },
+    { id: 'ponto',     nome: 'Ponto e Jornada',          desc: 'Controle de ponto, horas extras e banco de horas.',            status: 'breve', icon: 'ti-clock',       color: '#2A7A45' }
+  ]
+};
+
+function pfRegistrarAcesso(setor, modId, modNome) {
+  const key = 'dmf_recentes_' + setor;
+  let lista = [];
+  try { lista = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+  lista = lista.filter(x => x.id !== modId);
+  lista.unshift({ id: modId, nome: modNome, setor });
+  localStorage.setItem(key, JSON.stringify(lista.slice(0, 5)));
+}
+
+function pfNavParaHome() {
+  document.getElementById('pf-view-home').style.display = '';
+  document.getElementById('pf-view-modulos').style.display = 'none';
+  const ph = document.getElementById('pf-pill-home');
+  const pm = document.getElementById('pf-pill-modulos');
+  if (ph) ph.classList.add('active');
+  if (pm) pm.classList.remove('active');
+  pfRenderHome();
+}
+
+function pfNavParaModulos() {
+  document.getElementById('pf-view-home').style.display = 'none';
+  document.getElementById('pf-view-modulos').style.display = '';
+  const ph = document.getElementById('pf-pill-home');
+  const pm = document.getElementById('pf-pill-modulos');
+  if (ph) ph.classList.remove('active');
+  if (pm) pm.classList.add('active');
+}
+
+function pfRenderHome() {
+  const s = window._sessao || {};
+  const nome = (s.label || s.nome || '').split(' ')[0] || '';
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  const titleEl = document.getElementById('pf-home-title');
+  const subEl   = document.getElementById('pf-home-sub');
+  if (titleEl) titleEl.textContent = saudacao + (nome ? ', ' + nome + '!' : '!');
+  if (subEl)   subEl.textContent   = 'Bem-vindo à Central DMF — ' + (_pfCurrentSector || 'plataforma') + '.';
+
+  /* Recentes */
+  const recRow = document.getElementById('pf-recentes-row');
+  if (recRow) {
+    let lista = [];
+    try { lista = JSON.parse(localStorage.getItem('dmf_recentes_' + _pfCurrentSector) || '[]'); } catch(e) {}
+    lista = lista.slice(0, 3);
+    if (lista.length === 0) {
+      recRow.innerHTML = '<div class="pf-recente-empty"><i class="ti ti-clock-off"></i><span>Nenhum módulo acessado ainda neste setor.</span></div>';
+    } else {
+      recRow.innerHTML = lista.map(m => {
+        const mc = (_pfModuleCatalog[m.setor] || []).find(x => x.id === m.id) || {};
+        const color = mc.color || '#2B65B5';
+        const icon  = mc.icon  || 'ti-layout-grid-add';
+        return `<div class="pf-card-recente" onclick="pfAbrirModulo('${m.id}')">
+          <div class="pf-card-recente-icon" style="background:${color}"><i class="ti ${icon}"></i></div>
+          <div>
+            <div class="pf-card-recente-name">${m.nome}</div>
+            <div class="pf-card-recente-setor">${m.setor}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  /* Comunicados mock */
+  const comList = document.getElementById('pf-comunicados-list');
+  if (comList) {
+    const prefs = JSON.parse(localStorage.getItem('dmf_prefs') || '{}');
+    if (prefs.notif_comunicados === false) {
+      comList.innerHTML = '<div class="pf-recente-empty"><i class="ti ti-bell-off"></i><span>Comunicados desativados nas preferências.</span></div>';
+      return;
+    }
+    const comunicados = [
+      { tipo: 'aviso',    icon: 'ti-alert-triangle', cor: '#B06A00', titulo: 'Atualização do sistema',      data: '22/05/2026', desc: 'O DMF Engine v2.1 será lançado na próxima semana. Acesse o Guia de Uso para verificar as novidades.' },
+      { tipo: 'novidade', icon: 'ti-star',            cor: '#2A7A45', titulo: 'Novo módulo em homologação', data: '18/05/2026', desc: 'O módulo de Apuração de Impostos (Fiscal) está em fase final de testes e será disponibilizado em breve.' },
+      { tipo: 'evento',   icon: 'ti-calendar-event',  cor: '#2B65B5', titulo: 'Treinamento disponível',     data: '10/05/2026', desc: 'Sessão de treinamento do módulo Controle de Horas disponível. Entre em contato com a gestão para agendar.' }
+    ];
+    comList.innerHTML = comunicados.map(c => `
+      <div class="pf-comunicado">
+        <div class="pf-comunicado-icon" style="background:${c.cor}"><i class="ti ${c.icon}"></i></div>
+        <div class="pf-comunicado-body">
+          <div class="pf-comunicado-meta">
+            <span class="pf-comunicado-pill ${c.tipo}">${c.tipo.charAt(0).toUpperCase() + c.tipo.slice(1)}</span>
+            <span class="pf-comunicado-date">${c.data}</span>
+          </div>
+          <div class="pf-comunicado-desc"><b>${c.titulo}.</b> ${c.desc}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function goToPlatformScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('app-container').style.display = 'none';
+  if (id) { const el = document.getElementById(id); if (el) el.classList.add('active'); }
+}
+
+function pfRenderSectorScreen() {
+  const area = document.getElementById('sector-grid-area');
+  if (!area) return;
+  area.innerHTML = '<div class="sector-block-grid">' + _pfSectors.map(s => `
+    <button class="sector-block ${s.cls}" onclick="pfSelectSector('${s.name}')">
+      <div class="blk-top"><i class="ti ${s.icon}"></i><h3>${s.label}</h3></div>
+      <div class="blk-bottom"><p>${s.sub}</p><i class="ti ti-chevron-right"></i></div>
+    </button>`).join('') + '</div>';
+}
+
+function pfSelectSector(name) {
+  _pfCurrentSector = name;
+  const cfg = _pfSectorConfig[name];
+  const badge = document.getElementById('pf-login-sector-badge');
+  const icon  = document.getElementById('pf-login-sector-icon');
+  const label = document.getElementById('pf-login-sector-name');
+  if (badge && cfg) {
+    badge.style.background = cfg.bgAlpha;
+    badge.style.color      = cfg.color;
+    icon.className         = 'ti ' + cfg.icon;
+    label.textContent      = name;
+  }
+  document.getElementById('pf-login-erro').textContent = '';
+  goToPlatformScreen('screen-login');
+  setTimeout(() => { const u = document.getElementById('pf-usuario'); if (u) u.focus(); }, 50);
+}
+
+async function pfDoLogin() {
+  const nome  = (document.getElementById('pf-usuario')?.value || '').trim().toLowerCase();
+  const senha = document.getElementById('pf-senha')?.value || '';
+  const erro  = document.getElementById('pf-login-erro');
+  erro.textContent = '';
+  if (!nome || !senha) { erro.textContent = 'Informe usuário e senha.'; return; }
+  if (!api()) { erro.textContent = 'Bridge indisponível.'; return; }
+
+  const r = await api().login(nome, senha);
+
+  if (r.precisa_trocar_senha) {
+    window._loginPendente = { nome, senha };
+    document.getElementById('pf-senha').value = '';
+    /* Usa overlay legado apenas para troca de senha */
+    document.getElementById('login-overlay').style.display = '';
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('troca-senha-form').style.display = '';
+    goToPlatformScreen(null);
+    return;
+  }
+  if (!r.ok) { erro.textContent = r.erro || 'Falha no login.'; return; }
+
+  document.getElementById('pf-senha').value = '';
+  aplicarSessaoNoUI({ nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina });
+  toast('Bem-vindo, ' + (r.label || r.nome) + '.', 'success');
+  pfRenderModules();
+  pfNavParaHome();
+  goToPlatformScreen('screen-module');
+}
+
+function pfRenderModules() {
+  const cfg = _pfSectorConfig[_pfCurrentSector];
+  const PAPEL_LABEL = { admin: 'Administrador', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP' };
+
+  const topIcon = document.getElementById('pf-top-sector-icon');
+  if (topIcon && cfg) { topIcon.className = 'ti ' + cfg.icon; topIcon.style.color = cfg.color; }
+
+  const sbIcon = document.getElementById('pf-sidebar-sector-icon');
+  const sbName = document.getElementById('pf-sidebar-sector-name');
+  if (sbIcon && cfg) sbIcon.className = 'ti ' + cfg.icon;
+  if (sbName) sbName.textContent = _pfCurrentSector;
+
+  const sessao = window._sessao;
+  if (sessao) {
+    const el = document.getElementById('pf-sb-user-name');
+    const rl = document.getElementById('pf-sb-user-role');
+    const tu = document.getElementById('pf-topbar-user');
+    if (el) el.textContent = sessao.label || sessao.nome;
+    if (rl) rl.textContent = PAPEL_LABEL[sessao.papel] || sessao.papel;
+    if (tu) tu.textContent = sessao.label || sessao.nome;
+  }
+
+  const bc = document.getElementById('pf-breadcrumb');
+  if (bc) bc.textContent = 'Central DMF / ' + (_pfCurrentSector || '—') + ' / Módulos';
+
+  /* Renderiza catálogo do setor */
+  const modulos = _pfModuleCatalog[_pfCurrentSector] || [];
+  const area = document.getElementById('pf-modules-area');
+  if (!area) return;
+
+  if (modulos.length === 0) {
+    area.innerHTML = `
+      <div class="pf-module-empty">
+        <i class="ti ti-tools"></i>
+        <h3>Módulos em desenvolvimento</h3>
+        <p>Novos módulos serão disponibilizados em breve para este setor.</p>
+        <span class="badge-soon-pf">Em breve</span>
+      </div>`;
+    return;
+  }
+
+  const setorLabel = _pfCurrentSector.charAt(0) + _pfCurrentSector.slice(1).toLowerCase();
+  area.innerHTML = '<div class="pf-grid-b">' + modulos.map(m => {
+    const disp = m.status === 'disponivel';
+    const cls  = disp ? 'pf-card-b' : 'pf-card-b disabled';
+    const ev   = disp ? `onclick="pfAbrirModulo('${m.id}')"` : '';
+    const c1   = m.color, c2 = m.color + 'CC', c3 = m.color + '88';
+    return `<div class="${cls}" ${ev}>
+      <div class="pf-card-b-header">
+        <span class="blk1" style="background:${c1}"></span>
+        <span class="blk2" style="background:${c2}"></span>
+        <span class="blk3" style="background:${c3}"></span>
+      </div>
+      <div class="pf-card-b-body">
+        <p class="meta">Módulo · ${setorLabel}</p>
+        <h3>${m.nome}</h3>
+        <p class="desc">${m.desc}</p>
+        <div class="row">
+          ${disp
+            ? '<span class="badge-status"><span class="dot"></span>Disponível</span>'
+            : '<span class="badge-status" style="color:var(--color-text-light)"><span class="dot" style="background:var(--color-text-light)"></span>Em breve</span>'}
+          <i class="ti ti-arrow-right access-chev"></i>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+async function pfAbrirModulo(modulo) {
+  const mc = (_pfModuleCatalog[_pfCurrentSector] || []).find(m => m.id === modulo);
+  if (mc) pfRegistrarAcesso(_pfCurrentSector, modulo, mc.nome);
+
+  if (modulo === 'controle-horas') {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('app-container').style.display = 'flex';
+    await bootApp();
+  }
+}
+
+async function pfDoLogout() {
+  if (!api()) return;
+  await api().logout();
+  window._sessao = null;
+  document.getElementById('supervisor-nome').textContent = '—';
+  document.getElementById('supervisor-papel').textContent = '';
+  _pfCurrentSector = '';
+  document.getElementById('app-container').style.display = 'none';
+  pfRenderSectorScreen();
+  goToPlatformScreen('screen-sector');
+  toast('Sessão encerrada.', 'info');
+}
+
+/* ===== pfVoltarParaModulos ===== */
+function pfVoltarParaModulos() {
+  try {
+    const ac = document.getElementById('app-container');
+    if (ac) ac.style.display = 'none';
+    if (_pfCurrentSector) pfRenderModules();
+  } catch(e) { /* ignora erros de render */ }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const sm = document.getElementById('screen-module');
+  if (sm) {
+    sm.classList.add('active');
+    const mainView = sm.querySelector('.pf-main-view');
+    if (mainView) mainView.scrollTop = 0;
+  }
+  pfNavParaHome();
+}
+
+/* ===== PERFIL ===== */
+function pfOpenProfile() {
+  const s = window._sessao || {};
+  const PAPEL_LABEL = { admin: 'Administrador', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP' };
+  document.getElementById('pf-modal-name').textContent = s.label || s.nome || '—';
+  document.getElementById('pf-modal-role').textContent = PAPEL_LABEL[s.papel] || s.papel || '';
+  document.getElementById('pf-pwd-atual').value = '';
+  document.getElementById('pf-pwd-nova').value = '';
+  document.getElementById('pf-pwd-nova2').value = '';
+  const msg = document.getElementById('pf-profile-msg');
+  if (msg) { msg.textContent = ''; msg.className = 'pf-profile-msg'; }
+
+  /* Carrega dados de localStorage */
+  const info = JSON.parse(localStorage.getItem('dmf_perfil') || '{}');
+  ['nome','sobrenome','email','telefone','cargo','dpto'].forEach(k => {
+    const el = document.getElementById('pf-info-' + k);
+    if (el) el.value = info[k] || '';
+  });
+
+  /* Carrega avatar */
+  const avatar = localStorage.getItem('dmf_avatar');
+  pfAtualizarAvatarModal(avatar);
+
+  /* Carrega preferências */
+  const prefs = JSON.parse(localStorage.getItem('dmf_prefs') || '{}');
+  const tema = document.getElementById('pf-pref-tema');
+  if (tema) tema.value = prefs.tema || 'auto';
+  const notifExec = document.getElementById('pf-notif-exec');
+  if (notifExec) notifExec.checked = prefs.notif_exec !== false;
+  const notifSom = document.getElementById('pf-notif-som');
+  if (notifSom) notifSom.checked = prefs.notif_som === true;
+  const notifCom = document.getElementById('pf-notif-comunicados');
+  if (notifCom) notifCom.checked = prefs.notif_comunicados !== false;
+
+  /* Mensagens */
+  const mi = document.getElementById('pf-msg-info');
+  if (mi) { mi.textContent = ''; mi.className = 'pf-msg-info'; }
+  const mp = document.getElementById('pf-msg-prefs');
+  if (mp) { mp.textContent = ''; mp.className = 'pf-msg-prefs'; }
+
+  pfProfileTab('info');
+  document.getElementById('pf-profile-bg').classList.add('open');
+}
+
+function pfCloseProfile() {
+  document.getElementById('pf-profile-bg').classList.remove('open');
+}
+
+function pfProfileTab(tab) {
+  const tabs = ['info','senha','prefs'];
+  document.querySelectorAll('.pf-profile-tab').forEach((el, i) => el.classList.toggle('active', tabs[i] === tab));
+  tabs.forEach(t => {
+    const el = document.getElementById('pf-tab-' + t);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+}
+
+function pfAvatarUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataURL = e.target.result;
+    localStorage.setItem('dmf_avatar', dataURL);
+    pfAtualizarAvatarModal(dataURL);
+    pfAtualizarAvatarSidebar(dataURL);
+  };
+  reader.readAsDataURL(file);
+}
+
+function pfAtualizarAvatarModal(dataURL) {
+  const img  = document.getElementById('pf-avatar-img');
+  const icon = document.getElementById('pf-avatar-icon');
+  if (!img) return;
+  if (dataURL) {
+    img.src = dataURL; img.style.display = '';
+    if (icon) icon.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    if (icon) icon.style.display = '';
+  }
+}
+
+function pfAtualizarAvatarSidebar(dataURL) {
+  const sbAv = document.querySelector('.pf-sb-avatar');
+  if (!sbAv) return;
+  if (dataURL) {
+    sbAv.innerHTML = `<img src="${dataURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    sbAv.innerHTML = '<i class="ti ti-user" style="font-size:18px"></i>';
+  }
+}
+
+function pfAvatarRemover() {
+  localStorage.removeItem('dmf_avatar');
+  pfAtualizarAvatarModal(null);
+  pfAtualizarAvatarSidebar(null);
+  document.getElementById('pf-avatar-input').value = '';
+}
+
+function pfSalvarInfo() {
+  const info = {};
+  ['nome','sobrenome','email','telefone','cargo','dpto'].forEach(k => {
+    const el = document.getElementById('pf-info-' + k);
+    info[k] = el ? el.value.trim() : '';
+  });
+  localStorage.setItem('dmf_perfil', JSON.stringify(info));
+  const msg = document.getElementById('pf-msg-info');
+  if (msg) { msg.className = 'pf-msg-info ok'; msg.textContent = 'Informações salvas com sucesso!'; }
+  toast('Perfil atualizado.', 'success');
+  setTimeout(() => { const m = document.getElementById('pf-msg-info'); if (m) m.textContent = ''; }, 3000);
+}
+
+function pfSalvarPrefs() {
+  const prefs = {
+    tema:               document.getElementById('pf-pref-tema').value,
+    notif_exec:         document.getElementById('pf-notif-exec').checked,
+    notif_som:          document.getElementById('pf-notif-som').checked,
+    notif_comunicados:  document.getElementById('pf-notif-comunicados').checked
+  };
+  localStorage.setItem('dmf_prefs', JSON.stringify(prefs));
+  pfAplicarTema(prefs.tema);
+  const msg = document.getElementById('pf-msg-prefs');
+  if (msg) { msg.className = 'pf-msg-prefs ok'; msg.textContent = 'Preferências salvas!'; }
+  toast('Preferências salvas.', 'success');
+  setTimeout(() => { const m = document.getElementById('pf-msg-prefs'); if (m) m.textContent = ''; }, 3000);
+}
+
+function pfAplicarTema(tema) {
+  if (tema === 'escuro') {
+    document.body.classList.add('theme-dark');
+  } else if (tema === 'claro') {
+    document.body.classList.remove('theme-dark');
+  } else {
+    const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.body.classList.toggle('theme-dark', dark);
+  }
+}
+
+async function pfSalvarSenha() {
+  const atual = document.getElementById('pf-pwd-atual').value;
+  const nova  = document.getElementById('pf-pwd-nova').value;
+  const nova2 = document.getElementById('pf-pwd-nova2').value;
+  const msg   = document.getElementById('pf-profile-msg');
+  msg.className = 'pf-profile-msg';
+  msg.textContent = '';
+  if (!atual || !nova || !nova2) { msg.className = 'pf-profile-msg err'; msg.textContent = 'Preencha todos os campos.'; return; }
+  if (nova.length < 4)  { msg.className = 'pf-profile-msg err'; msg.textContent = 'Nova senha deve ter pelo menos 4 caracteres.'; return; }
+  if (nova !== nova2)   { msg.className = 'pf-profile-msg err'; msg.textContent = 'As senhas não coincidem.'; return; }
+  if (!api()) { msg.className = 'pf-profile-msg err'; msg.textContent = 'Bridge indisponível.'; return; }
+  const r = await api().trocar_senha(atual, nova);
+  if (r.ok) {
+    msg.className = 'pf-profile-msg ok';
+    msg.textContent = 'Senha alterada com sucesso!';
+    document.getElementById('pf-pwd-atual').value = '';
+    document.getElementById('pf-pwd-nova').value = '';
+    document.getElementById('pf-pwd-nova2').value = '';
+  } else {
+    msg.className = 'pf-profile-msg err';
+    msg.textContent = r.erro || 'Erro ao alterar senha.';
+  }
+}
 </script>
+
+<!-- ===== MODAL DE PERFIL (expandido, tabbed) ===== -->
+<div class="pf-profile-bg" id="pf-profile-bg" onclick="if(event.target===this)pfCloseProfile()">
+  <div class="pf-profile-card expanded">
+
+    <div class="pf-profile-header">
+      <h3><i class="ti ti-user-circle" style="color:var(--color-dmf-blue)"></i> Meu Perfil</h3>
+      <button class="pf-profile-close" onclick="pfCloseProfile()" title="Fechar">&times;</button>
+    </div>
+
+    <div class="pf-profile-tabs">
+      <button class="pf-profile-tab active" onclick="pfProfileTab('info')">Informações</button>
+      <button class="pf-profile-tab" onclick="pfProfileTab('senha')">Segurança</button>
+      <button class="pf-profile-tab" onclick="pfProfileTab('prefs')">Preferências</button>
+    </div>
+
+    <!-- ABA: INFORMAÇÕES -->
+    <div class="pf-profile-tab-content active" id="pf-tab-info">
+      <div class="pf-profile-avatar-row">
+        <div class="pf-profile-avatar-upload" id="pf-avatar-upload" onclick="document.getElementById('pf-avatar-input').click()" title="Alterar foto">
+          <img id="pf-avatar-img" alt="avatar">
+          <i class="ti ti-user" id="pf-avatar-icon" style="font-size:28px;color:#fff"></i>
+          <div class="overlay-cam"><i class="ti ti-camera"></i></div>
+        </div>
+        <input type="file" id="pf-avatar-input" accept="image/*" style="display:none" onchange="pfAvatarUpload(this)">
+        <div class="pf-profile-avatar-info">
+          <p>Clique para enviar uma foto. Formatos aceitos: JPG, PNG.<br>Salva localmente neste navegador.</p>
+          <button onclick="pfAvatarRemover()">Remover foto</button>
+        </div>
+      </div>
+      <div class="pf-profile-grid-2">
+        <div class="pf-profile-field">
+          <label>Nome</label>
+          <input type="text" id="pf-info-nome" placeholder="Seu nome">
+        </div>
+        <div class="pf-profile-field">
+          <label>Sobrenome</label>
+          <input type="text" id="pf-info-sobrenome" placeholder="Seu sobrenome">
+        </div>
+        <div class="pf-profile-field">
+          <label>E-mail</label>
+          <input type="email" id="pf-info-email" placeholder="email@empresa.com">
+        </div>
+        <div class="pf-profile-field">
+          <label>Telefone</label>
+          <input type="text" id="pf-info-telefone" placeholder="(00) 00000-0000">
+        </div>
+        <div class="pf-profile-field">
+          <label>Cargo</label>
+          <input type="text" id="pf-info-cargo" placeholder="Ex: Supervisor">
+        </div>
+        <div class="pf-profile-field">
+          <label>Departamento</label>
+          <input type="text" id="pf-info-dpto" placeholder="Ex: Gestão">
+        </div>
+      </div>
+      <div class="pf-msg-info" id="pf-msg-info"></div>
+      <div class="pf-profile-actions">
+        <button class="pf-btn-cancel" onclick="pfCloseProfile()">Cancelar</button>
+        <button class="pf-btn-save" onclick="pfSalvarInfo()">Salvar informações</button>
+      </div>
+    </div>
+
+    <!-- ABA: SEGURANÇA -->
+    <div class="pf-profile-tab-content" id="pf-tab-senha">
+      <div class="pf-profile-user-row">
+        <div class="pf-profile-avatar"><i class="ti ti-shield-lock" style="font-size:20px"></i></div>
+        <div>
+          <div class="pf-profile-uname" id="pf-modal-name">—</div>
+          <div class="pf-profile-urole" id="pf-modal-role"></div>
+        </div>
+      </div>
+      <hr class="pf-profile-divider">
+      <p class="pf-profile-section-title">Alterar senha</p>
+      <div class="pf-profile-field">
+        <label>Senha atual</label>
+        <input type="password" id="pf-pwd-atual" autocomplete="current-password" placeholder="••••••">
+      </div>
+      <div class="pf-profile-field">
+        <label>Nova senha</label>
+        <input type="password" id="pf-pwd-nova" autocomplete="new-password" placeholder="Mínimo 4 caracteres">
+      </div>
+      <div class="pf-profile-field">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="pf-pwd-nova2" autocomplete="new-password" placeholder="Repita a nova senha">
+      </div>
+      <div class="pf-profile-msg" id="pf-profile-msg"></div>
+      <div class="pf-profile-actions">
+        <button class="pf-btn-cancel" onclick="pfCloseProfile()">Cancelar</button>
+        <button class="pf-btn-save" onclick="pfSalvarSenha()">Salvar senha</button>
+      </div>
+    </div>
+
+    <!-- ABA: PREFERÊNCIAS -->
+    <div class="pf-profile-tab-content" id="pf-tab-prefs">
+      <p class="pf-profile-section-title">Aparência</p>
+      <div class="pf-pref-row">
+        <div>
+          <div class="pf-pref-label">Tema</div>
+          <div class="pf-pref-hint">Claro, escuro ou automático (conforme o sistema)</div>
+        </div>
+        <div class="pf-profile-field" style="margin:0;width:150px">
+          <select id="pf-pref-tema" onchange="pfAplicarTema(this.value)">
+            <option value="auto">Automático</option>
+            <option value="claro">Claro</option>
+            <option value="escuro">Escuro</option>
+          </select>
+        </div>
+      </div>
+      <p class="pf-profile-section-title" style="margin-top:20px">Notificações</p>
+      <div class="pf-pref-row">
+        <div>
+          <div class="pf-pref-label">Notificações de execução</div>
+          <div class="pf-pref-hint">Alertas ao concluir ou falhar uma automação</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="pf-notif-exec" checked><span class="toggle-track"></span></label>
+      </div>
+      <div class="pf-pref-row">
+        <div>
+          <div class="pf-pref-label">Sons de notificação</div>
+          <div class="pf-pref-hint">Áudio ao receber alertas</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="pf-notif-som"><span class="toggle-track"></span></label>
+      </div>
+      <div class="pf-pref-row">
+        <div>
+          <div class="pf-pref-label">Comunicados internos</div>
+          <div class="pf-pref-hint">Exibir comunicados na tela Início</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="pf-notif-comunicados" checked><span class="toggle-track"></span></label>
+      </div>
+      <div class="pf-msg-prefs" id="pf-msg-prefs"></div>
+      <div class="pf-profile-actions">
+        <button class="pf-btn-cancel" onclick="pfCloseProfile()">Cancelar</button>
+        <button class="pf-btn-save" onclick="pfSalvarPrefs()">Salvar preferências</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 </body>
 </html>
