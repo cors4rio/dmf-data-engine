@@ -251,6 +251,19 @@ class Api:
             return caminho
         return None
 
+    def selecionar_horas_contabeis(self):
+        import webview
+        win = self._win()
+        result = win.create_file_dialog(
+            webview.OPEN_DIALOG, allow_multiple=False,
+            file_types=["Planilha Excel (*.xlsx)", "Todos os arquivos (*.*)"],
+        )
+        if result and result[0]:
+            caminho = result[0]
+            self._config.save({"contabil_origem_path": caminho})
+            return {"ok": True, "caminho": caminho}
+        return {"ok": False, "cancelado": True}
+
     def validar_arquivos(self, caminhos: dict):
         return {k: os.path.exists(v) if v else False for k, v in caminhos.items()}
 

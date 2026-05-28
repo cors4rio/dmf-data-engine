@@ -767,7 +767,7 @@
 <!-- OVERLAY DE LOGIN — visível até autenticação concluir -->
 <div class="login-overlay" id="login-overlay" style="display:none">
   <div class="login-card">
-    <h2 id="login-titulo"><i class="ti ti-shield-lock"></i> DMF Engine</h2>
+    <h2 id="login-titulo"><i class="ti ti-shield-lock"></i> Automação de Horas</h2>
     <div class="subtitle" id="login-subtitulo">Faça login para continuar</div>
 
     <!-- LOGIN -->
@@ -807,10 +807,9 @@
     </div>
     <div class="window-title">
       <i class="ti ti-chart-dots"></i>
-      <span><b>DMF Engine</b> — Automação de Horas</span>
+      <span>Automação de Horas</span>
     </div>
     <div class="window-right">
-      <button onclick="pfVoltarParaModulos()" style="background:none;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 10px;font-size:12px;color:var(--color-text-muted);cursor:pointer;font-family:var(--font-sans);">← Módulos</button>
       <span>Competência:</span>
       <select class="period-dropdown" id="competencia-select"></select>
       <button onclick="popularCompetenciasDaMaster()" title="Recarregar competências da Master" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 4px;color:var(--color-text-muted)">⟳</button>
@@ -824,13 +823,13 @@
     <aside class="sidebar">
       <!-- Botão voltar ao seletor de módulos do departamento -->
       <button id="btn-voltar-modulos" class="nav-pill" onclick="pfVoltarParaModulos()" style="margin:10px 8px 4px;width:calc(100% - 16px);border-radius:var(--radius-md);border:1px solid var(--color-border);background:#f0f4f9;color:var(--color-accent);font-weight:600;">
-        <i class="ti ti-arrow-left" style="color:var(--color-accent)"></i> <span>← Módulos</span>
+        <i class="ti ti-arrow-left" style="color:var(--color-accent)"></i> <span>Central DMF</span>
       </button>
 
       <div class="logo-header" style="margin-top:8px">
         <i class="ti ti-layout-grid-add"></i>
         <div class="logo-text">
-          <h1>DMF Engine</h1>
+          <h1>Automação de Horas</h1>
           <span>v2.0 - local runner</span>
         </div>
       </div>
@@ -1478,7 +1477,7 @@ function mostrarOverlayLogin() {
   /* Mantém o overlay acessível apenas para troca de senha */
   document.getElementById('login-form').style.display = '';
   document.getElementById('troca-senha-form').style.display = 'none';
-  document.getElementById('login-titulo').innerHTML = '<i class="ti ti-shield-lock"></i> DMF Engine';
+  document.getElementById('login-titulo').innerHTML = '<i class="ti ti-shield-lock"></i> Automação de Horas';
   document.getElementById('login-subtitulo').textContent = 'Faça login para continuar';
   document.getElementById('login-erro').textContent = '';
   setTimeout(() => document.getElementById('login-nome').focus(), 30);
