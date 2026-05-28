@@ -7,7 +7,7 @@ import logging
 import traceback
 from datetime import datetime
 
-from dmf_engine.modules.base import BaseModule, ModuleMeta
+from modules.base import BaseModule, ModuleMeta
 
 log = logging.getLogger("FiscalModule")
 
@@ -31,8 +31,7 @@ class FiscalModule(BaseModule):
         from engine.master_writer import MasterWriter
         from engine.lock_master import adquirir_lock, liberar_lock
 
-        # Imports lazy para não circular na inicialização
-        import dmf_engine.main as _main
+        import compat as _main
         db = _main.db
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT

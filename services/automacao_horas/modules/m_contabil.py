@@ -11,7 +11,7 @@ import logging
 import traceback
 from datetime import datetime
 
-from dmf_engine.modules.base import BaseModule, ModuleMeta
+from modules.base import BaseModule, ModuleMeta
 
 log = logging.getLogger("ContabilModule")
 
@@ -41,7 +41,7 @@ class ContabilModule(BaseModule):
     def _fase2_processar(self, opcoes: dict) -> dict:
         from modulos.contabil_preenchedor import preencher_horas_contabeis
 
-        import dmf_engine.main as _main
+        import compat as _main
         db = _main.db
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT
@@ -94,11 +94,11 @@ class ContabilModule(BaseModule):
     # ── Fase 5: injetar na master ────────────────────────────────────────────
 
     def _fase5_injetar_master(self, opcoes: dict) -> dict:
-        from modulos.contabil_injetor import injetar_contabil_na_master
+        from modulos.contabil_integrador import injetar_contabil_na_master
         from engine.master_writer import MasterWriter
         from engine.lock_master import adquirir_lock, liberar_lock
 
-        import dmf_engine.main as _main
+        import compat as _main
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT
 
