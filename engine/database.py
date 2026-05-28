@@ -12,7 +12,7 @@ class DominioDatabase:
     def __init__(self):
         self.dsn = os.environ.get("DOMINIO_DSN", "Contabil")
         self.uid = os.environ.get("DOMINIO_UID", "EXTERNO")
-        self.pwd = os.environ.get("DOMINIO_PWD", "***REDACTED***")
+        self.pwd = os.environ.get("DOMINIO_PWD", "")
         self.timeout = int(os.environ.get("DOMINIO_TIMEOUT", "5"))
         self.connection_string = f"DSN={self.dsn};UID={self.uid};PWD={self.pwd}"
         self.conn = None
