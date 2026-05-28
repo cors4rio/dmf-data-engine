@@ -17,11 +17,13 @@ import logging
 
 def _resolver_pasta():
     """Resolve a pasta de exceções tanto em dev quanto após PyInstaller.
-    Em frozen: ao lado do .exe. Em dev: 1 nível acima de modulos/."""
+    Em frozen: ao lado do .exe. Em dev: raiz do repo (4 níveis acima de excecoes.py).
+    services/automacao_horas/modulos/excecoes.py → modulos/ → automacao_horas/ → services/ → repo root"""
     if getattr(sys, "frozen", False):
         base = os.path.dirname(sys.executable)
     else:
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        _here = os.path.dirname(os.path.abspath(__file__))  # modulos/
+        base = os.path.dirname(os.path.dirname(os.path.dirname(_here)))  # repo root
     return os.path.join(base, "config", "nao_faz_setor")
 
 PASTA = _resolver_pasta()

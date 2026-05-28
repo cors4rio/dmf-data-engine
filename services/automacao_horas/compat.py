@@ -13,8 +13,8 @@ from engine.database import db                        # noqa: F401
 from engine import estado_compartilhado as estado_sh  # noqa: F401
 
 # Raiz do projeto: este arquivo está em services/automacao_horas/
-# → 2 níveis acima = raiz do repo (N8N automacao/)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# services/automacao_horas/compat.py → automacao_horas/ → services/ → repo root (3 dirname)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Preenchido por main.py após webview.create_window() — referência mutável
 # que os módulos acessam em tempo de execução (não no import).

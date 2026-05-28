@@ -230,21 +230,21 @@
 - `[x]` Removido `dmf_engine\modules\m_contabil.py`
 
 ### 4.5 — Testar Central DMF limpa
-- `[ ]` `py dmf_engine\main.py` (sem 32-bit — deve funcionar em 64-bit)
-- `[ ]` Sem erros de import no console?
-- `[ ]` Login e navegação funcionam?
-- `[ ]` Card "Automação de Horas" lança com SSO?
+- `[x]` `py dmf_engine\main.py` (sem 32-bit — deve funcionar em 64-bit)
+- `[x]` Sem erros de import no console?
+- `[x]` Login e navegação funcionam?
+- `[x]` Card "Automação de Horas" lança com SSO?
 
 ### 4.6 — Commit
-- `[ ]` `git add -A`
-- `[ ]` `git commit -m "feat: Central DMF desacoplada - automacao_horas isolada em services/"`
+- `[x]` `git add -A`
+- `[x]` `git commit -m "feat: Central DMF desacoplada - automacao_horas isolada em services/"`
 
-### CHECKPOINT 4
-- `[ ]` `run.bat` → Central DMF abre normalmente?
-- `[ ]` Todos os setores navegáveis?
-- `[ ]` Automação de Horas lança com SSO a partir de GESTÃO?
-- `[ ]` Automação standalone funciona? `py -3-32 services\automacao_horas\main.py`
-- `[ ]` Nenhum erro de import nos dois apps?
+### CHECKPOINT 4 ✅
+- `[x]` `run.bat` → Central DMF abre normalmente?
+- `[x]` Todos os setores navegáveis?
+- `[x]` Automação de Horas lança com SSO a partir de GESTÃO?
+- `[x]` Automação standalone funciona? `py -3-32 services\automacao_horas\main.py`
+- `[x]` Nenhum erro de import nos dois apps?
 
 ---
 

@@ -79,6 +79,11 @@ scratch/
 skills/
 log_execucao.md
 
+# Services - arquivos locais (não compartilhar entre instâncias)
+services/automacao_horas/config.json
+services/automacao_horas/__pycache__/
+services/automacao_horas/ENTRADAS_MANUAIS/
+
 # Backups gerados pelo editor / ferramentas
 *.bak
 *.bak2
