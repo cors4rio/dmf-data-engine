@@ -47,7 +47,8 @@ def extrair_e_preencher_dp(writer, data_inicio, data_fim, fator_carga=0.33, over
         logging.warning("[DP] Nenhum dado retornado do Domínio.")
     
     # 2. Ler Planilha da Carol (caminho explícito sobrescreve fallback local)
-    caminho_planilha = caminho_carol or os.path.join("ENTRADAS_MANUAIS", "Controle de Empregados (CAROL).xls")
+    _svc = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    caminho_planilha = caminho_carol or os.path.join(_svc, "ENTRADAS_MANUAIS", "Controle de Empregados (CAROL).xls")
     dados_planilha = ExcelParser.ler_planilha_carol(caminho_planilha) or {}
     
     # 3. Consolidação e Dupla Checagem (Planilha Vence)

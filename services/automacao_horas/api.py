@@ -18,6 +18,9 @@ from calendar import monthrange
 
 log = logging.getLogger("Api")
 
+# Raiz do próprio service (services/automacao_horas/) — independente do cwd
+_SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class Api:
     """
@@ -658,7 +661,7 @@ class Api:
         cfg = self._config.load()
         candidatos = [
             cfg.get("contabil_origem_path"),
-            os.path.join(self._project_root, "ENTRADAS_MANUAIS", "HORAS CONTABEIS.xlsx"),
+            os.path.join(_SERVICE_DIR, "ENTRADAS_MANUAIS", "HORAS CONTABEIS.xlsx"),
         ]
         caminho = next((p for p in candidatos if p and os.path.exists(p)), candidatos[0])
         info = {
