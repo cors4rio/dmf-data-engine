@@ -3027,7 +3027,7 @@ const _pfSectors = [
 
 const _pfModuleCatalog = {
   'GESTÃO': [
-    { id: 'controle-horas', nome: 'Controle de Horas',      desc: 'Automação de lançamento de horas — Fiscal, Contábil e DP.', status: 'disponivel', icon: 'ti-clock-hour-4', color: '#2B65B5' },
+    { id: 'automacao_horas', nome: 'Automação de Horas',     desc: 'Apuração e lançamento de horas via ERP Domínio — Fiscal, Contábil e DP.', status: 'disponivel', icon: 'ti-clock-play', color: '#2B65B5' },
     { id: 'financeiro',     nome: 'Financeiro',              desc: 'Contas a pagar, receber e fluxo de caixa.',                 status: 'breve',      icon: 'ti-cash',         color: '#2A7A45' },
     { id: 'faturamento',    nome: 'Faturamento',             desc: 'Emissão de notas fiscais e controle de faturamento.',       status: 'breve',      icon: 'ti-file-invoice', color: '#1B3461' },
     { id: 'relatorios',     nome: 'Relatórios Gerenciais',   desc: 'Dashboards e relatórios consolidados de gestão.',           status: 'breve',      icon: 'ti-chart-bar',    color: '#B06A00' }
@@ -3272,6 +3272,14 @@ function pfRenderModules() {
 async function pfAbrirModulo(modulo) {
   const mc = (_pfModuleCatalog[_pfCurrentSector] || []).find(m => m.id === modulo);
   if (mc) pfRegistrarAcesso(_pfCurrentSector, modulo, mc.nome);
+
+  if (modulo === 'automacao_horas') {
+    if (!api()) return;
+    toast('Abrindo Automação de Horas...', 'info');
+    const r = await api().executar_modulo('automacao_horas', {});
+    if (!r.ok) toast(r.erro || 'Erro ao abrir Automação de Horas.', 'error');
+    return;
+  }
 
   if (modulo === 'controle-horas') {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

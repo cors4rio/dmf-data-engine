@@ -103,6 +103,7 @@ from dmf_engine.modules.registry import ModuleRegistry
 from dmf_engine.modules.m_fiscal import FiscalModule
 from dmf_engine.modules.m_dp import DPModule
 from dmf_engine.modules.m_contabil import ContabilModule
+from dmf_engine.modules.m_automacao_horas import AutomacaoHorasLauncher
 from dmf_engine.api import Api
 
 _config = ConfigManager(CONFIG_FILE)
@@ -119,6 +120,7 @@ def _sessao_fn():
 _registry.register(FiscalModule(_bus, _config, _sessao_fn))
 _registry.register(DPModule(_bus, _config, _sessao_fn))
 _registry.register(ContabilModule(_bus, _config, _sessao_fn))
+_registry.register(AutomacaoHorasLauncher(_bus, _config, _sessao_fn))
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
 
