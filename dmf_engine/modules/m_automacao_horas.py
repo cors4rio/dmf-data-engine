@@ -71,7 +71,6 @@ class AutomacaoHorasLauncher(BaseModule):
             }
 
         # 3. Lançar como processo separado (janela PyWebView própria)
-        self.progress(10, "Abrindo Automação de Horas...")
         try:
             subprocess.Popen(
                 [python_32, app_path, "--session-token", token],
@@ -80,7 +79,6 @@ class AutomacaoHorasLauncher(BaseModule):
                     | subprocess.CREATE_NEW_PROCESS_GROUP
                 ),
             )
-            self.progress(100, "Automação de Horas aberta.")
             return {"ok": True, "msg": "Automação de Horas aberta com sessão ativa."}
         except Exception as e:
             if os.path.exists(caminho_token):

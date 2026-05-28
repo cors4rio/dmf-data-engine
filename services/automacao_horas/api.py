@@ -66,6 +66,61 @@ class Api:
         """Expõe a sessão atual para o JS verificar SSO no boot da UI."""
         return self._sessao
 
+    def testar_conexao(self):
+        from engine.database import db
+        cfg = self._config.load()
+        db.configurar(
+            dsn=cfg.get("db_dsn"),
+            uid=cfg.get("db_uid"),
+            pwd=cfg.get("db_pwd") or db.pwd,
+            timeout=cfg.get("db_timeout", 5),
+        )
+        ok = db.connect()
+        resultado = {
+            "ok": ok,
+            "msg": "Conexão com Domínio estabelecida com sucesso." if ok else "Falha na conexão ODBC.",
+            "erro": db.ultimo_erro if not ok else None,
+        }
+        self._config.save({
+            "db_ultimo_teste_ok": ok,
+            "db_ultimo_teste_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "db_ultimo_erro": db.ultimo_erro if not ok else None,
+        })
+        return resultado
+
+    def fechar_janela(self):
+        """Fecha a janela PyWebView (botão ← Módulos no service standalone)."""
+        try:
+            win = self._win()
+            if win:
+                import threading
+                threading.Timer(0.15, win.destroy).start()
+            return {"ok": True}
+        except Exception as e:
+            log.error(f"[FECHAR] {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def diagnosticar_odbc(self):
+        import sys, platform
+        cfg = self._config.load()
+        dsn_conf = cfg.get("db_dsn", "")
+        resultado = {
+            "python_version": sys.version.split()[0],
+            "python_bits": platform.architecture()[0],
+            "drivers": [],
+            "dsns_user": {},
+            "dsn_configurado": dsn_conf,
+            "dsn_existe": False,
+        }
+        try:
+            import pyodbc
+            resultado["drivers"] = sorted(pyodbc.drivers())
+            resultado["dsns_user"] = dict(pyodbc.dataSources())
+            resultado["dsn_existe"] = dsn_conf in resultado["dsns_user"]
+        except Exception as e:
+            resultado["erro_pyodbc"] = str(e)
+        return resultado
+
     # ── Helpers internos ─────────────────────────────────────────────────────
 
     def _autorizado(self, modulo: str) -> bool:

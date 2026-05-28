@@ -2964,10 +2964,9 @@ window.addEventListener('pywebviewready', async () => {
       const r = await api().verificar_estado_login();
       if (r.sessao) {
         aplicarSessaoNoUI(r.sessao);
-        _pfCurrentSector = 'GESTÃO';
-        pfRenderModules();
-        pfNavParaHome();
-        goToPlatformScreen('screen-module');
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('app-container').style.display = 'flex';
+        await bootApp();
       }
     } catch(e) { /* sem sessão, fica em screen-sector */ }
   }
@@ -3196,9 +3195,9 @@ async function pfDoLogin() {
   document.getElementById('pf-senha').value = '';
   aplicarSessaoNoUI({ nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina });
   toast('Bem-vindo, ' + (r.label || r.nome) + '.', 'success');
-  pfRenderModules();
-  pfNavParaHome();
-  goToPlatformScreen('screen-module');
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('app-container').style.display = 'flex';
+  await bootApp();
 }
 
 function pfRenderModules() {
@@ -3293,22 +3292,9 @@ async function pfDoLogout() {
   toast('Sessão encerrada.', 'info');
 }
 
-/* ===== pfVoltarParaModulos ===== */
+/* ===== pfVoltarParaModulos — service: fecha a janela ===== */
 function pfVoltarParaModulos() {
-  try {
-    const ac = document.getElementById('app-container');
-    if (ac) ac.style.display = 'none';
-
-    if (_pfCurrentSector) pfRenderModules();
-  } catch(e) { /* ignora erros de render */ }
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const sm = document.getElementById('screen-module');
-  if (sm) {
-    sm.classList.add('active');
-    const mainView = sm.querySelector('.pf-main-view');
-    if (mainView) mainView.scrollTop = 0;
-  }
-  pfNavParaHome();
+  if (api()) api().fechar_janela().catch(() => {});
 }
 
 /* ===== PERFIL ===== */
