@@ -52,6 +52,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# Usuários internos (NUNCA SUBIR — copie usuarios_template.json → usuarios.json)
+usuarios.json
+!usuarios_template.json
+
 # Variáveis de Ambiente (NUNCA SUBIR)
 .env
 .env.test

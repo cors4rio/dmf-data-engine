@@ -1,7 +1,8 @@
-"""Autenticação local com lista fixa de supervisores e amarração de máquina.
+"""Autenticação local com lista de supervisores e amarração de máquina.
 
-Lista de usuários autorizados é definida no código (constante USUARIOS_AUTORIZADOS).
-Ninguém cria conta pela UI. O arquivo `supervisores.json` guarda apenas estado
+Lista de usuários autorizados carregada de `usuarios.json` (não rastreado).
+Copie `usuarios_template.json` → `usuarios.json` e preencha com os dados reais.
+O arquivo `supervisores.json` guarda apenas estado de runtime
 (hash, salt, máquina amarrada, flag de primeira senha).
 
 Identificação de máquina = `hostname\\username`. Não é à prova de adversário
@@ -18,14 +19,19 @@ import logging
 from datetime import datetime
 
 
-# ── Configuração fixa ──────────────────────────────────────
-USUARIOS_AUTORIZADOS = [
-    {"nome": "***",    "papel": "admin",        "label": "***"},
-    {"nome": "***",    "papel": "contabil",     "label": "***"},
-    {"nome": "***",   "papel": "fiscal",       "label": "***"},
-    {"nome": "***",  "papel": "dp",           "label": "***"},
-    {"nome": "***",  "papel": "legalizacao",  "label": "***"},
-]
+# ── Usuários autorizados (carregados de arquivo externo) ──────────────────
+_AUTH_DIR = os.path.dirname(os.path.abspath(__file__))
+_USUARIOS_FILE = os.path.join(_AUTH_DIR, "usuarios.json")
+
+USUARIOS_AUTORIZADOS = []
+if os.path.exists(_USUARIOS_FILE):
+    try:
+        with open(_USUARIOS_FILE, "r", encoding="utf-8") as _f:
+            USUARIOS_AUTORIZADOS = json.load(_f)
+    except Exception as _e:
+        logging.warning(f"[AUTH] Não foi possível ler usuarios.json: {_e}")
+else:
+    logging.warning("[AUTH] usuarios.json não encontrado. Copie usuarios_template.json → usuarios.json")
 
 # Quais módulos cada papel pode executar (escrita)
 PERMISSOES_EXECUCAO = {
@@ -175,14 +181,12 @@ def autenticar(base_dir, nome, senha):
     data = _carregar(base_dir)
     s = _buscar(data, nome)
     if not s:
-        # Usuário não está na lista autorizada
         return {"ok": False, "erro": "Usuário ou senha incorretos."}
 
     h = _hash_senha(senha, s["salt"])
     if not hmac.compare_digest(s["hash"], h):
         return {"ok": False, "erro": "Usuário ou senha incorretos."}
 
-    # Primeira senha (= nome): força troca antes de qualquer outra ação.
     if s.get("primeira_senha"):
         return {
             "ok": True,
@@ -190,7 +194,6 @@ def autenticar(base_dir, nome, senha):
             "nome": s["nome"], "label": s.get("label"), "papel": s.get("papel"),
         }
 
-    # Amarração de máquina
     maquina_atual = identificar_maquina()
     maquina_amarrada = s.get("maquina")
     if maquina_amarrada and maquina_amarrada != maquina_atual:
@@ -200,7 +203,6 @@ def autenticar(base_dir, nome, senha):
                      f"({maquina_amarrada}). Peça ao admin para liberar."),
         }
 
-    # Login válido — registra último acesso
     s["ultimo_login"] = datetime.now().strftime("%d/%m/%Y %H:%M")
     if not maquina_amarrada:
         s["maquina"] = maquina_atual
@@ -275,7 +277,7 @@ def resetar_senha(base_dir, nome):
     if not s:
         return {"ok": False, "erro": "Usuário não encontrado."}
     s["salt"] = secrets.token_hex(SALT_BYTES)
-    s["hash"] = _hash_senha(s["nome"], s["salt"])  # senha = nome
+    s["hash"] = _hash_senha(s["nome"], s["salt"])
     s["primeira_senha"] = True
     _gravar(base_dir, data)
     logging.info(f"[AUTH] Senha resetada para {nome}.")

@@ -1,0 +1,7 @@
+[
+  {"nome": "usuario1", "papel": "admin",        "label": "Administrador"},
+  {"nome": "usuario2", "papel": "contabil",     "label": "Contabilidade"},
+  {"nome": "usuario3", "papel": "fiscal",       "label": "Fiscal"},
+  {"nome": "usuario4", "papel": "dp",           "label": "Departamento Pessoal"},
+  {"nome": "usuario5", "papel": "legalizacao",  "label": "Legalizacao"}
+]
