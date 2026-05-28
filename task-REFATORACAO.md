@@ -9,51 +9,51 @@
 > **Tempo:** ~30 min | **Risco:** Zero | **Branch:** `feat/desacoplamento`
 
 ### 1.1 — Git
-- `[ ]` Confirmar stage limpo: `git status`
-- `[ ]` Criar branch: `git checkout -b feat/desacoplamento`
+- `[x]` Confirmar stage limpo: `git status`
+- `[x]` Criar branch: `git checkout -b feat/desacoplamento`
 
 ### 1.2 — Criar estrutura de pastas
-- `[ ]` Criar `services\`
-- `[ ]` Criar `services\automacao_horas\`
-- `[ ]` Criar `services\automacao_horas\engine\`
-- `[ ]` Criar `services\automacao_horas\modulos\`
-- `[ ]` Criar `services\automacao_horas\modules\`
-- `[ ]` Criar `services\automacao_horas\core\`
-- `[ ]` Criar `services\automacao_horas\ui\`
+- `[x]` Criar `services\`
+- `[x]` Criar `services\automacao_horas\`
+- `[x]` Criar `services\automacao_horas\engine\`
+- `[x]` Criar `services\automacao_horas\modulos\`
+- `[x]` Criar `services\automacao_horas\modules\`
+- `[x]` Criar `services\automacao_horas\core\`
+- `[x]` Criar `services\automacao_horas\ui\`
 
 ### 1.3 — Copiar arquivos da Automação (cópia — original intocado)
-- `[ ]` Copiar `engine\*.py` → `services\automacao_horas\engine\`
-- `[ ]` Copiar `modulos\*.py` → `services\automacao_horas\modulos\`
-- `[ ]` Copiar `dmf_engine\modules\m_fiscal.py` → `services\automacao_horas\modules\`
-- `[ ]` Copiar `dmf_engine\modules\m_dp.py` → `services\automacao_horas\modules\`
-- `[ ]` Copiar `dmf_engine\modules\m_contabil.py` → `services\automacao_horas\modules\`
-- `[ ]` Copiar `dmf_engine\modules\base.py` → `services\automacao_horas\modules\`
-- `[ ]` Copiar `dmf_engine\modules\registry.py` → `services\automacao_horas\modules\`
-- `[ ]` Copiar `dmf_engine\core\event_bus.py` → `services\automacao_horas\core\`
-- `[ ]` Copiar `dmf_engine\core\thread_runner.py` → `services\automacao_horas\core\`
-- `[ ]` Copiar `dmf_engine\core\config.py` → `services\automacao_horas\core\`
-- `[ ]` Copiar `dmf_engine\auth.py` → `services\automacao_horas\`
-- `[ ]` Copiar `dmf_engine\config.json` → `services\automacao_horas\config_template.json`
-- `[ ]` Copiar `dmf_engine\supervisores.json` → `services\automacao_horas\`
-- `[ ]` Copiar `dmf_engine\ui\index.html` → `services\automacao_horas\ui\`
-- `[ ]` Copiar logos/imagens da `dmf_engine\ui\` → `services\automacao_horas\ui\`
+- `[x]` Copiar `engine\*.py` → `services\automacao_horas\engine\`
+- `[x]` Copiar `modulos\*.py` → `services\automacao_horas\modulos\`
+- `[x]` Copiar `dmf_engine\modules\m_fiscal.py` → `services\automacao_horas\modules\`
+- `[x]` Copiar `dmf_engine\modules\m_dp.py` → `services\automacao_horas\modules\`
+- `[x]` Copiar `dmf_engine\modules\m_contabil.py` → `services\automacao_horas\modules\`
+- `[x]` Copiar `dmf_engine\modules\base.py` → `services\automacao_horas\modules\`
+- `[x]` Copiar `dmf_engine\modules\registry.py` → `services\automacao_horas\modules\`
+- `[x]` Copiar `dmf_engine\core\event_bus.py` → `services\automacao_horas\core\`
+- `[x]` Copiar `dmf_engine\core\thread_runner.py` → `services\automacao_horas\core\`
+- `[x]` Copiar `dmf_engine\core\config.py` → `services\automacao_horas\core\`
+- `[x]` Copiar `dmf_engine\auth.py` → `services\automacao_horas\`
+- `[x]` Copiar `dmf_engine\config.json` → `services\automacao_horas\config_template.json`
+- `[x]` Copiar `dmf_engine\supervisores.json` → `services\automacao_horas\`
+- `[x]` Copiar `dmf_engine\ui\index.html` → `services\automacao_horas\ui\`
+- `[x]` Copiar logos/imagens da `dmf_engine\ui\` → `services\automacao_horas\ui\`
 
 ### 1.4 — Criar `__init__.py` nas pastas necessárias
-- `[ ]` `services\__init__.py` (vazio)
-- `[ ]` `services\automacao_horas\__init__.py` (vazio)
-- `[ ]` `services\automacao_horas\engine\__init__.py` (vazio)
-- `[ ]` `services\automacao_horas\modulos\__init__.py` (vazio)
-- `[ ]` `services\automacao_horas\modules\__init__.py` (vazio)
-- `[ ]` `services\automacao_horas\core\__init__.py` (vazio)
+- `[x]` `services\__init__.py` (vazio)
+- `[x]` `services\automacao_horas\__init__.py` (vazio)
+- `[x]` `services\automacao_horas\engine\__init__.py` (vazio)
+- `[x]` `services\automacao_horas\modulos\__init__.py` (vazio)
+- `[x]` `services\automacao_horas\modules\__init__.py` (vazio)
+- `[x]` `services\automacao_horas\core\__init__.py` (vazio)
 
 ### 1.5 — Commit
-- `[ ]` `git add services\`
-- `[ ]` `git commit -m "feat: estrutura services/automacao_horas criada (copias sem alterar original)"`
+- `[x]` `git add services\`
+- `[x]` `git commit -m "feat: estrutura services/automacao_horas criada (copias sem alterar original)"`
 
-### CHECKPOINT 1
-- `[ ]` `run.bat` → app abre normalmente?
-- `[ ]` Login funciona?
-- `[ ]` Módulo Fiscal executa?
+### CHECKPOINT 1 ✅
+- `[x]` `run.bat` → app abre normalmente?
+- `[x]` Login funciona?
+- `[x]` Módulo Fiscal executa?
 - `[ ]` **Se falhou:** `git stash` e investigar antes de continuar
 
 ---
@@ -62,107 +62,47 @@
 > **Tempo:** ~3h | **Risco:** Baixo | **Original continua intocado**
 
 ### 2.1 — Criar `services\automacao_horas\main.py`
-- `[ ]` Copiar `dmf_engine\main.py` → `services\automacao_horas\main.py`
-- `[ ]` Adicionar no início do arquivo o ajuste de `sys.path`:
-  ```python
-  import sys, os
-  _ROOT = os.path.dirname(os.path.abspath(__file__))
-  sys.path.insert(0, _ROOT)
-  sys.path.insert(0, os.path.dirname(_ROOT))
-  sys.path.insert(0, os.path.dirname(os.path.dirname(_ROOT)))
-  ```
-- `[ ]` Atualizar imports para usar módulos locais (`from modules.registry import ModuleRegistry`)
-- `[ ]` Adicionar função `_recuperar_sessao_via_token()` após os imports:
-  ```python
-  def _recuperar_sessao_via_token():
-      token = None
-      for i, arg in enumerate(sys.argv):
-          if arg == "--session-token" and i + 1 < len(sys.argv):
-              token = sys.argv[i + 1]
-              break
-      if not token:
-          return None
-      import json, tempfile
-      from datetime import datetime
-      caminho = os.path.join(tempfile.gettempdir(), f"dmf_session_{token}.json")
-      if not os.path.exists(caminho):
-          return None
-      try:
-          with open(caminho, encoding="utf-8") as f:
-              dados = json.load(f)
-          os.remove(caminho)
-          if datetime.now() > datetime.fromisoformat(dados["expira_em"]):
-              return None
-          return {"nome": dados["usuario"], "label": dados.get("label", ""), "papel": dados["papel"]}
-      except Exception:
-          return None
-  ```
-- `[ ]` Capturar sessão SSO antes de criar a janela: `_sessao_sso = _recuperar_sessao_via_token()`
-- `[ ]` Passar `_sessao_sso` para a `Api` no construtor
-- `[ ]` Alterar título da janela para `"DMF — Automação de Horas"`
-- `[ ]` Manter o guard 32-bit — ele pertence aqui
+- `[x]` Criar `services\automacao_horas\main.py` (criado do zero — não cópia direta)
+- `[x]` Ajuste de `sys.path` no início (`_ROOT` inserido em `sys.path[0]`)
+- `[x]` Imports locais: `from core.*`, `from modules.*`, `from api import Api`
+- `[x]` `compat.py` criado como shim (expõe `db`, `estado_sh`, `PROJECT_ROOT`, `window`)
+- `[x]` Função `_recuperar_sessao_via_token()` implementada
+- `[x]` `_sessao_sso = _recuperar_sessao_via_token()` capturado antes de criar janela
+- `[x]` `sessao_inicial=_sessao_sso` passado para a Api no construtor
+- `[x]` Título: `"DMF — Automação de Horas"`
+- `[x]` Guard 32-bit mantido
+- `[x]` `compat.window = window` propagado após `create_window`
 
 ### 2.2 — Adaptar a Api da Automação para SSO
-- `[ ]` Copiar `dmf_engine\api.py` → `services\automacao_horas\api.py`
-- `[ ]` No `__init__` da Api, aceitar `sessao_inicial=None`
-- `[ ]` Se `sessao_inicial` não for None, popular `self._sessao` direto (pula login)
-- `[ ]` Verificar se `get_sessao()` existe na Api — se não, criar:
-  ```python
-  def get_sessao(self):
-      return self._sessao
-  ```
+- `[x]` Copiar `dmf_engine\api.py` → `services\automacao_horas\api.py`
+- `[x]` `sessao_inicial=None` adicionado ao `__init__`; `self._sessao = sessao_inicial`
+- `[x]` `get_sessao()` criado
+- `[x]` `from dmf_engine.core.event_bus import json_safe` → `from core.event_bus import json_safe`
 
-### 2.3 — Adaptar a UI para pular login quando SSO está ativo
-- `[ ]` Em `services\automacao_horas\ui\index.html`, no `DOMContentLoaded`, adicionar verificação:
-  ```javascript
-  async function _verificarSessaoSSO() {
-      try {
-          const s = await window.pywebview.api.get_sessao();
-          if (s && s.nome) {
-              pfEntrarNoApp(s);  // pula setor e login, vai direto para módulos
-              return true;
-          }
-      } catch(e) {}
-      return false;
-  }
-  // Chamar no início: await _verificarSessaoSSO();
-  ```
+### 2.3 — UI SSO
+- `[x]` Verificado: `verificar_estado_login()` já retorna sessão SSO (pois `self._sessao`
+  é definido no construtor) — o handler `pywebviewready` existente redireciona automaticamente
 
 ### 2.4 — Testar Automação standalone (sem SSO)
-- `[ ]` `py -3-32 services\automacao_horas\main.py`
-  → Deve abrir com tela de login
-- `[ ]` Login manual funciona?
-- `[ ]` Módulos Fiscal, DP, Contábil executam?
-- `[ ]` `run.bat` ainda funciona? (original intocado)
+- `[x]` `copy config_template.json config.json` em `services\automacao_horas\`
+- `[x]` `py -3-32 services\automacao_horas\main.py` → abre com tela de login?
+- `[x]` Login manual funciona?
+- `[x]` Módulos Fiscal, DP, Contábil executam?
+- `[x]` `run.bat` ainda funciona? (original intocado)
 
 ### 2.5 — Testar SSO manualmente
-- `[ ]` Criar `scratch_test_token.py` na raiz:
-  ```python
-  import json, os, tempfile, secrets
-  from datetime import datetime, timedelta
-  token = secrets.token_hex(16)
-  dados = {
-      "usuario": "***", "label": "***", "papel": "admin",
-      "expira_em": (datetime.now() + timedelta(seconds=30)).isoformat()
-  }
-  caminho = os.path.join(tempfile.gettempdir(), f"dmf_session_{token}.json")
-  with open(caminho, "w") as f:
-      json.dump(dados, f)
-  print(f"py -3-32 services\\automacao_horas\\main.py --session-token {token}")
-  ```
-- `[ ]` Rodar o script e executar o comando impresso
+- `[x]` Criar `scratch_test_token.py` na raiz e executar
   → Deve abrir **já logado como Carol** sem tela de login
-- `[ ]` Apagar `scratch_test_token.py`
+- `[x]` Apagar `scratch_test_token.py`
 
 ### 2.6 — Commit
-- `[ ]` `git add services\automacao_horas\`
-- `[ ]` `git commit -m "feat: automacao_horas/main.py standalone com SSO por token"`
+- `[x]` `git commit -m "feat: automacao_horas/main.py standalone com SSO por token"`
 
-### CHECKPOINT 2
-- `[ ]` `run.bat` → app original abre normalmente?
-- `[ ]` `py -3-32 services\automacao_horas\main.py` → abre standalone com tela de login?
-- `[ ]` SSO com token válido → abre já autenticado?
-- `[ ]` Token inválido/ausente → tela de login aparece normalmente?
+### CHECKPOINT 2 ✅
+- `[x]` `run.bat` → app original abre normalmente?
+- `[x]` `py -3-32 services\automacao_horas\main.py` → abre standalone com tela de login?
+- `[x]` SSO com token válido → abre já autenticado?
+- `[x]` Token inválido/ausente → tela de login aparece normalmente?
 
 ---
 
@@ -170,15 +110,12 @@
 > **Tempo:** ~2h | **Risco:** Baixo | **Original ainda funciona em paralelo**
 
 ### 3.1 — Identificar o Python 32-bit
-- `[ ]` Rodar: `py -3-32 -c "import sys; print(sys.executable)"`
-- `[ ]` Anotar o caminho completo (ex: `C:\Python312-32\python.exe`)
-- `[ ]` Adicionar ao `dmf_engine\config.json`:
-  ```json
-  "automacao_horas_python": "C:\\caminho\\completo\\python.exe"
-  ```
+- `[x]` Rodar: `py -3-32 -c "import sys; print(sys.executable)"`
+- `[x]` Caminho: `C:\Users\DMF-AUTOMACAO\AppData\Local\Programs\Python\Python314-32\python.exe`
+- `[x]` Adicionado ao `dmf_engine\config.json` como `automacao_horas_python`
 
 ### 3.2 — Criar `dmf_engine\modules\m_automacao_horas.py`
-- `[ ]` Criar o arquivo com o código do launcher SSO:
+- `[x]` Criar o arquivo com o código do launcher SSO:
   ```python
   import os, json, secrets, subprocess, tempfile
   from datetime import datetime, timedelta
@@ -245,32 +182,25 @@
   ```
 
 ### 3.3 — Registrar o launcher na Central DMF
-- `[ ]` Em `dmf_engine\main.py`, adicionar no bloco de imports de módulos:
-  ```python
-  from dmf_engine.modules.m_automacao_horas import AutomacaoHorasLauncher
-  ```
-- `[ ]` Na seção de registro, adicionar:
-  ```python
-  _registry.register(AutomacaoHorasLauncher(_bus, _config, _sessao_fn))
-  ```
+- `[x]` `from dmf_engine.modules.m_automacao_horas import AutomacaoHorasLauncher` adicionado
+- `[x]` `_registry.register(AutomacaoHorasLauncher(_bus, _config, _sessao_fn))` adicionado
 
 ### 3.4 — Verificar o setor GESTÃO na UI da Central
-- `[ ]` Confirmar que `index.html` tem `sector-block gestao` definido
-- `[ ]` Confirmar que o catálogo (`get_catalog()`) filtra por setor corretamente
-- `[ ]` O card "Automação de Horas" deve aparecer quando o usuário acessar GESTÃO
+- `[x]` `sector-block gestao` confirmado no HTML
+- `[x]` Catálogo atualizado: `controle-horas` → `automacao_horas` com icon `ti-clock-play`
+- `[x]` `pfAbrirModulo` atualizado: case `automacao_horas` chama `executar_modulo`
 
 ### 3.5 — Commit
-- `[ ]` `git add dmf_engine\modules\m_automacao_horas.py dmf_engine\main.py dmf_engine\config.json`
-- `[ ]` `git commit -m "feat: launcher AutomacaoHoras com SSO adicionado na Central DMF"`
+- `[x]` `git commit -m "feat: launcher AutomacaoHoras com SSO adicionado na Central DMF"`
 
-### CHECKPOINT 3
-- `[ ]` `run.bat` → Central DMF abre normalmente?
-- `[ ]` Login como `carol/admin` funciona?
-- `[ ]` Card "Automação de Horas" aparece no painel GESTÃO?
-- `[ ]` Clicar no card → janela da Automação abre?
-- `[ ]` Janela da Automação abre já logada (sem tela de login)?
-- `[ ]` Módulos Fiscal, DP, Contábil dentro da Automação funcionam?
-- `[ ]` Outros setores da Central ainda funcionam?
+### CHECKPOINT 3 ✅
+- `[x]` `run.bat` → Central DMF abre normalmente?
+- `[x]` Login como `carol/admin` funciona?
+- `[x]` Card "Automação de Horas" aparece no painel GESTÃO?
+- `[x]` Clicar no card → janela da Automação abre?
+- `[x]` Janela da Automação abre já logada (sem tela de login)?
+- `[x]` Módulos Fiscal, DP, Contábil dentro da Automação funcionam?
+- `[x]` Outros setores da Central ainda funcionam?
 
 ---
 
@@ -280,28 +210,24 @@
 > ⚠️ **Esta fase remove código. Faça commit antes de começar.**
 
 ### 4.1 — Remover registro dos módulos de automação
-- `[ ]` Em `dmf_engine\main.py`, remover os imports de:
+- `[x]` Em `dmf_engine\main.py`, remover os imports de:
   - `FiscalModule`, `DPModule`, `ContabilModule`
-- `[ ]` Remover os `_registry.register(...)` correspondentes
+- `[x]` Remover os `_registry.register(...)` correspondentes
 
 ### 4.2 — Remover métodos de automação da api.py
-- `[ ]` Buscar métodos que importam de `engine/` ou `modulos/`:
-  `grep -n "from engine\|from modulos" dmf_engine\api.py`
-- `[ ]` Remover esses métodos e seus imports do topo
-- `[ ]` Manter apenas métodos de plataforma: login, logout, sessão, catálogo, perfil, configurações
+- `[x]` Removidos: `executar_ciclo`, `listar_excecoes`, `importar_excecoes`, `abrir_pasta_excecoes`
+- `[x]` Removidos: wrappers deprecated (`executar_fiscal_individual`, `importar_planilha_carol`, `injetar_dp_master`, `processar_horas_contabeis`, `injetar_horas_contabeis_master`)
+- `[x]` Removidos imports órfãos: `traceback`, `threading`, `monthrange`
+- `[x]` Mantidos: métodos de plataforma + dashboard (lêem master.xlsm via engine/)
 
 ### 4.3 — Remover o guard 32-bit da Central
-- `[ ]` Em `dmf_engine\main.py`, localizar e remover:
-  ```python
-  PYTHON_BITS = platform.architecture()[0]
-  if PYTHON_BITS != "32bit":
-      logging.warning(...)
-  ```
+- `[x]` Guard removido de `dmf_engine\main.py`
+- `[x]` Título da janela corrigido para "Central DMF"
 
 ### 4.4 — Remover arquivos de módulo movidos para services/
-- `[ ]` Remover `dmf_engine\modules\m_fiscal.py`
-- `[ ]` Remover `dmf_engine\modules\m_dp.py`
-- `[ ]` Remover `dmf_engine\modules\m_contabil.py`
+- `[x]` Removido `dmf_engine\modules\m_fiscal.py`
+- `[x]` Removido `dmf_engine\modules\m_dp.py`
+- `[x]` Removido `dmf_engine\modules\m_contabil.py`
 
 ### 4.5 — Testar Central DMF limpa
 - `[ ]` `py dmf_engine\main.py` (sem 32-bit — deve funcionar em 64-bit)

@@ -78,15 +78,6 @@ try:
 except AttributeError:
     pass
 
-# Guard de arquitetura: o driver ODBC do Sybase é 32-bit. Rodar em 64-bit causa IM014.
-PYTHON_BITS = platform.architecture()[0]
-if PYTHON_BITS != "32bit":
-    logging.warning(
-        "[BOOT] Python rodando em %s. O driver ODBC do Domínio (SQL Anywhere) é "
-        "32-bit — conexões falharão com IM014. Use 'run.bat' ou rode "
-        "'py -3-32 dmf_engine\\main.py'.",
-        PYTHON_BITS,
-    )
 
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
@@ -100,9 +91,6 @@ from dmf_engine.core.config import ConfigManager
 from dmf_engine.core.event_bus import EventBus
 from dmf_engine.core.thread_runner import ThreadRunner
 from dmf_engine.modules.registry import ModuleRegistry
-from dmf_engine.modules.m_fiscal import FiscalModule
-from dmf_engine.modules.m_dp import DPModule
-from dmf_engine.modules.m_contabil import ContabilModule
 from dmf_engine.modules.m_automacao_horas import AutomacaoHorasLauncher
 from dmf_engine.api import Api
 
@@ -117,9 +105,6 @@ def _sessao_fn():
     return api._sessao  # noqa: F821
 
 
-_registry.register(FiscalModule(_bus, _config, _sessao_fn))
-_registry.register(DPModule(_bus, _config, _sessao_fn))
-_registry.register(ContabilModule(_bus, _config, _sessao_fn))
 _registry.register(AutomacaoHorasLauncher(_bus, _config, _sessao_fn))
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
@@ -135,7 +120,7 @@ api = Api(
 )
 
 window = webview.create_window(
-    title="DMF Engine — Automação de Horas",
+    title="Central DMF",
     url=os.path.join(RESOURCES_DIR, "ui", "index.html"),
     js_api=api,
     width=1100,
