@@ -228,6 +228,22 @@ class Api:
             return caminho
         return None
 
+    def abrir_seletor_pasta(self):
+        import webview
+        r = self._win().create_file_dialog(webview.FOLDER_DIALOG, directory=os.path.expanduser("~"))
+        return {"caminho": r[0] if r else None}
+
+    def abrir_arquivo(self, caminho: str):
+        import subprocess
+        try:
+            os.startfile(caminho)
+            return {"ok": True}
+        except AttributeError:
+            subprocess.Popen(["xdg-open", caminho])
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "erro": str(e)}
+
     def validar_arquivos(self, caminhos: dict):
         return {k: os.path.exists(v) if v else False for k, v in caminhos.items()}
 

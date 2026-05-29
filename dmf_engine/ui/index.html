@@ -2928,42 +2928,42 @@ window.execucaoFalhou = function(erro) {
   toast(msg, tipo === 'locked' ? 'warning' : 'error', 6500);
 };
 
+/* Mescla catálogo dinâmico (filtrado por role) sobre _pfModuleCatalog estático.
+   Deve ser chamado APÓS login para que catalog_for_role retorne os módulos corretos. */
+async function pfAtualizarCatalogoDinamico() {
+  if (!api()) return;
+  try {
+    const dyn = await api().get_catalog();
+    if (!dyn || Object.keys(dyn).length === 0) return;
+    for (const [setor, mods] of Object.entries(dyn)) {
+      if (!_pfModuleCatalog[setor]) {
+        _pfModuleCatalog[setor] = mods;
+      } else {
+        for (const mod of mods) {
+          const idx = _pfModuleCatalog[setor].findIndex(m => m.id === mod.id);
+          if (idx >= 0) {
+            _pfModuleCatalog[setor][idx] = { ..._pfModuleCatalog[setor][idx], ...mod };
+          } else {
+            _pfModuleCatalog[setor].push(mod);
+          }
+        }
+      }
+    }
+  } catch(e) {}
+}
+
 window.addEventListener('pywebviewready', async () => {
   /* Inicia sempre na seleção de setor */
   pfRenderSectorScreen();
   goToPlatformScreen('screen-sector');
 
-  /* Carrega catálogo dinâmico do Python — mescla sobre _pfModuleCatalog estático.
-     Permite que novos módulos apareçam sem editar este arquivo. */
-  if (api()) {
-    try {
-      const dynCatalog = await api().get_catalog();
-      if (dynCatalog && Object.keys(dynCatalog).length > 0) {
-        for (const [setor, mods] of Object.entries(dynCatalog)) {
-          if (!_pfModuleCatalog[setor]) {
-            _pfModuleCatalog[setor] = mods;
-          } else {
-            // Mescla: adiciona módulos novos, atualiza campos de existentes
-            for (const mod of mods) {
-              const idx = _pfModuleCatalog[setor].findIndex(m => m.id === mod.id);
-              if (idx >= 0) {
-                _pfModuleCatalog[setor][idx] = { ..._pfModuleCatalog[setor][idx], ...mod };
-              } else {
-                _pfModuleCatalog[setor].push(mod);
-              }
-            }
-          }
-        }
-      }
-    } catch(e) { /* usa catálogo estático como fallback */ }
-  }
-
-  /* Verifica sessão ativa — se existir, vai direto para módulos */
+  /* Verifica sessão ativa — se existir, carrega catálogo com a role correta e vai direto */
   if (api()) {
     try {
       const r = await api().verificar_estado_login();
       if (r.sessao) {
         aplicarSessaoNoUI(r.sessao);
+        await pfAtualizarCatalogoDinamico();
         _pfCurrentSector = 'GESTÃO';
         pfRenderModules();
         pfNavParaHome();
@@ -3196,6 +3196,7 @@ async function pfDoLogin() {
   document.getElementById('pf-senha').value = '';
   aplicarSessaoNoUI({ nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina });
   toast('Bem-vindo, ' + (r.label || r.nome) + '.', 'success');
+  await pfAtualizarCatalogoDinamico();
   pfRenderModules();
   pfNavParaHome();
   goToPlatformScreen('screen-module');
@@ -3281,6 +3282,11 @@ async function pfAbrirModulo(modulo) {
     return;
   }
 
+  if (modulo === 'relatorio_rendimentos') {
+    rfAbrirModal();
+    return;
+  }
+
   if (modulo === 'controle-horas') {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('app-container').style.display = 'flex';
@@ -3299,6 +3305,298 @@ async function pfDoLogout() {
   pfRenderSectorScreen();
   goToPlatformScreen('screen-sector');
   toast('Sessão encerrada.', 'info');
+}
+
+/* ===================================================================== */
+/* RELATÓRIO DE RENDIMENTOS — Modal inline (Padrão 0)                   */
+/* ===================================================================== */
+
+function rfAbrirModal() {
+  document.getElementById('rf-modal-overlay')?.remove();
+
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rf-modal-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;
+    display:flex;align-items:center;justify-content:center;
+  `;
+  overlay.innerHTML = `
+    <div style="background:#FEFCF3;border:1px solid #DED8C4;border-radius:12px;
+         padding:28px 32px;width:460px;max-width:95vw;
+         box-shadow:0 20px 60px rgba(0,0,0,.2);color:#221E15">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;
+                  border-bottom:1px solid #EDE7D2;padding-bottom:16px">
+        <span style="background:#1E7C5A;border-radius:8px;width:36px;height:36px;flex-shrink:0;
+              display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-file-spreadsheet" style="color:#fff;font-size:18px"></i>
+        </span>
+        <div>
+          <div style="font-weight:600;font-size:15px;color:#221E15">Relatório de Rendimentos</div>
+          <div style="font-size:12px;color:#857060">Rendimentos isentos EFD-Reinf</div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <button onclick="rfAbrirConfigBanco()"
+            title="Configurar banco de dados"
+            style="background:none;border:1px solid #DED8C4;border-radius:6px;color:#5C5040;
+                   cursor:pointer;font-size:12px;padding:5px 10px;display:flex;align-items:center;gap:4px">
+            <i class="ti ti-settings" style="font-size:13px"></i> Banco
+          </button>
+          <button onclick="document.getElementById('rf-modal-overlay').remove()"
+            style="background:none;border:none;color:#857060;cursor:pointer;font-size:20px;
+                   line-height:1;padding:4px">×</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">
+          Competência
+        </label>
+        <div style="display:flex;gap:8px">
+          <input id="rf-ano" type="number" value="${anoAtual}" min="2020" max="2099" placeholder="AAAA"
+            style="width:90px;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#fff;color:#221E15;font-size:14px"/>
+          <input id="rf-mes" type="number" value="${mesAtual}" min="1" max="12" placeholder="MM"
+            style="width:70px;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#fff;color:#221E15;font-size:14px"/>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">
+          Cliente (opcional — vazio = todos)
+        </label>
+        <input id="rf-codi-emp" type="number" placeholder="Código numérico"
+          style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                 background:#fff;color:#221E15;font-size:14px;box-sizing:border-box"/>
+      </div>
+
+      <div style="margin-bottom:22px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">
+          Pasta de saída
+        </label>
+        <div style="display:flex;gap:8px">
+          <input id="rf-output-dir" type="text" readonly placeholder="Downloads"
+            style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#F8F5ED;color:#221E15;font-size:13px"/>
+          <button onclick="rfEscolherPasta()"
+            style="padding:8px 14px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#F0EBE0;color:#3A3020;cursor:pointer;font-size:13px;white-space:nowrap">
+            <i class="ti ti-folder-open"></i> Escolher
+          </button>
+        </div>
+      </div>
+
+      <div id="rf-resultado" style="display:none;margin-bottom:16px;padding:12px;border-radius:8px"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="document.getElementById('rf-modal-overlay').remove()"
+          style="padding:9px 18px;border-radius:7px;border:1px solid #DED8C4;
+                 background:none;color:#3A3020;cursor:pointer;font-size:14px">
+          Cancelar
+        </button>
+        <button id="rf-btn-gerar" onclick="rfGerarRelatorio()"
+          style="padding:9px 20px;border-radius:7px;border:none;background:#1E7C5A;
+                 color:#fff;cursor:pointer;font-size:14px;font-weight:600">
+          <i class="ti ti-table-export"></i> Gerar Relatório
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function rfAbrirConfigBanco() {
+  document.getElementById('rf-config-overlay')?.remove();
+
+  let cfg = {};
+  try { if (api()) cfg = await api().carregar_parametros(); } catch(_) {}
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rf-config-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9100;
+    display:flex;align-items:center;justify-content:center;
+  `;
+  overlay.innerHTML = `
+    <div style="background:#FEFCF3;border:1px solid #DED8C4;border-radius:12px;
+         padding:28px 32px;width:420px;max-width:95vw;
+         box-shadow:0 20px 60px rgba(0,0,0,.2);color:#221E15">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;
+                  border-bottom:1px solid #EDE7D2;padding-bottom:16px">
+        <span style="background:#185FA5;border-radius:8px;width:36px;height:36px;flex-shrink:0;
+              display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-database" style="color:#fff;font-size:18px"></i>
+        </span>
+        <div>
+          <div style="font-weight:600;font-size:15px;color:#221E15">Configuração do Banco</div>
+          <div style="font-size:12px;color:#857060">Conexão ODBC — ERP Domínio</div>
+        </div>
+        <button onclick="document.getElementById('rf-config-overlay').remove()"
+          style="margin-left:auto;background:none;border:none;color:#857060;
+                 cursor:pointer;font-size:20px;line-height:1;padding:4px">×</button>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">DSN</label>
+        <input id="rf-cfg-dsn" type="text" value="${(cfg.db_dsn || '').replace(/"/g,'&quot;')}" placeholder="Ex: Dominio_Prod"
+          style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                 background:#fff;color:#221E15;font-size:14px;box-sizing:border-box"/>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">Usuário</label>
+        <input id="rf-cfg-uid" type="text" value="${(cfg.db_uid || '').replace(/"/g,'&quot;')}" placeholder="Usuário do banco"
+          style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                 background:#fff;color:#221E15;font-size:14px;box-sizing:border-box"/>
+      </div>
+      <div style="margin-bottom:22px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">Senha</label>
+        <input id="rf-cfg-pwd" type="password" value="${(cfg.db_pwd || '').replace(/"/g,'&quot;')}" placeholder="••••••••"
+          style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                 background:#fff;color:#221E15;font-size:14px;box-sizing:border-box"/>
+      </div>
+
+      <div id="rf-cfg-resultado" style="display:none;margin-bottom:16px;padding:10px 14px;border-radius:8px"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="rfTestarConexao()"
+          style="padding:9px 16px;border-radius:7px;border:1px solid #DED8C4;
+                 background:#F0EBE0;color:#3A3020;cursor:pointer;font-size:14px;
+                 display:flex;align-items:center;gap:6px">
+          <i class="ti ti-plug"></i> Testar
+        </button>
+        <button onclick="rfSalvarConfig()"
+          style="padding:9px 20px;border-radius:7px;border:none;background:#185FA5;
+                 color:#fff;cursor:pointer;font-size:14px;font-weight:600;
+                 display:flex;align-items:center;gap:6px">
+          <i class="ti ti-device-floppy"></i> Salvar
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function rfTestarConexao() {
+  if (!api()) return;
+  const dsn = document.getElementById('rf-cfg-dsn')?.value.trim();
+  const uid = document.getElementById('rf-cfg-uid')?.value.trim();
+  const pwd = document.getElementById('rf-cfg-pwd')?.value;
+  if (!dsn || !uid) {
+    rfMostrarCfgResultado('warning', 'Preencha DSN e usuário antes de testar.');
+    return;
+  }
+  rfMostrarCfgResultado('info', '<i class="ti ti-loader-2"></i> Testando conexão...');
+  await api().salvar_parametros({ db_dsn: dsn, db_uid: uid, db_pwd: pwd });
+  const r = await api().testar_conexao();
+  if (r.ok) {
+    rfMostrarCfgResultado('success', `<i class="ti ti-circle-check"></i> ${r.msg || 'Conexão estabelecida com sucesso.'}`);
+  } else {
+    rfMostrarCfgResultado('error', `<i class="ti ti-alert-circle"></i> ${r.erro || r.msg || 'Falha na conexão.'}`);
+  }
+}
+
+async function rfSalvarConfig() {
+  if (!api()) return;
+  const dsn = document.getElementById('rf-cfg-dsn')?.value.trim();
+  const uid = document.getElementById('rf-cfg-uid')?.value.trim();
+  const pwd = document.getElementById('rf-cfg-pwd')?.value;
+  if (!dsn || !uid) {
+    rfMostrarCfgResultado('warning', 'Preencha pelo menos DSN e usuário.');
+    return;
+  }
+  await api().salvar_parametros({ db_dsn: dsn, db_uid: uid, db_pwd: pwd });
+  rfMostrarCfgResultado('success', '<i class="ti ti-circle-check"></i> Configuração salva.');
+}
+
+function rfMostrarCfgResultado(tipo, html) {
+  const el = document.getElementById('rf-cfg-resultado');
+  if (!el) return;
+  const estilos = {
+    success: 'background:rgba(30,124,90,.1);border:1px solid rgba(30,124,90,.3);color:#1E5C40',
+    error:   'background:rgba(180,30,30,.1);border:1px solid rgba(180,30,30,.3);color:#8B1A1A',
+    warning: 'background:rgba(176,106,0,.1);border:1px solid rgba(176,106,0,.3);color:#6B4000',
+    info:    'background:rgba(24,95,165,.08);border:1px solid rgba(24,95,165,.2);color:#0D4A8A',
+  };
+  el.style.cssText = `display:block;margin-bottom:16px;padding:10px 14px;border-radius:8px;${estilos[tipo] || estilos.info}`;
+  el.innerHTML = html;
+}
+
+async function rfEscolherPasta() {
+  if (!api()) return;
+  const r = await api().abrir_seletor_pasta();
+  if (r && r.caminho) {
+    document.getElementById('rf-output-dir').value = r.caminho;
+  }
+}
+
+async function rfGerarRelatorio() {
+  if (!api()) return;
+  const ano     = (document.getElementById('rf-ano')?.value || '').trim();
+  const mes     = (document.getElementById('rf-mes')?.value || '').trim().padStart(2, '0');
+  const codiEmp = (document.getElementById('rf-codi-emp')?.value || '').trim();
+  const outDir  = (document.getElementById('rf-output-dir')?.value || '').trim();
+
+  if (!ano || !mes) { toast('Informe ano e mês da competência.', 'warning'); return; }
+
+  const competencia = `${ano}-${mes}-01`;
+
+  const btn = document.getElementById('rf-btn-gerar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+  document.getElementById('rf-resultado').style.display = 'none';
+
+  registerModuleHandlers('relatorio_rendimentos', {
+    done: function(data) {
+      const btn = document.getElementById('rf-btn-gerar');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-table-export"></i> Gerar Relatório'; }
+      document.getElementById('progresso-container')?.remove();
+
+      const res = document.getElementById('rf-resultado');
+      if (!res) return;
+      res.style.display = '';
+
+      if (!data.ok) {
+        res.style.cssText = 'display:block;margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(180,30,30,.1);border:1px solid rgba(180,30,30,.3)';
+        res.innerHTML = `<span style="color:#8B1A1A"><i class="ti ti-alert-circle"></i> ${data.erro || 'Falha ao gerar relatório.'}</span>`;
+        return;
+      }
+      if (data.aviso) {
+        res.style.cssText = 'display:block;margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(176,106,0,.1);border:1px solid rgba(176,106,0,.3)';
+        res.innerHTML = `<span style="color:#6B4000"><i class="ti ti-info-circle"></i> ${data.aviso}</span>`;
+        return;
+      }
+      res.style.cssText = 'display:block;margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(30,124,90,.1);border:1px solid rgba(30,124,90,.3)';
+      const nome = data.arquivo ? data.arquivo.split('\\').pop().split('/').pop() : '';
+      res.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <div style="color:#1E5C40;font-weight:600"><i class="ti ti-circle-check"></i> Relatório gerado</div>
+            <div style="font-size:12px;color:#857060;margin-top:3px">
+              ${nome} · ${data.total ?? 0} registros
+            </div>
+          </div>
+          ${data.arquivo ? `<button onclick="api().abrir_arquivo && api().abrir_arquivo('${data.arquivo.replace(/\\/g, '\\\\')}')"
+            style="padding:6px 12px;border-radius:6px;border:1px solid rgba(30,124,90,.35);
+                   background:rgba(30,124,90,.1);color:#1E5C40;cursor:pointer;font-size:12px;
+                   white-space:nowrap"><i class="ti ti-external-link"></i> Abrir</button>` : ''}
+        </div>
+      `;
+      toast(`Relatório gerado: ${nome}`, 'success', 5000);
+    }
+  });
+
+  const opcoes = { competencia };
+  if (codiEmp) opcoes.codi_emp = parseInt(codiEmp, 10);
+  if (outDir)  opcoes.output_dir = outDir;
+
+  const r = await api().executar_modulo('relatorio_rendimentos', opcoes);
+  if (r && !r.ok) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-table-export"></i> Gerar Relatório'; }
+    toast(r.erro || 'Erro ao iniciar módulo.', 'error');
+  }
 }
 
 /* ===== pfVoltarParaModulos ===== */

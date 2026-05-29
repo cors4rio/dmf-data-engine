@@ -1,10 +1,11 @@
 @echo off
 REM ============================================================
 REM  Central DMF - launcher
-REM  Roda em Python 64-bit (padrao do sistema).
-REM  Para Automacao de Horas standalone, use run_automacao_horas.bat
+REM  Usa py -3-32 enquanto houver dependencias residuais de engine/
+REM  (ODBC Sybase, lock_master, excel_parser).
+REM  Migrar para py -3-64 apos limpeza das dependencias (ver ROADMAP sec 3).
 REM ============================================================
 
 cd /d %~dp0
-py dmf_engine\main.py
+py -3-32 dmf_engine\main.py
 if errorlevel 1 pause

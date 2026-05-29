@@ -1,41 +1,41 @@
 # DMF Engine
 
-## Visão Geral
+O **DMF Engine** é uma plataforma desktop interna desenvolvida em Python para automação de produtividade contábil, fiscal e de departamento pessoal. A plataforma conecta-se ao banco Sybase SQL Anywhere (ERP Domínio) via ODBC, processa as regras de negócio de cada setor e alimenta as planilhas mestras de controle de horas.
 
-O **DMF Engine** é um motor local robusto desenvolvido em Python focado na automação e extração de métricas de produtividade contábil, fiscal e de departamento pessoal. Originalmente criado como um conjunto de scripts soltos (ETL), o projeto evoluiu para um aplicativo desktop completo com uma interface web moderna (pywebview + HTML/CSS/JS) instalável na máquina dos supervisores.
+**Status atual:** Teste Piloto em Produção — supervisores operando a interface compilada.
 
-O objetivo do sistema é conectar-se diretamente ao banco Sybase SQL Anywhere (Domínio Sistemas), consolidar tempos de operação (logs de uso), cruzar com dados de folhas de pagamento e faturamento (exceções), e calcular a produtividade com precisão milimétrica para alimentar as planilhas mestras de controle de horas.
+---
 
-## Fase Atual: Teste Piloto em Produção 🚀
+## Documentação Técnica
 
-O projeto completou sua fase de desenvolvimento central e estruturação da arquitetura e agora está em **Teste de Produção com Usuários Reais**. Os supervisores utilizarão a interface gráfica compilada para gerar os relatórios de produtividade, substituindo a execução de scripts manuais.
+Toda a documentação técnica está centralizada em **[`docs/`](docs/README.md)**.
 
-## Funcionalidades Principais
+| Área | Documento |
+|---|---|
+| Portal e índice navegável | [`docs/README.md`](docs/README.md) |
+| Arquitetura do sistema | [`docs/arquitetura.md`](docs/arquitetura.md) |
+| Padrões e decisões técnicas | [`docs/design-patterns.md`](docs/design-patterns.md) |
+| Catálogo de módulos | [`docs/modulos.md`](docs/modulos.md) |
+| Regras de negócio (fonte da verdade) | [`docs/regras-de-negocio.md`](docs/regras-de-negocio.md) |
+| Build, deploy e segurança | [`docs/operacoes.md`](docs/operacoes.md) |
+| Setup e onboarding técnico | [`docs/onboarding.md`](docs/onboarding.md) |
+| Glossário do domínio | [`docs/glossario.md`](docs/glossario.md) |
+| Histórico de versões | [`docs/CHANGELOG.md`](docs/CHANGELOG.md) |
+| Próximos passos | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
+| Documentação histórica | [`docs/legacy/`](docs/legacy/README.md) |
 
-- **Interface de Usuário (Dashboard)**: UI moderna, dark mode com visual premium, desenhada para ser amigável a usuários não-técnicos (supervisores dos setores).
-- **Extração via ODBC Dinâmica**: Consultas SQL de alta performance conectadas à base Sybase, abstraindo a complexidade relacional do Domínio Sistemas.
-- **Motor de Regras (DP, Contábil, Fiscal)**: Lógicas avançadas de acréscimo de tempo, rateio entre empresas filiais, e cálculos de "sócios vs funcionários".
-- **Sistema de Lock Cooperativo**: Previne que dois usuários alterem as planilhas mestras simultaneamente (concorrência).
-- **Automação de Instalação e Distribuição**: Build simplificado usando PyInstaller e instalação na máquina cliente via script híbrido Batch/PowerShell com barra de progresso customizada.
+---
 
-## Estrutura do Projeto
+## Guia do Usuário Final
 
-- `/dmf_engine/`: Módulo principal contendo a inicialização do app UI e orquestrador.
-- `/dmf_engine/ui/`: Frontend Vanilla JS e CSS do aplicativo.
-- `/engine/`: Módulos de conexão (banco de dados, arquivos excel) e sistema de locking.
-- `/modulos/`: Implementação das regras de negócio por setor (dp.py, fiscal.py, contabil.py).
-- `build_runner.py` e `build.bat`: Pipelines locais de compilação da aplicação.
-- `Instalar DMF Engine.bat`: Instalador local (deploy para rede) utilizado pelo usuário final.
+Para operadores do sistema (supervisores), consulte [`GUIA_USUARIO.md`](GUIA_USUARIO.md).
 
-## Aviso de Segurança e Conformidade (⚠️ IMPORTANTE)
+---
 
-**Nenhum dado sensível é versionado neste repositório.**
-- Senhas, URIs e configurações sensíveis de conexão devem existir apenas no arquivo `config.json` e nas variáveis de ambiente na máquina host/usuário.
-- Arquivos contendo dados de clientes (Planilhas Excel, `.txt`, relatórios de dump, etc.) são proibidos e bloqueados pelo `.gitignore`.
-- O código-fonte está estritamente em conformidade com as regras de higienização de PII e chaves criptográficas.
+## Segurança
 
-## Guias e Documentação
+Nenhum dado sensível é versionado neste repositório. Senhas, URIs de banco e configurações de conexão residem exclusivamente em `config.json` local. Planilhas e dados de clientes são bloqueados pelo `.gitignore`.
 
-- `DISTRIBUICAO.md`: Diretrizes e roadmap de deployment do projeto em rede.
-- `GUIA_USUARIO.md`: Documentação passo a passo ensinando os usuários a operar a interface (versão live também hospedada no Anytype do escritório).
-- `TASKBOARD.md`: Backlog técnico e histórico de desenvolvimento.
+---
+
+*Para contribuir ou configurar o ambiente local, consulte [`docs/onboarding.md`](docs/onboarding.md).*
