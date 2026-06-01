@@ -167,6 +167,11 @@ class Api:
         })
         return resultado
 
+    def verificar_primeira_execucao(self):
+        """Retorna True se config.json não existe (primeira execução)."""
+        import os
+        return {"primeira_execucao": not os.path.exists(self._config._path)}
+
     def diagnosticar_odbc(self):
         import sys, platform
         cfg = self._config.load()

@@ -27,7 +27,7 @@ class AutomacaoHorasLauncher(BaseModule):
             setor="GESTAO",
             icon="ti-clock-play",
             color="#2B65B5",
-            papeis=["admin", "contabil", "fiscal", "dp"],
+            papeis=["admin", "contabil", "fiscal", "dp", "legalizacao"],
         )
 
     def execute(self, opcoes: dict) -> dict:
