@@ -73,6 +73,10 @@ desktop.ini
 # Planilha de exemplo permitida
 !exemplo_controle_de_horas.xlsx
 
+# Templates do módulo Sem Movimento NFS-e (não são dados de cliente)
+!dmf_engine/ui/template_sem_movimento.txt
+!dmf_engine/ui/template_sem_movimento.xlsx
+
 # Ignorando Dumps de Relatorios em MD
 relatorio_*.md
 calculos_*.md

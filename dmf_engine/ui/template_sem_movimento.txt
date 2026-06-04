@@ -1,0 +1,8 @@
+# Template — Sem Movimento NFS-e Salvador
+# Formato: CNPJ;SENHA  (uma empresa por linha)
+# CNPJ pode ter pontuação ou só números.
+# O nome da empresa é extraído automaticamente do portal após o login.
+# Linhas começando com # são ignoradas.
+#
+12345678000195;senha_da_empresa
+98765432000111;outra_senha

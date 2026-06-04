@@ -13,6 +13,7 @@
    - [FiscalModule](#fiscalmodule)
    - [DPModule](#dpmodule)
    - [ContabilModule](#contabilmodule)
+   - [SemMovimentoNfseModule](#semmovimentonfsemodule)
 
 ---
 
@@ -68,6 +69,7 @@ A Central DMF e seus serviços acoplados têm registries independentes. A Centra
 |---|---|---|---|---|---|
 | `automacao_horas` | Automação de Horas | GESTÃO | admin, contabil, fiscal, dp | Padrão B (subprocess + SSO) | `dmf_engine/modules/m_automacao_horas.py` |
 | `relatorio_rendimentos` | Relatório de Rendimentos | CONTÁBIL | admin, contabil | Padrão 0 (inline) | `dmf_engine/modules/m_relatorio_rendimentos.py` |
+| `sem_movimento_nfse` | Sem Movimento NFS-e Salvador | FISCAL | admin, fiscal | Padrão A (serviço + thread) | `dmf_engine/modules/m_sem_movimento_nfse.py` |
 
 ### Módulos da Automação de Horas (Serviço 1)
 
@@ -256,4 +258,109 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 
 ---
 
-*Última atualização: 2026-05-29*
+---
+
+### SemMovimentoNfseModule
+
+**Arquivo:** `dmf_engine/modules/m_sem_movimento_nfse.py`
+**Serviço acoplado:** `services/sem_movimento_nfse/`
+
+**Propósito:** Automatiza a emissão dos comprovantes de **ausência de movimento de NFS-e** no portal municipal de Salvador (`nfse.salvador.ba.gov.br`) para um lote de empresas. Para cada empresa, gera dois PDFs (notas emitidas + notas recebidas como tomador) e um resumo consolidado em Excel.
+
+**Padrão aplicado:** Padrão A — serviço em `services/` com thread dedicada, `threading.Event` para cancelamento e eventos via EventBus. O JS interage diretamente com métodos `sm_*` em `api.py`, não via `executar_modulo`.
+
+**Estrutura do serviço:**
+
+```
+services/sem_movimento_nfse/
+  sm_service.py          # thread/stop_flag/eventos — orquestrador
+  sm_engine/
+    sm_portal.py         # Playwright: login, extração de nome, emissão de PDF por empresa
+    sm_captcha.py        # Anti-Captcha (ImageToTextTask) via HTTP puro
+    sm_planilha.py       # parse TXT/xlsx com CNPJ + senha
+    sm_resumo.py         # gera resumo consolidado .xlsx ao final do lote
+```
+
+**Entrada — `sm_executar(empresas_com_senha, mes, ano, pasta_destino)`:**
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `empresas_com_senha` | list | `[{"cnpj": str, "senha": str}, ...]` — lista com senhas reais (guardada em memória no JS) |
+| `mes` | int | Mês da competência (1–12) |
+| `ano` | int | Ano da competência |
+| `pasta_destino` | str | Caminho da pasta onde os PDFs serão salvos |
+
+**Saída — evento `sm_empresa` (por empresa processada):**
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `cnpj` | str | CNPJ da empresa (14 dígitos) |
+| `status` | str | `"ok"`, `"erro"`, `"captcha_falhou"` |
+| `emitidas` | dict | `{arquivo, qtd, status, detalhe}` |
+| `recebidas` | dict | `{arquivo, qtd, status, detalhe}` — `status="sem_botao"` se empresa não tiver ponta de tomador |
+| `detalhe` | str | Mensagem de erro (presente se `status != "ok"`) |
+| `indice` | int | Posição da empresa no lote (1-based) |
+| `total` | int | Total de empresas no lote |
+
+**Saída — evento `sm_done` (ao final do lote):**
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `ok` | bool | `True` se zero erros |
+| `total` | int | Total de empresas processadas |
+| `ok_count` | int | Empresas concluídas com sucesso |
+| `erros` | int | Empresas com erro ou captcha_falhou |
+| `cancelado` | bool | `True` se o usuário cancelou via `sm_cancelar()` |
+| `resumo_arquivo` | str\|None | Caminho do `resumo_sem_movimento_MMAAAA.xlsx` gerado |
+
+**Nomenclatura dos PDFs gerados:**
+
+```
+{NomeEmpresa}_{6digitos_CNPJ}_{emitidas|recebidas}_{MMAAAA}.pdf
+Exemplo: ACTION_SERVICOS_FINANCEIROS_LTDA_001-32_emitidas_052026.pdf
+```
+
+O nome da empresa é extraído automaticamente do `#ddlContribuinte` na tela de consulta do portal (campo disabled — lido via `page.evaluate()`).
+
+**Configuração (chaves em `config.json`):**
+
+| Chave | Tipo | Padrão | Descrição |
+|---|---|---|---|
+| `sm_anticaptcha_api_key` | str | `""` | Chave API do Anti-Captcha. Vazio = modo manual (usuário resolve no navegador) |
+| `sm_headless` | bool | `true` | `false` força navegador visível (ignorado no modo manual, sempre visível) |
+| `sm_captcha_timeout_s` | int | `60` | Timeout de polling do Anti-Captcha por empresa |
+| `sm_pausa_entre_empresas_s` | float | `2` | Pausa interruptível entre empresas do lote |
+
+**Métodos `api.py` expostos ao JS:**
+
+| Método | Descrição |
+|---|---|
+| `sm_selecionar_planilha()` | Abre diálogo de arquivo (TXT ou xlsx) |
+| `sm_carregar_planilha(caminho)` | Faz parse e retorna preview com senha mascarada (`****`) |
+| `sm_executar(empresas_com_senha, mes, ano, pasta_destino)` | Inicia o lote em thread |
+| `sm_executar_por_caminho(caminho, mes, ano, pasta_destino)` | Recarrega planilha e inicia lote (botão Recarregar) |
+| `sm_cancelar()` | Sinaliza cancelamento via `stop_flag.set()` |
+| `sm_get_status()` | Retorna `{status: "running"|"idle"}` |
+| `sm_carregar_config()` | Lê configurações do `config.json` |
+| `sm_salvar_config(dados)` | Salva configurações no `config.json` |
+| `sm_abrir_template(tipo)` | Abre template de planilha (`"txt"` ou `"xlsx"`) com `os.startfile` |
+
+**Dependências:**
+
+| Dependência | Tipo |
+|---|---|
+| `playwright` (chromium) | Automação do portal (já instalado no projeto) |
+| `requests` | Polling da API Anti-Captcha (HTTP puro, sem lib externa) |
+| `openpyxl` | Leitura de `.xlsx` de entrada e geração do resumo |
+
+**Notas:**
+
+- Cada empresa usa um `BrowserContext` isolado (`new_context()`) — sem vazamento de sessão entre CNPJs.
+- Modo manual (sem chave Anti-Captcha): força `headless=False`; timeout de 3 minutos por empresa para o usuário resolver o CAPTCHA.
+- `status="sem_botao"` em `recebidas` não é erro — empresas sem atividade de tomador não têm o botão no portal. O PDF de emitidas é gerado normalmente.
+- A senha nunca é logada nem persistida; é mascarada no preview da UI e trafega em memória apenas durante a execução do lote.
+- O papel mínimo para executar é `fiscal` ou `admin`.
+
+---
+
+*Última atualização: 2026-06-04*

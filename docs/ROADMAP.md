@@ -74,11 +74,15 @@ A Central DMF ainda importa de `engine/` (raiz) para as seguintes funcionalidade
 | Status do lock | `engine/lock_master.py` |
 | Leitura da master | `engine/excel_parser.py` |
 
-Enquanto essas dependências existirem, a Central continua obrigada a rodar em Python 32-bit — a mesma restrição que motivou o desacoplamento da v0.2.0.
+Acreditava-se que essas dependências obrigavam a Central a rodar em Python 32-bit. **Isso foi investigado e é falso** (2026-06).
 
-**Abordagem futura:** a Automação de Horas deve expor uma API REST local (ou endpoint IPC) que a Central consulta para obter estado, status de lock e dados da master. Eliminadas as importações diretas de `engine/`, a Central passa a ser genuinamente 64-bit e desacoplada.
+**Descoberta:** a restrição de 32-bit vinha *apenas* do acesso ao banco do Domínio via o **DSN ODBC "Contabil"**, registrado como 32-bit no Windows. O banco é **SAP SQL Anywhere 17**, que tem driver 64-bit já instalado. Conexão 64-bit **comprovada** trocando `DSN=Contabil` por connection string **DSN-less** (`DRIVER=SQL Anywhere 17;...`). Nada mais no projeto exige 32-bit.
 
-Esta limpeza é um pré-requisito para qualquer módulo futuro que precise de bibliotecas 64-bit na Central.
+**Abordagem (revisada — mais simples que API REST/IPC):** migrar a camada de banco para DSN-less, mover a Central para 64-bit, e embutir a Automação de Horas como **módulo inline** (Padrão 0, como o Buscar XML) — eliminando subprocesso, token SSO por arquivo e a infra triplicada de uma vez. Não é mais necessária uma API REST/IPC entre Central e Automação.
+
+➡️ **Guia de implantação passo a passo:** [`docs/migracao-64bit.md`](migracao-64bit.md). Connection string validada e credencial real (UID=`EXTERNO`, não `dba`) estão lá.
+
+Esta limpeza é pré-requisito para qualquer módulo futuro que precise de bibliotecas 64-bit na Central.
 
 ---
 
@@ -105,7 +109,17 @@ Após o piloto com os 5 usuários reais (Carol, James, Nayane, Jailton, Adriele)
 
 ---
 
-## 5. Próximos Serviços Candidatos
+## 5. Módulos Ativos na Central DMF
+
+| Módulo | Setor | Status | Notas |
+|---|---|---|---|
+| `automacao_horas` | GESTÃO | Produção (piloto 5 usuários) | Subprocess 32-bit — candidato à migração inline (ver Seção 3) |
+| `relatorio_rendimentos` | CONTÁBIL | Produção | Padrão 0 inline |
+| `sem_movimento_nfse` | FISCAL | Produção | Padrão A, Anti-Captcha, Playwright |
+
+---
+
+## 6. Próximos Serviços Candidatos
 
 | Serviço | Descrição | Padrão de Integração |
 |---|---|---|
@@ -113,19 +127,19 @@ Após o piloto com os 5 usuários reais (Carol, James, Nayane, Jailton, Adriele)
 | Novos setores | Legalização, Consultoria, outros setores da DMF | Módulos dentro da Automação ou novo serviço |
 | Dashboard consolidado | Visão executiva de produtividade (exportação PDF/Excel) | Módulo UI na Central |
 
-Cada novo serviço deve seguir o padrão estabelecido na v0.2.0: launcher na Central + SSO por token + processo independente.
+Cada novo serviço deve seguir o padrão estabelecido: launcher na Central + serviço em `services/` + eventos via EventBus.
 
 ---
 
-## 6. Decisões em Aberto
+## 7. Decisões em Aberto
 
 | Decisão | Contexto | Critério |
 |---|---|---|
 | Inno Setup vs `.bat` | Distribuição pós-piloto | Feedback dos 5 usuários do piloto |
 | Repositório único vs separado para novos serviços | Hoje: tudo no mesmo repo | Serviço com ciclo de vida independente → repo separado |
-| Limpeza das dependências residuais | Quando abordar | Antes de qualquer módulo Central que precise de 64-bit |
-| Exposição da API da Automação | Como a Central obtém estado sem importar `engine/` | Após estabilização do piloto |
+| Migração para 64-bit unificado | Quando abordar (guia pronto em [`migracao-64bit.md`](migracao-64bit.md)) | Janela segura — `automacao_horas` em produção com 5 usuários |
+| ~~Exposição da API da Automação~~ | **Resolvido:** com 64-bit unificado a Automação vira módulo inline; não precisa de API entre processos | — |
 
 ---
 
-*Última atualização: 2026-05-29*
+*Última atualização: 2026-06-04*

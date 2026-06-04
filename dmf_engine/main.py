@@ -93,6 +93,8 @@ from dmf_engine.core.thread_runner import ThreadRunner
 from dmf_engine.modules.registry import ModuleRegistry
 from dmf_engine.modules.m_automacao_horas import AutomacaoHorasLauncher
 from dmf_engine.modules.m_relatorio_rendimentos import RelatorioRendimentosModule
+from dmf_engine.modules.m_buscar_xml import BuscarXMLModule
+from dmf_engine.modules.m_sem_movimento_nfse import SemMovimentoNfseModule
 from dmf_engine.api import Api
 
 _config = ConfigManager(CONFIG_FILE)
@@ -108,6 +110,8 @@ def _sessao_fn():
 
 _registry.register(AutomacaoHorasLauncher(_bus, _config, _sessao_fn))
 _registry.register(RelatorioRendimentosModule(_bus, _config, _sessao_fn))
+_registry.register(BuscarXMLModule(_bus, _config, _sessao_fn))
+_registry.register(SemMovimentoNfseModule(_bus, _config, _sessao_fn))
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
 

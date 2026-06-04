@@ -179,6 +179,17 @@ def _get_service(self):
 
 O callback `lambda ev, d` traduz eventos internos do projeto externo para o EventBus do DMF — a UI não sabe que o código é externo.
 
+> ⚠️ **Regra anti-colisão de pacotes (obrigatória).** Como o adaptador injeta o
+> projeto em `sys.path`, os nomes de pacote do projeto **passam a competir** com os
+> da raiz da Central. A raiz já tem `engine/`, `config/`, `core/`, `modules/`.
+> Se o projeto externo usar esses mesmos nomes, o Python resolve para o pacote da
+> Central (cacheado primeiro em `sys.modules`) e os imports do projeto quebram com
+> `ModuleNotFoundError` — frequentemente engolido por um `except`, deixando o módulo
+> "vazio" ou inerte sem erro visível. **Renomeie os pacotes do projeto com um prefixo
+> exclusivo** (ex.: `bx_engine/`, `bx_config/` no Buscar XML). Separe também a pasta
+> de **dados de runtime** de qualquer pacote de **código** (ex.: dados em `bx_data/`,
+> nunca em `config/`). Ver memória `colisao-pacotes-engine-config`.
+
 ---
 
 ## 6. Padrão B — Binário Compilado

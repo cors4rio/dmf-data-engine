@@ -33,6 +33,16 @@ class ConfigManager:
         "governanca_match_minimo": 2,
         "governanca_bloquear_cnpj_dup": True,
         "governanca_gravar_zero": True,
+        # Override OPCIONAL do Python 32-bit que lança o automacao_horas.
+        # Vazio = o launcher descobre automaticamente via `py -3-32` (ver
+        # _resolver_python_32 em m_automacao_horas.py). Só preencha para forçar
+        # um interpretador específico.
+        "automacao_horas_python": "",
+        # Sem Movimento NFS-e Salvador
+        "sm_anticaptcha_api_key":     "",
+        "sm_headless":               True,
+        "sm_captcha_timeout_s":      60,
+        "sm_pausa_entre_empresas_s": 2,
     }
 
     def __init__(self, config_path: str):

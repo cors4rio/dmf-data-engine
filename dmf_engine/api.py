@@ -214,6 +214,19 @@ class Api:
         if papel not in mod_meta["papeis"] and papel != "admin":
             return {"ok": False, "erro": "Sem permissão para este módulo."}
         opcoes["_sessao"] = self._sessao_snapshot()
+
+        # Módulos "sync" (ex: launchers que abrem subprocesso) executam de forma
+        # direta e o resultado real volta ao JS. Sem isso, o retorno seria
+        # engolido pelo ThreadRunner (que sempre devolve {"ok": True}) e um erro
+        # do launcher ficaria invisível — clica e "nada acontece".
+        if mod_meta.get("execucao") == "sync":
+            mod = self._registry.get(module_id)
+            try:
+                return mod.execute(opcoes)
+            except Exception as e:
+                log.error(f"[{module_id}] execução sync falhou: {e}")
+                return {"ok": False, "erro": str(e)}
+
         return self._registry.execute(module_id, opcoes)
 
     def get_module_status(self, module_id: str) -> dict:
@@ -758,4 +771,293 @@ class Api:
             log.error(f"[ESTADO] {e}")
             return {"modulos": {}, "timestamp": None, "competencia": None}
 
+    # ── Buscar XML (Padrão A) ─────────────────────────────────────────────────
+
+    def _bx_svc(self):
+        """Retorna o BuscarXMLService via adaptador do registry."""
+        mod = self._registry.get("buscar_xml")
+        if mod is None:
+            raise RuntimeError("Módulo buscar_xml não registrado.")
+        return mod._get_service()
+
+    def bx_listar_lojas(self) -> list:
+        try:
+            return self._bx_svc().listar_lojas()
+        except Exception as e:
+            log.error(f"[BX] bx_listar_lojas: {e}")
+            return []
+
+    def bx_listar_clientes_tokai(self) -> list:
+        try:
+            return self._bx_svc().listar_clientes_tokai()
+        except Exception as e:
+            log.error(f"[BX] bx_listar_clientes_tokai: {e}")
+            return []
+
+    def bx_executar_nfe(self, lojas: list, periodo: dict) -> dict:
+        try:
+            return self._bx_svc().executar_nfe(lojas, periodo)
+        except Exception as e:
+            log.error(f"[BX] bx_executar_nfe: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_executar_nfce(self, lojas: list, periodo: dict) -> dict:
+        try:
+            return self._bx_svc().executar_nfce(lojas, periodo)
+        except Exception as e:
+            log.error(f"[BX] bx_executar_nfce: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_executar_sped(self, lojas: list, periodo: dict) -> dict:
+        try:
+            return self._bx_svc().executar_sped(lojas, periodo)
+        except Exception as e:
+            log.error(f"[BX] bx_executar_sped: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_executar_tokai(self, clientes: list = None, periodo: dict = None) -> dict:
+        try:
+            return self._bx_svc().executar_tokai(clientes=clientes, periodo=periodo)
+        except Exception as e:
+            log.error(f"[BX] bx_executar_tokai: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_compactar_tokai(self, clientes: list = None, periodo: dict = None) -> dict:
+        try:
+            return self._bx_svc().compactar_tokai(clientes=clientes, periodo=periodo)
+        except Exception as e:
+            log.error(f"[BX] bx_compactar_tokai: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_previa_deletar_competencia(self, grupo: str, competencia: str) -> dict:
+        try:
+            return self._bx_svc().previa_deletar_competencia(grupo, competencia)
+        except Exception as e:
+            log.error(f"[BX] bx_previa_deletar_competencia: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_deletar_competencia(self, grupo: str, competencia: str,
+                               confirmacao: str = "", caminhos: list = None) -> dict:
+        try:
+            return self._bx_svc().deletar_competencia(grupo, competencia, confirmacao, caminhos)
+        except Exception as e:
+            log.error(f"[BX] bx_deletar_competencia: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_cancelar(self, modulo: str) -> dict:
+        try:
+            return self._bx_svc().cancelar(modulo)
+        except Exception as e:
+            log.error(f"[BX] bx_cancelar: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_get_status(self) -> dict:
+        try:
+            return self._bx_svc().get_status()
+        except Exception as e:
+            log.error(f"[BX] bx_get_status: {e}")
+            return {"executando": [], "daemons": {}}
+
+    def bx_get_status_daemons(self) -> dict:
+        try:
+            return self._bx_svc().get_status_daemons()
+        except Exception as e:
+            log.error(f"[BX] bx_get_status_daemons: {e}")
+            return {}
+
+    def bx_start_daemon(self, nome: str) -> dict:
+        try:
+            return self._bx_svc().start_daemon(nome)
+        except Exception as e:
+            log.error(f"[BX] bx_start_daemon: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_stop_daemon(self, nome: str) -> dict:
+        try:
+            return self._bx_svc().stop_daemon(nome)
+        except Exception as e:
+            log.error(f"[BX] bx_stop_daemon: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_carregar_config(self) -> dict:
+        try:
+            return self._bx_svc().carregar_config()
+        except Exception as e:
+            log.error(f"[BX] bx_carregar_config: {e}")
+            return {}
+
+    def bx_salvar_config(self, dados: dict) -> dict:
+        try:
+            return self._bx_svc().salvar_config(dados)
+        except Exception as e:
+            log.error(f"[BX] bx_salvar_config: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_testar_conexao_erp(self) -> dict:
+        try:
+            return self._bx_svc().testar_conexao_erp()
+        except Exception as e:
+            log.error(f"[BX] bx_testar_conexao_erp: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_verificar_disco_z(self) -> dict:
+        try:
+            return self._bx_svc().verificar_disco_z()
+        except Exception as e:
+            log.error(f"[BX] bx_verificar_disco_z: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_mapear_disco_z(self) -> dict:
+        try:
+            return self._bx_svc().mapear_disco_z()
+        except Exception as e:
+            log.error(f"[BX] bx_mapear_disco_z: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_get_logs(self, modulo: str = "", limite: int = 200) -> list:
+        try:
+            return self._bx_svc().get_logs(modulo, limite)
+        except Exception as e:
+            log.error(f"[BX] bx_get_logs: {e}")
+            return []
+
+    def bx_limpar_logs(self) -> dict:
+        try:
+            return self._bx_svc().limpar_logs()
+        except Exception as e:
+            log.error(f"[BX] bx_limpar_logs: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_get_historico(self) -> list:
+        try:
+            return self._bx_svc().get_historico()
+        except Exception as e:
+            log.error(f"[BX] bx_get_historico: {e}")
+            return []
+
+    # ── Sem Movimento NFS-e Salvador ─────────────────────────────────────────
+
+    def _sm_svc(self):
+        mod = self._registry.get("sem_movimento_nfse")
+        if mod is None:
+            raise RuntimeError("Módulo sem_movimento_nfse não registrado.")
+        return mod._get_service()
+
+    def sm_abrir_template(self, tipo: str) -> dict:
+        """Abre o template TXT ou XLSX de exemplo no aplicativo padrão do SO."""
+        import subprocess
+        nome = f"template_sem_movimento.{'txt' if tipo == 'txt' else 'xlsx'}"
+        caminho = os.path.join(self._base_dir, "ui", nome)
+        if not os.path.exists(caminho):
+            return {"ok": False, "erro": f"Template não encontrado: {caminho}"}
+        try:
+            os.startfile(caminho)
+            return {"ok": True}
+        except Exception as e:
+            try:
+                subprocess.Popen(["explorer", caminho])
+                return {"ok": True}
+            except Exception:
+                return {"ok": False, "erro": str(e)}
+
+    def sm_selecionar_planilha(self) -> dict:
+        """Abre diálogo para selecionar TXT ou xlsx de empresas SM."""
+        import webview
+        tipos = ("Planilha TXT Excel (*.txt;*.xlsx;*.xlsm)", "Todos os arquivos (*.*)")
+        result = self._win().create_file_dialog(
+            webview.OPEN_DIALOG, allow_multiple=False, file_types=tipos
+        )
+        if result and result[0]:
+            return {"ok": True, "caminho": result[0]}
+        return {"ok": False, "caminho": None}
+
+    def sm_carregar_planilha(self, caminho: str) -> dict:
+        """Parse TXT/xlsx com CNPJ+senha. Retorna preview com senha mascarada."""
+        try:
+            self._sm_svc()  # garante que o path do serviço já foi injetado
+            from sm_planilha import carregar  # noqa: E402
+            resultado = carregar(caminho)
+            # Mascara senhas antes de enviar ao JS
+            preview = [
+                {"cnpj": e["cnpj"], "senha": "****", "linha": e["linha"]}
+                for e in resultado["empresas"]
+            ]
+            return {
+                "ok":       True,
+                "empresas": preview,
+                "total":    len(preview),
+                "invalidas": resultado["invalidas"],
+            }
+        except Exception as e:
+            log.error(f"[SM] sm_carregar_planilha: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def sm_executar(self, empresas_com_senha: list, mes: int, ano: int,
+                    pasta_destino: str) -> dict:
+        """
+        Inicia o lote. empresas_com_senha vem do JS com senha real
+        (o frontend guarda a lista original carregada em memória).
+        """
+        try:
+            if not os.path.isdir(pasta_destino):
+                return {"ok": False, "erro": f"Pasta não encontrada: {pasta_destino}"}
+            return self._sm_svc().executar(empresas_com_senha, mes, ano, pasta_destino)
+        except Exception as e:
+            log.error(f"[SM] sm_executar: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def sm_executar_por_caminho(self, caminho: str, mes: int, ano: int,
+                               pasta_destino: str) -> dict:
+        """Recarrega a planilha com senhas reais e inicia o lote."""
+        try:
+            if not os.path.isdir(pasta_destino):
+                return {"ok": False, "erro": f"Pasta não encontrada: {pasta_destino}"}
+            self._sm_svc()  # garante path injetado
+            from sm_planilha import carregar  # noqa: E402
+            resultado = carregar(caminho)
+            if not resultado["empresas"]:
+                return {"ok": False, "erro": "Nenhuma empresa válida na planilha."}
+            return self._sm_svc().executar(resultado["empresas"], mes, ano, pasta_destino)
+        except Exception as e:
+            log.error(f"[SM] sm_executar_por_caminho: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def sm_cancelar(self) -> dict:
+        try:
+            return self._sm_svc().cancelar()
+        except Exception as e:
+            log.error(f"[SM] sm_cancelar: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def sm_get_status(self) -> dict:
+        try:
+            return {"ok": True, **self._sm_svc().get_status()}
+        except Exception as e:
+            return {"ok": False, "erro": str(e)}
+
+    def sm_carregar_config(self) -> dict:
+        try:
+            cfg = self._config.load()
+            return {
+                "ok":                       True,
+                "sm_anticaptcha_api_key":   cfg.get("sm_anticaptcha_api_key", ""),
+                "sm_headless":              cfg.get("sm_headless", True),
+                "sm_captcha_timeout_s":     cfg.get("sm_captcha_timeout_s", 60),
+                "sm_pausa_entre_empresas_s": cfg.get("sm_pausa_entre_empresas_s", 2),
+            }
+        except Exception as e:
+            return {"ok": False, "erro": str(e)}
+
+    def sm_salvar_config(self, dados: dict) -> dict:
+        try:
+            cfg = self._config.load()
+            for chave in ("sm_anticaptcha_api_key", "sm_headless",
+                          "sm_captcha_timeout_s", "sm_pausa_entre_empresas_s"):
+                if chave in dados:
+                    cfg[chave] = dados[chave]
+            self._config.save(cfg)
+            return {"ok": True}
+        except Exception as e:
+            log.error(f"[SM] sm_salvar_config: {e}")
+            return {"ok": False, "erro": str(e)}
 

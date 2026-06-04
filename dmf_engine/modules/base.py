@@ -16,6 +16,10 @@ class ModuleMeta:
     color: str       # hex: "#B06A00"
     papeis: list     # ["admin", "fiscal"]
     status: str = "disponivel"   # "disponivel" | "breve"
+    execucao: str = "async"      # "async" = via ThreadRunner (tarefa longa, emite eventos)
+                                 # "sync"  = chamada direta; o retorno do execute() volta ao JS.
+                                 #           Use para launchers que lançam subprocesso e
+                                 #           precisam reportar sucesso/erro imediatamente.
 
 
 class BaseModule(ABC):

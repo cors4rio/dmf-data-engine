@@ -56,6 +56,7 @@ class ModuleRegistry:
                 "color": m.color,
                 "status": m.status,
                 "papeis": m.papeis,
+                "execucao": m.execucao,
             })
         return result
 

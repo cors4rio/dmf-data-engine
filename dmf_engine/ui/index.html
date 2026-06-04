@@ -3039,9 +3039,11 @@ const _pfModuleCatalog = {
     { id: 'relatorios',     nome: 'Relatórios Gerenciais',   desc: 'Dashboards e relatórios consolidados de gestão.',           status: 'breve',      icon: 'ti-chart-bar',    color: '#B06A00' }
   ],
   'FISCAL': [
-    { id: 'apuracao',   nome: 'Apuração de Impostos',    desc: 'Cálculo e apuração de ICMS, PIS, COFINS e outros.',              status: 'breve', icon: 'ti-calculator',       color: '#B06A00' },
-    { id: 'declaracoes',nome: 'Declarações',              desc: 'SPED Fiscal, EFD Contribuições e obrigações acessórias.',        status: 'breve', icon: 'ti-file-text',         color: '#8B3A3A' },
-    { id: 'obrigacoes', nome: 'Obrigações Acessórias',   desc: 'Calendário e controle de vencimentos fiscais.',                  status: 'breve', icon: 'ti-calendar-check',   color: '#2A7A45' }
+    { id: 'buscar_xml',          nome: 'Buscar XML',                    desc: 'Exporta e organiza XMLs fiscais: NF-e, NFCe, SPED e TOKAI.',          status: 'disponivel', icon: 'ti-file-search',      color: '#1565C0' },
+    { id: 'sem_movimento_nfse',  nome: 'Sem Movimento NFS-e Salvador',  desc: 'Emite comprovantes de ausência de movimento no portal NFS-e Salvador.', status: 'disponivel', icon: 'ti-file-certificate', color: '#B06A00' },
+    { id: 'apuracao',            nome: 'Apuração de Impostos',          desc: 'Cálculo e apuração de ICMS, PIS, COFINS e outros.',                    status: 'breve',      icon: 'ti-calculator',       color: '#B06A00' },
+    { id: 'declaracoes',         nome: 'Declarações',                   desc: 'SPED Fiscal, EFD Contribuições e obrigações acessórias.',               status: 'breve',      icon: 'ti-file-text',        color: '#8B3A3A' },
+    { id: 'obrigacoes',          nome: 'Obrigações Acessórias',         desc: 'Calendário e controle de vencimentos fiscais.',                         status: 'breve',      icon: 'ti-calendar-check',   color: '#2A7A45' }
   ],
   'CONTÁBIL': [
     { id: 'lancamentos', nome: 'Lançamentos Contábeis', desc: 'Registro e conciliação de lançamentos contábeis.',               status: 'breve', icon: 'ti-notes',           color: '#2A7A45' },
@@ -3290,6 +3292,16 @@ async function pfAbrirModulo(modulo) {
 
   if (modulo === 'relatorio_rendimentos') {
     rfAbrirModal();
+    return;
+  }
+
+  if (modulo === 'buscar_xml') {
+    bxAbrir();
+    return;
+  }
+
+  if (modulo === 'sem_movimento_nfse') {
+    smAbrir();
     return;
   }
 
@@ -4057,5 +4069,1807 @@ async function pfSalvarSenha() {
 
   </div>
 </div>
+
+<!-- ===== TELA 4: BUSCAR XML ===== -->
+<div class="screen" id="screen-buscar-xml">
+<style>
+  /* Escopo bx-* para não vazar no resto da Central */
+  #screen-buscar-xml {
+    /* Tema off-white amarelado (warm) — remove o branco cru, mais confortável */
+    --bx-bg: #FAF7EE; --bx-card: #FFFEFA; --bx-surface: #F5F1E4; --bx-border: #E8E2D2;
+    --bx-txt: #2B2A26; --bx-txt-m: #6B675C; --bx-txt-l: #9C978A;
+    --bx-accent: #1565C0; --bx-accent-soft: #F0EFE4;
+    --bx-ok: #3B6D11; --bx-err: #A32D2D; --bx-warn: #B06A00;
+    --bx-r: 8px; --bx-r-sm: 5px;
+    background: var(--bx-bg); flex-direction: column; height: 100vh;
+  }
+  .bx-topbar {
+    height: 48px; background: var(--bx-card); border-bottom: 1px solid var(--bx-border);
+    display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0;
+  }
+  .bx-back-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border: 1px solid var(--bx-border); border-radius: var(--bx-r-sm);
+    background: var(--bx-card); color: var(--bx-txt-m); font-size: 13px; cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  .bx-back-btn:hover { background: var(--bx-surface); }
+  .bx-back-btn i { font-size: 16px; }
+  .bx-tb-title { font-size: 14px; font-weight: 600; color: var(--bx-txt); display: flex; align-items: center; gap: 8px; }
+  .bx-tb-title i { font-size: 18px; color: #1565C0; }
+  .bx-tb-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .bx-daemon-dot { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--bx-txt-m); cursor: pointer; }
+  .bx-dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; display: inline-block; }
+  .bx-dot.on { background: #22c55e; }
+  .bx-dot.err { background: #ef4444; }
+  .bx-sep { width: 1px; height: 20px; background: var(--bx-border); }
+
+  .bx-body { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar */
+  .bx-sidebar {
+    width: 200px; background: var(--bx-card); border-right: 1px solid var(--bx-border);
+    display: flex; flex-direction: column; padding: 12px 0; flex-shrink: 0; overflow-y: auto;
+  }
+  .bx-grp-select {
+    margin: 0 10px 8px; padding: 7px 10px; border-radius: var(--bx-r-sm);
+    border: 1px solid var(--bx-accent); background: var(--bx-accent-soft); width: calc(100% - 20px);
+    font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+    color: var(--bx-accent); cursor: pointer; outline: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231565C0' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    padding-right: 28px;
+  }
+  .bx-grp-select:focus { border-color: #0d47a1; box-shadow: 0 0 0 2px rgba(21,101,192,0.15); }
+  .bx-nav-lbl { font-size: 10px; font-weight: 600; color: var(--bx-txt-l); letter-spacing: .05em; padding: 10px 14px 4px; text-transform: uppercase; }
+  .bx-nav-pill {
+    display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 500; color: var(--bx-txt-m); cursor: pointer;
+    border-left: 2px solid transparent; background: transparent; border-radius: 0;
+    border-top: none; border-right: none; border-bottom: none;
+    font-family: var(--font-sans); width: 100%; text-align: left;
+  }
+  .bx-nav-pill:hover { background: var(--bx-surface); color: var(--bx-txt); }
+  .bx-nav-pill.active { color: var(--bx-accent); font-weight: 600; border-left-color: var(--bx-accent); background: var(--bx-accent-soft); }
+  .bx-nav-pill i { font-size: 16px; }
+
+  /* Main */
+  .bx-main { flex: 1; overflow-y: auto; padding: 20px; }
+  .bx-page { display: none; }
+  .bx-page.active { display: block; }
+
+  .bx-pg-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--bx-border); }
+  .bx-pg-title { font-size: 17px; font-weight: 700; color: var(--bx-txt); }
+  .bx-pg-desc { font-size: 12px; color: var(--bx-txt-m); }
+  .bx-pg-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  .bx-card { background: var(--bx-card); border: 1px solid var(--bx-border); border-radius: var(--bx-r); padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(43,42,38,0.03); }
+  .bx-card-title { font-size: 13px; font-weight: 600; color: var(--bx-txt); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .bx-card-title i { font-size: 16px; color: var(--bx-txt-m); }
+
+  .bx-row { display: flex; gap: 16px; }
+  .bx-col { flex: 1; min-width: 0; }
+
+  .bx-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 1px solid var(--bx-border); border-radius: var(--bx-r-sm); background: var(--bx-card); color: var(--bx-txt); font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-sans); transition: background .12s, border-color .12s; }
+  .bx-btn:hover { background: var(--bx-surface); border-color: #DAD3C0; }
+  .bx-btn i { font-size: 15px; color: var(--bx-txt-m); }
+  .bx-btn-primary { background: var(--bx-accent); color: #fff; border-color: var(--bx-accent); }
+  .bx-btn-primary:hover { background: #0f4a82; border-color: #0f4a82; }
+  .bx-btn-primary i { color: #fff; }
+  .bx-btn-danger { background: var(--bx-card); color: var(--bx-err); border-color: #E0B4A8; }
+  .bx-btn-danger:hover { background: #FBEDE6; border-color: #D69A88; }
+  .bx-btn-warn { background: var(--bx-card); color: var(--bx-warn); border-color: #E2C690; }
+  .bx-btn-warn:hover { background: #FAF1DD; border-color: #D4B370; }
+  .bx-btn-warn i { color: var(--bx-warn); }
+
+  .bx-periodo-wrap { display: flex; gap: 10px; margin-bottom: 10px; }
+  .bx-periodo-wrap select { flex: 1; padding: 7px 10px; border: 1px solid var(--bx-border); border-radius: var(--bx-r-sm); font-size: 13px; font-family: var(--font-sans); background: var(--bx-card); color: var(--bx-txt); }
+
+  .bx-lojas-grid { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  .bx-loja-grupo-header {
+    font-size: 10px; font-weight: 700; color: var(--bx-txt-l); letter-spacing: .06em;
+    text-transform: uppercase; padding: 8px 4px 2px; margin-top: 4px;
+  }
+  .bx-loja-check {
+    display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+    border-radius: var(--bx-r-sm); cursor: pointer; font-size: 12px;
+    color: var(--bx-txt); user-select: none; transition: background .1s;
+  }
+  .bx-loja-check:hover { background: var(--bx-surface); }
+  .bx-loja-check input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+  .bx-lojas-actions { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .bx-link { background: none; border: none; color: #1565C0; font-size: 12px; cursor: pointer; font-family: var(--font-sans); text-decoration: underline; padding: 0; }
+
+  .bx-progress-wrap { margin: 8px 0; }
+  .bx-progress-bg { height: 6px; background: var(--bx-surface); border-radius: 3px; overflow: hidden; }
+  .bx-progress-fill { height: 100%; background: var(--bx-accent); border-radius: 3px; transition: width .3s; width: 0%; }
+  .bx-progress-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--bx-txt-m); margin-top: 5px; }
+
+  .bx-log-box { font-size: 11px; font-family: monospace; background: var(--bx-surface); border: 1px solid var(--bx-border); border-radius: var(--bx-r-sm); padding: 10px; max-height: 200px; overflow-y: auto; color: var(--bx-txt-m); white-space: pre-wrap; }
+  .bx-log-line { padding: 1px 0; border-bottom: 1px solid var(--bx-border); }
+  .bx-log-line:last-child { border-bottom: none; }
+  .bx-log-line.err { color: var(--bx-err); }
+  .bx-log-line.warn { color: var(--bx-warn); }
+
+  .bx-form-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bx-surface); border: 1px solid var(--bx-border); border-radius: var(--bx-r-sm); margin-bottom: 8px; }
+  .bx-form-label { font-size: 13px; font-weight: 500; color: var(--bx-txt); }
+  .bx-form-hint { font-size: 11px; color: var(--bx-txt-l); margin-top: 2px; }
+  .bx-form-input { padding: 7px 10px; border: 1px solid var(--bx-border); border-radius: var(--bx-r-sm); font-size: 13px; font-family: var(--font-sans); min-width: 200px; background: var(--bx-card); color: var(--bx-txt); }
+  .bx-form-input:focus { outline: none; border-color: var(--bx-accent); box-shadow: 0 0 0 2px rgba(21,101,192,0.12); }
+
+  .bx-badge { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 50px; }
+  .bx-badge-ok { background: #dcfce7; color: var(--bx-ok); }
+  .bx-badge-err { background: #fee2e2; color: var(--bx-err); }
+  .bx-badge-wait { background: #f1f5f9; color: var(--bx-txt-l); }
+
+  .bx-metric { background: var(--bx-card); border: 1px solid var(--bx-border); border-radius: var(--bx-r); padding: 16px; text-align: center; box-shadow: 0 1px 2px rgba(43,42,38,0.03); }
+  .bx-metric-val { font-size: 24px; font-weight: 700; color: var(--bx-txt); }
+  .bx-metric-lbl { font-size: 11px; color: var(--bx-txt-m); margin-top: 4px; }
+  .bx-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+
+  .bx-toggle { position: relative; width: 36px; height: 20px; cursor: pointer; display: inline-block; }
+  .bx-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .bx-toggle-track { position: absolute; inset: 0; border-radius: 20px; background: #cbd5e1; transition: .2s; }
+  .bx-toggle-track:before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; border-radius: 50%; background: #fff; transition: .2s; }
+  .bx-toggle input:checked + .bx-toggle-track { background: #1565C0; }
+
+  .bx-daemon-card { background: var(--bx-card); border: 1px solid var(--bx-border); border-radius: var(--bx-r); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(43,42,38,0.03); }
+  .bx-daemon-info h4 { font-size: 13px; font-weight: 600; color: var(--bx-txt); margin-bottom: 3px; }
+  .bx-daemon-info p { font-size: 11px; color: var(--bx-txt-m); }
+  .bx-daemon-ctrl { display: flex; align-items: center; gap: 12px; }
+
+  /* Modal genérico do módulo */
+  .bx-modal-overlay {
+    position: absolute; inset: 0; background: rgba(43,42,38,0.45);
+    display: flex; align-items: center; justify-content: center; z-index: 50;
+  }
+  .bx-modal {
+    background: var(--bx-card); border: 1px solid var(--bx-border);
+    border-radius: var(--bx-r); width: 460px; max-width: calc(100% - 40px);
+    box-shadow: 0 12px 40px rgba(43,42,38,0.25); display: flex; flex-direction: column;
+  }
+  .bx-modal-head {
+    display: flex; align-items: center; padding: 14px 16px;
+    border-bottom: 1px solid var(--bx-border);
+  }
+  .bx-modal-title { font-size: 15px; font-weight: 700; color: var(--bx-txt); display: flex; align-items: center; gap: 8px; }
+  .bx-modal-x {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    color: var(--bx-txt-l); padding: 4px; border-radius: var(--bx-r-sm); display: flex;
+  }
+  .bx-modal-x:hover { background: var(--bx-surface); color: var(--bx-txt); }
+  .bx-modal-x i { font-size: 18px; }
+  .bx-modal-body { padding: 16px; }
+  .bx-modal-foot {
+    display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px;
+    border-top: 1px solid var(--bx-border);
+  }
+  .bx-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .bx-delcomp-item {
+    display: flex; align-items: center; gap: 8px; padding: 4px 2px;
+    font-family: var(--font-sans); font-size: 12px; color: var(--bx-txt);
+    cursor: pointer; user-select: none; border-bottom: 1px solid var(--bx-border);
+  }
+  .bx-delcomp-item:last-child { border-bottom: none; }
+  .bx-delcomp-item:hover { background: var(--bx-card); }
+  .bx-delcomp-item input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+</style>
+
+  <!-- Topbar -->
+  <div class="bx-topbar">
+    <button class="bx-back-btn" onclick="bxVoltar()"><i class="ti ti-arrow-left"></i> Voltar</button>
+    <div class="bx-sep"></div>
+    <div class="bx-tb-title"><i class="ti ti-file-search"></i> Buscar XML</div>
+    <div class="bx-tb-right">
+      <div class="bx-daemon-dot" onclick="bxNav('daemons')" title="Daemon e-mails">
+        <span class="bx-dot" id="bx-dot-emails"></span><span>e-mails</span>
+      </div>
+      <div class="bx-daemon-dot" onclick="bxNav('daemons')" title="Daemon arquivos">
+        <span class="bx-dot" id="bx-dot-arquivos"></span><span>arquivos</span>
+      </div>
+      <div class="bx-sep"></div>
+      <div class="bx-daemon-dot" id="bx-drive-z-btn" onclick="bxMapearZ()" title="Drive Z:\">
+        <span class="bx-dot" id="bx-dot-drive-z"></span><span>Z:\</span>
+      </div>
+      <div class="bx-sep"></div>
+      <button class="bx-btn bx-btn-danger" onclick="bxAbrirDeletarComp()" title="Apagar arquivos de uma competência no grupo atual" style="padding:5px 11px">
+        <i class="ti ti-calendar-minus"></i> Deletar Competência
+      </button>
+      <div class="bx-sep"></div>
+      <span id="bx-grupo-label" style="font-size:12px;color:var(--bx-txt-m)">AGROMIX/ATACADÃO</span>
+    </div>
+  </div>
+
+  <div class="bx-body">
+    <!-- Sidebar -->
+    <div class="bx-sidebar">
+      <!-- Seletor de grupo -->
+      <div style="padding:8px 10px 4px">
+        <select class="bx-grp-select" id="bx-grp-select" onchange="bxSwitchGrupo(this.value)">
+          <option value="agromix">AGROMIX / ATACADÃO</option>
+          <option value="tokai">GRUPO TOKAI</option>
+        </select>
+      </div>
+
+      <!-- Nav AGROMIX -->
+      <div id="bx-nav-agromix">
+        <span class="bx-nav-lbl">Módulos</span>
+        <button class="bx-nav-pill active" data-bxpage="dashboard" onclick="bxNav('dashboard')"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+        <button class="bx-nav-pill" data-bxpage="nfe" onclick="bxNav('nfe')"><i class="ti ti-file-invoice"></i> NF-e Saída</button>
+        <button class="bx-nav-pill" data-bxpage="nfce" onclick="bxNav('nfce')"><i class="ti ti-receipt"></i> NFCe</button>
+        <button class="bx-nav-pill" data-bxpage="sped" onclick="bxNav('sped')"><i class="ti ti-report"></i> SPED</button>
+        <span class="bx-nav-lbl">Sistema</span>
+        <button class="bx-nav-pill" data-bxpage="daemons" onclick="bxNav('daemons')"><i class="ti ti-activity"></i> Daemons</button>
+        <button class="bx-nav-pill" data-bxpage="config" onclick="bxNav('config')"><i class="ti ti-settings"></i> Config</button>
+        <button class="bx-nav-pill" data-bxpage="logs" onclick="bxNav('logs')"><i class="ti ti-terminal-2"></i> Logs</button>
+      </div>
+
+      <!-- Nav TOKAI -->
+      <div id="bx-nav-tokai" style="display:none">
+        <span class="bx-nav-lbl">TOKAI</span>
+        <button class="bx-nav-pill active" data-bxpage="tokai-exec" onclick="bxNav('tokai-exec')"><i class="ti ti-cloud-download"></i> Executar</button>
+        <span class="bx-nav-lbl">Sistema</span>
+        <button class="bx-nav-pill" data-bxpage="tokai-config" onclick="bxNav('tokai-config')"><i class="ti ti-settings"></i> Config TOKAI</button>
+        <button class="bx-nav-pill" data-bxpage="logs" onclick="bxNav('logs')"><i class="ti ti-terminal-2"></i> Logs</button>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="bx-main">
+
+      <!-- Dashboard -->
+      <div class="bx-page active" id="bx-page-dashboard">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">Dashboard</span>
+          <span class="bx-pg-desc">Resumo das execuções</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn" onclick="bxRefreshDashboard()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+        <div class="bx-grid-3">
+          <div class="bx-metric"><div class="bx-metric-val" id="bx-dash-nfe"><span class="bx-badge bx-badge-wait">—</span></div><div class="bx-metric-lbl">NF-e Saída</div></div>
+          <div class="bx-metric"><div class="bx-metric-val" id="bx-dash-nfce"><span class="bx-badge bx-badge-wait">—</span></div><div class="bx-metric-lbl">NFCe</div></div>
+          <div class="bx-metric"><div class="bx-metric-val" id="bx-dash-sped"><span class="bx-badge bx-badge-wait">—</span></div><div class="bx-metric-lbl">SPED</div></div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-list"></i> Histórico Recente</div>
+          <div class="bx-log-box" id="bx-historico" style="max-height:160px">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- NF-e -->
+      <div class="bx-page" id="bx-page-nfe">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">NF-e Saída</span>
+          <span class="bx-pg-desc">Exportação via ERP Bluesoft</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn bx-btn-primary" id="bx-btn-nfe-exec" onclick="bxExecutar('nfe')"><i class="ti ti-player-play"></i> Executar</button>
+            <button class="bx-btn bx-btn-danger" id="bx-btn-nfe-cancel" onclick="bxCancelar('nfe')" style="display:none"><i class="ti ti-player-stop"></i> Cancelar</button>
+          </div>
+        </div>
+        <div class="bx-row">
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-calendar"></i> Período</div>
+              <div class="bx-periodo-wrap">
+                <select id="bx-nfe-mes"></select>
+                <select id="bx-nfe-ano"></select>
+              </div>
+            </div>
+          </div>
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-building-store"></i> Lojas
+                <div class="bx-lojas-actions" style="margin-left:auto">
+                  <button class="bx-link" onclick="bxSelLojas('nfe',true)">Todas</button>
+                  <button class="bx-link" onclick="bxSelLojas('nfe',false)">Nenhuma</button>
+                  <button class="bx-link" onclick="bxSelGrupo('nfe','AGROMIX')">AGROMIX</button>
+                  <button class="bx-link" onclick="bxSelGrupo('nfe','ATACADAO')">ATACADÃO</button>
+                </div>
+              </div>
+              <div class="bx-lojas-grid" id="bx-nfe-lojas"></div>
+            </div>
+          </div>
+        </div>
+        <div class="bx-card" id="bx-nfe-progress-card" style="display:none">
+          <div class="bx-card-title"><i class="ti ti-loader"></i> Progresso</div>
+          <div class="bx-progress-wrap">
+            <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-nfe-bar"></div></div>
+            <div class="bx-progress-info"><span id="bx-nfe-msg">Aguardando...</span><span id="bx-nfe-pct">0%</span></div>
+          </div>
+          <div class="bx-log-box" id="bx-nfe-log" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- NFCe -->
+      <div class="bx-page" id="bx-page-nfce">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">NFCe</span>
+          <span class="bx-pg-desc">Download via API interna</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn bx-btn-primary" id="bx-btn-nfce-exec" onclick="bxExecutar('nfce')"><i class="ti ti-player-play"></i> Executar</button>
+            <button class="bx-btn bx-btn-danger" id="bx-btn-nfce-cancel" onclick="bxCancelar('nfce')" style="display:none"><i class="ti ti-player-stop"></i> Cancelar</button>
+          </div>
+        </div>
+        <div class="bx-row">
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-calendar"></i> Período</div>
+              <div class="bx-periodo-wrap">
+                <select id="bx-nfce-mes"></select>
+                <select id="bx-nfce-ano"></select>
+              </div>
+            </div>
+          </div>
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-building-store"></i> Lojas
+                <div class="bx-lojas-actions" style="margin-left:auto">
+                  <button class="bx-link" onclick="bxSelLojas('nfce',true)">Todas</button>
+                  <button class="bx-link" onclick="bxSelLojas('nfce',false)">Nenhuma</button>
+                </div>
+              </div>
+              <div class="bx-lojas-grid" id="bx-nfce-lojas"></div>
+            </div>
+          </div>
+        </div>
+        <div class="bx-card" id="bx-nfce-progress-card" style="display:none">
+          <div class="bx-card-title"><i class="ti ti-loader"></i> Progresso</div>
+          <div class="bx-progress-wrap">
+            <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-nfce-bar"></div></div>
+            <div class="bx-progress-info"><span id="bx-nfce-msg">Aguardando...</span><span id="bx-nfce-pct">0%</span></div>
+          </div>
+          <div class="bx-log-box" id="bx-nfce-log" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- SPED -->
+      <div class="bx-page" id="bx-page-sped">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">SPED Fiscal</span>
+          <span class="bx-pg-desc">Geração via ERP + polling S3</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn bx-btn-primary" id="bx-btn-sped-exec" onclick="bxExecutar('sped')"><i class="ti ti-player-play"></i> Executar</button>
+            <button class="bx-btn bx-btn-danger" id="bx-btn-sped-cancel" onclick="bxCancelar('sped')" style="display:none"><i class="ti ti-player-stop"></i> Cancelar</button>
+          </div>
+        </div>
+        <div class="bx-row">
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-calendar"></i> Período</div>
+              <div class="bx-periodo-wrap">
+                <select id="bx-sped-mes"></select>
+                <select id="bx-sped-ano"></select>
+              </div>
+            </div>
+          </div>
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-building-store"></i> Lojas
+                <div class="bx-lojas-actions" style="margin-left:auto">
+                  <button class="bx-link" onclick="bxSelLojas('sped',true)">Todas</button>
+                  <button class="bx-link" onclick="bxSelLojas('sped',false)">Nenhuma</button>
+                </div>
+              </div>
+              <div class="bx-lojas-grid" id="bx-sped-lojas"></div>
+            </div>
+          </div>
+        </div>
+        <div class="bx-card" id="bx-sped-progress-card" style="display:none">
+          <div class="bx-card-title"><i class="ti ti-loader"></i> Progresso</div>
+          <div class="bx-progress-wrap">
+            <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-sped-bar"></div></div>
+            <div class="bx-progress-info"><span id="bx-sped-msg">Aguardando...</span><span id="bx-sped-pct">0%</span></div>
+          </div>
+          <div class="bx-log-box" id="bx-sped-log" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- TOKAI Executar -->
+      <div class="bx-page" id="bx-page-tokai-exec">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">TOKAI — SharePoint</span>
+          <span class="bx-pg-desc">Download SharePoint → Z:\</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn bx-btn-primary" id="bx-btn-tokai-exec" onclick="bxExecutarTokai()"><i class="ti ti-player-play"></i> Executar</button>
+            <button class="bx-btn" id="bx-btn-tokai-compact" onclick="bxCompactarTokai()" title="Compactar XMLs já baixados em Z:\"><i class="ti ti-file-zip"></i> Compactar</button>
+            <button class="bx-btn bx-btn-danger" id="bx-btn-tokai-cancel" onclick="bxCancelar('tokai')" style="display:none"><i class="ti ti-player-stop"></i> Cancelar</button>
+          </div>
+        </div>
+        <div class="bx-row">
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-calendar"></i> Período</div>
+              <div class="bx-periodo-wrap">
+                <select id="bx-tokai-mes"></select>
+                <select id="bx-tokai-ano"></select>
+              </div>
+              <div style="font-size:11px;color:var(--bx-txt-m)">Mês e ano dos arquivos a baixar do SharePoint</div>
+            </div>
+          </div>
+          <div class="bx-col">
+            <div class="bx-card">
+              <div class="bx-card-title"><i class="ti ti-building-community"></i> Unidades TOKAI
+                <div style="margin-left:auto">
+                  <button class="bx-link" onclick="bxSelTodosTokai(true)">Todas</button>
+                  <button class="bx-link" onclick="bxSelTodosTokai(false)">Nenhuma</button>
+                </div>
+              </div>
+              <div class="bx-lojas-grid" id="bx-tokai-clientes" style="max-height:200px;grid-template-columns:1fr">
+                <span style="color:var(--bx-txt-l);font-size:12px">Carregando...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bx-card" id="bx-tokai-progress-card" style="display:none">
+          <div class="bx-card-title"><i class="ti ti-loader"></i> Progresso — Download</div>
+          <div class="bx-progress-wrap">
+            <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-tokai-bar"></div></div>
+            <div class="bx-progress-info"><span id="bx-tokai-msg">Aguardando...</span><span id="bx-tokai-pct">0%</span></div>
+          </div>
+        </div>
+        <div class="bx-card" id="bx-tokai-compact-card" style="display:none">
+          <div class="bx-card-title"><i class="ti ti-file-zip"></i> Compactação TOKAI</div>
+          <div class="bx-progress-wrap">
+            <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-tokai-compact-bar"></div></div>
+            <div class="bx-progress-info"><span id="bx-tokai-compact-msg">Aguardando...</span><span id="bx-tokai-compact-pct">0%</span></div>
+          </div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-terminal-2"></i> Log em Tempo Real</div>
+          <div class="bx-log-box" id="bx-tokai-log" style="max-height:280px"></div>
+        </div>
+      </div>
+
+      <!-- Daemons -->
+      <div class="bx-page" id="bx-page-daemons">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">Daemons</span>
+          <span class="bx-pg-desc">Processos em segundo plano</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn" onclick="bxRefreshDaemons()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+        <div class="bx-daemon-card">
+          <div class="bx-daemon-info">
+            <h4><i class="ti ti-mail" style="color:var(--bx-txt-m)"></i> leitura_emails</h4>
+            <p>Monitoramento IMAP — baixa ZIPs de NF-e via e-mail</p>
+          </div>
+          <div class="bx-daemon-ctrl">
+            <span id="bx-dmn-emails-badge" class="bx-badge bx-badge-wait">parado</span>
+            <label class="bx-toggle"><input type="checkbox" id="bx-toggle-emails" onchange="bxToggleDaemon('emails',this.checked)"><span class="bx-toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="bx-daemon-card">
+          <div class="bx-daemon-info">
+            <h4><i class="ti ti-folder" style="color:var(--bx-txt-m)"></i> nfe_arquivos</h4>
+            <p>Extração de ZIPs e roteamento para Z:\ (loop a cada 5s)</p>
+          </div>
+          <div class="bx-daemon-ctrl">
+            <span id="bx-dmn-arquivos-badge" class="bx-badge bx-badge-wait">parado</span>
+            <label class="bx-toggle"><input type="checkbox" id="bx-toggle-arquivos" onchange="bxToggleDaemon('arquivos',this.checked)"><span class="bx-toggle-track"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config AGROMIX -->
+      <div class="bx-page" id="bx-page-config">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">Configurações</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn bx-btn-primary" onclick="bxSalvarConfig()"><i class="ti ti-device-floppy"></i> Salvar</button>
+            <button class="bx-btn" onclick="bxTestarERP()"><i class="ti ti-plug-connected"></i> Testar ERP</button>
+            <button class="bx-btn" onclick="bxVerificarZ()"><i class="ti ti-server"></i> Verificar Z:\</button>
+          </div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-world"></i> ERP Bluesoft</div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Usuário ERP</div></div><input class="bx-form-input" id="bx-cfg-erp-usuario" placeholder="icaro.dmf"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Senha ERP</div></div><input class="bx-form-input" id="bx-cfg-erp-senha" type="password" placeholder="••••••••"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">E-mail destino NF-e</div></div><input class="bx-form-input" id="bx-cfg-erp-email" placeholder="dmfautomacoes@gmail.com"></div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-receipt"></i> NFCe — API Interna</div>
+          <div class="bx-form-row"><div><div class="bx-form-label">URL Base NFCe</div></div><input class="bx-form-input" id="bx-cfg-nfce-url" placeholder="http://10.111.246.241:9091/nfx/"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Usuário NFCe</div></div><input class="bx-form-input" id="bx-cfg-nfce-usuario" placeholder="198"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Senha NFCe</div></div><input class="bx-form-input" id="bx-cfg-nfce-senha" type="password" placeholder="••••••"></div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-mail"></i> E-mail IMAP (Gmail)</div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Conta Gmail</div></div><input class="bx-form-input" id="bx-cfg-imap-usuario" placeholder="conta@gmail.com"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Senha de App</div></div><input class="bx-form-input" id="bx-cfg-imap-senha" type="password" placeholder="••••••••••••••••"></div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-folder-open"></i> Caminhos (Z:\)</div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Base Z:</div></div><input class="bx-form-input" id="bx-cfg-path-base" placeholder="Z:\#ROTINA AUTOMATICA NF"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Destino NF-e</div></div><input class="bx-form-input" id="bx-cfg-path-nfe" placeholder="Z:\#ROTINA AUTOMATICA NF\NFe"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Destino NFCe</div></div><input class="bx-form-input" id="bx-cfg-path-nfce" placeholder="Z:\#ROTINA AUTOMATICA NF\NFCe"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Destino SPED</div></div><input class="bx-form-input" id="bx-cfg-path-sped" placeholder="Z:\#ROTINA AUTOMATICA NF\SPED"></div>
+        </div>
+      </div>
+
+      <!-- Config TOKAI -->
+      <div class="bx-page" id="bx-page-tokai-config">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">Config TOKAI</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn bx-btn-primary" onclick="bxSalvarConfigTokai()"><i class="ti ti-device-floppy"></i> Salvar</button>
+          </div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-brand-sharepoint"></i> Conta e Acesso</div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Endereço SharePoint</div></div><input class="bx-form-input" id="bx-tcfg-sp-url" placeholder="https://empresa.sharepoint.com/sites/..."></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Gmail TOKAI</div></div><input class="bx-form-input" id="bx-tcfg-email-user" placeholder="conta@gmail.com"></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Pasta Gmail</div></div><input class="bx-form-input" id="bx-tcfg-gmail-label" placeholder="TOKAI - XML"></div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-folder-open"></i> Destino dos Arquivos</div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Pasta na rede</div></div><input class="bx-form-input" id="bx-tcfg-net-path" placeholder="Z:\#ROTINA AUTOMATICA NF"></div>
+        </div>
+        <div class="bx-card">
+          <div class="bx-card-title"><i class="ti ti-adjustments"></i> Avançado</div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Executar em segundo plano</div></div><label class="bx-toggle"><input type="checkbox" id="bx-tcfg-headless"><span class="bx-toggle-track"></span></label></div>
+          <div class="bx-form-row"><div><div class="bx-form-label">Aceitar e-mails dos últimos ___ dias</div></div><input class="bx-form-input" id="bx-tcfg-max-age" type="number" style="min-width:80px" placeholder="35"></div>
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div class="bx-page" id="bx-page-logs">
+        <div class="bx-pg-head">
+          <span class="bx-pg-title">Logs</span>
+          <div class="bx-pg-actions">
+            <button class="bx-btn" onclick="bxCarregarLogs()"><i class="ti ti-refresh"></i></button>
+            <button class="bx-btn bx-btn-danger" onclick="bxLimparLogs()"><i class="ti ti-trash"></i> Limpar</button>
+          </div>
+        </div>
+        <div class="bx-log-box" id="bx-log-viewer" style="max-height:calc(100vh - 200px)">
+          <span style="color:var(--bx-txt-l)">Carregando logs...</span>
+        </div>
+      </div>
+
+    </div><!-- /bx-main -->
+  </div><!-- /bx-body -->
+
+  <!-- Modal: Deletar Competência (ação global, escopo = grupo atual) -->
+  <div class="bx-modal-overlay" id="bx-delcomp-modal" style="display:none">
+    <div class="bx-modal">
+      <div class="bx-modal-head">
+        <div class="bx-modal-title"><i class="ti ti-calendar-minus" style="color:var(--bx-err)"></i> Deletar Competência</div>
+        <button class="bx-modal-x" onclick="bxFecharDeletarComp()"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="bx-modal-body">
+        <p style="font-size:12px;color:var(--bx-txt-m);margin-bottom:12px;line-height:1.5">
+          Remove a pasta da competência (mês/ano) das empresas de <b id="bx-delcomp-escopo">AGROMIX / ATACADÃO</b>.
+          Clique em <b>Verificar</b> e escolha quais empresas apagar. Afeta apenas o grupo selecionado.
+        </p>
+        <div class="bx-periodo-wrap">
+          <select id="bx-delcomp-mes"></select>
+          <select id="bx-delcomp-ano"></select>
+          <button class="bx-btn" onclick="bxPreviaDeletarComp()"><i class="ti ti-search"></i> Verificar</button>
+        </div>
+
+        <div id="bx-delcomp-previa" style="display:none;margin-top:12px">
+          <div class="bx-card" style="margin-bottom:12px;background:var(--bx-surface)">
+            <div id="bx-delcomp-resumo" style="font-size:13px;color:var(--bx-txt)"></div>
+            <div class="bx-lojas-actions" id="bx-delcomp-acoes" style="margin-top:8px;display:none">
+              <button class="bx-link" onclick="bxSelDelComp(true)">Todas</button>
+              <button class="bx-link" onclick="bxSelDelComp(false)">Nenhuma</button>
+            </div>
+            <div class="bx-log-box" id="bx-delcomp-lista" style="margin-top:10px;max-height:180px;display:none"></div>
+          </div>
+          <div id="bx-delcomp-confirm-wrap" style="display:none">
+            <label style="font-size:12px;color:var(--bx-txt-m);display:block;margin-bottom:6px">
+              Para confirmar, digite a competência <b id="bx-delcomp-codigo"></b>:
+            </label>
+            <input class="bx-form-input" id="bx-delcomp-confirm" placeholder="MMAAAA"
+                   oninput="bxValidarConfirmDelComp()" style="width:100%;min-width:0;margin-bottom:4px">
+          </div>
+        </div>
+      </div>
+      <div class="bx-modal-foot">
+        <button class="bx-btn" onclick="bxFecharDeletarComp()">Cancelar</button>
+        <button class="bx-btn bx-btn-danger" id="bx-delcomp-btn" disabled
+                onclick="bxConfirmarDeletarComp()"><i class="ti ti-trash"></i> Deletar definitivamente</button>
+      </div>
+    </div>
+  </div>
+</div><!-- /screen-buscar-xml -->
+
+<!-- ================================================================
+     SEM MOVIMENTO NFS-e SALVADOR
+================================================================ -->
+<div class="screen" id="screen-sem-movimento">
+<style>
+  #screen-sem-movimento {
+    --sm-bg: #FAF7EE; --sm-card: #FFFEFA; --sm-surface: #F5F1E4; --sm-border: #E8E2D2;
+    --sm-txt: #2B2A26; --sm-txt-m: #6B675C; --sm-txt-l: #9C978A;
+    --sm-accent: #B06A00; --sm-accent-soft: #FFF3E0;
+    --sm-ok: #3B6D11; --sm-err: #A32D2D;
+    --sm-r: 8px; --sm-r-sm: 5px;
+    background: var(--sm-bg); flex-direction: column; height: 100vh;
+  }
+  #screen-sem-movimento .sm-topbar {
+    height: 48px; background: var(--sm-card); border-bottom: 1px solid var(--sm-border);
+    display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0;
+  }
+  #screen-sem-movimento .sm-back-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border: 1px solid var(--sm-border); border-radius: var(--sm-r-sm);
+    background: var(--sm-card); color: var(--sm-txt-m); font-size: 13px; cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  #screen-sem-movimento .sm-back-btn:hover { background: var(--sm-surface); }
+  #screen-sem-movimento .sm-tb-title { font-size: 14px; font-weight: 600; color: var(--sm-txt); display: flex; align-items: center; gap: 8px; }
+  #screen-sem-movimento .sm-tb-title i { font-size: 18px; color: var(--sm-accent); }
+  #screen-sem-movimento .sm-body { display: flex; flex: 1; overflow: hidden; }
+  #screen-sem-movimento .sm-sidebar {
+    width: 180px; background: var(--sm-card); border-right: 1px solid var(--sm-border);
+    display: flex; flex-direction: column; padding: 12px 0; flex-shrink: 0;
+  }
+  #screen-sem-movimento .sm-nav-pill {
+    display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 500; color: var(--sm-txt-m); cursor: pointer;
+    border-left: 2px solid transparent; background: transparent;
+    border: none; border-left: 2px solid transparent;
+    font-family: var(--font-sans); width: 100%; text-align: left;
+  }
+  #screen-sem-movimento .sm-nav-pill:hover { background: var(--sm-surface); color: var(--sm-txt); }
+  #screen-sem-movimento .sm-nav-pill.active { color: var(--sm-accent); font-weight: 600; border-left-color: var(--sm-accent); background: var(--sm-accent-soft); }
+  #screen-sem-movimento .sm-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  #screen-sem-movimento .sm-page { display: none; flex-direction: column; gap: 16px; }
+  #screen-sem-movimento .sm-page.active { display: flex; }
+  #screen-sem-movimento .sm-card {
+    background: var(--sm-card); border: 1px solid var(--sm-border); border-radius: var(--sm-r); padding: 16px;
+  }
+  #screen-sem-movimento .sm-card-title { font-size: 12px; font-weight: 600; color: var(--sm-txt-l); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  #screen-sem-movimento .sm-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #screen-sem-movimento .sm-btn {
+    padding: 7px 16px; border-radius: var(--sm-r-sm); font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; font-family: var(--font-sans);
+  }
+  #screen-sem-movimento .sm-btn-primary { background: var(--sm-accent); color: #fff; }
+  #screen-sem-movimento .sm-btn-primary:hover { opacity: .9; }
+  #screen-sem-movimento .sm-btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  #screen-sem-movimento .sm-btn-outline {
+    background: transparent; color: var(--sm-txt-m); border: 1px solid var(--sm-border);
+  }
+  #screen-sem-movimento .sm-btn-outline:hover { background: var(--sm-surface); }
+  #screen-sem-movimento .sm-btn-danger { background: #A32D2D; color: #fff; }
+  #screen-sem-movimento .sm-btn-danger:hover { opacity: .9; }
+  #screen-sem-movimento .sm-select, #screen-sem-movimento .sm-input {
+    padding: 6px 10px; border: 1px solid var(--sm-border); border-radius: var(--sm-r-sm);
+    font-size: 13px; font-family: var(--font-sans); background: var(--sm-surface); color: var(--sm-txt);
+    outline: none;
+  }
+  #screen-sem-movimento .sm-select:focus, #screen-sem-movimento .sm-input:focus { border-color: var(--sm-accent); }
+  #screen-sem-movimento .sm-progress-bar-wrap {
+    height: 6px; background: var(--sm-border); border-radius: 3px; overflow: hidden; margin-top: 8px;
+  }
+  #screen-sem-movimento .sm-progress-bar { height: 100%; background: var(--sm-accent); width: 0%; transition: width .3s; }
+  #screen-sem-movimento .sm-log-box {
+    background: var(--sm-surface); border: 1px solid var(--sm-border); border-radius: var(--sm-r-sm);
+    padding: 10px; font-size: 12px; font-family: monospace; color: var(--sm-txt-m);
+    max-height: 140px; overflow-y: auto; margin-top: 8px;
+  }
+  #screen-sem-movimento .sm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #screen-sem-movimento .sm-table th {
+    text-align: left; padding: 8px 10px; background: var(--sm-surface);
+    border-bottom: 1px solid var(--sm-border); font-weight: 600; color: var(--sm-txt-m); font-size: 11px; text-transform: uppercase;
+  }
+  #screen-sem-movimento .sm-table td { padding: 8px 10px; border-bottom: 1px solid var(--sm-border); color: var(--sm-txt); vertical-align: middle; }
+  #screen-sem-movimento .sm-table tr:last-child td { border-bottom: none; }
+  #screen-sem-movimento .sm-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  }
+  #screen-sem-movimento .sm-badge-ok      { background: #D4EDDA; color: #3B6D11; }
+  #screen-sem-movimento .sm-badge-erro    { background: #F8D7DA; color: #A32D2D; }
+  #screen-sem-movimento .sm-badge-captcha { background: #FFF3CD; color: #856404; }
+  #screen-sem-movimento .sm-badge-idle    { background: var(--sm-surface); color: var(--sm-txt-l); }
+  #screen-sem-movimento .sm-file-path {
+    font-size: 12px; color: var(--sm-txt-m); background: var(--sm-surface);
+    border: 1px solid var(--sm-border); border-radius: var(--sm-r-sm); padding: 5px 10px;
+    flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+</style>
+
+  <!-- Topbar -->
+  <div class="sm-topbar">
+    <button class="sm-back-btn" onclick="smVoltar()">
+      <i class="ti ti-arrow-left"></i> Voltar
+    </button>
+    <div class="sm-tb-title">
+      <i class="ti ti-file-certificate"></i>
+      Sem Movimento NFS-e Salvador
+    </div>
+  </div>
+
+  <div class="sm-body">
+    <!-- Sidebar -->
+    <div class="sm-sidebar">
+      <button class="sm-nav-pill active" id="sm-pill-executar" onclick="smPagina('executar')">
+        <i class="ti ti-player-play"></i> Executar
+      </button>
+      <button class="sm-nav-pill" id="sm-pill-config" onclick="smPagina('config')">
+        <i class="ti ti-settings"></i> Configuração
+      </button>
+    </div>
+
+    <div class="sm-content">
+
+      <!-- Página: Executar -->
+      <div class="sm-page active" id="sm-page-executar">
+
+        <!-- Card: Empresas -->
+        <div class="sm-card">
+          <div class="sm-card-title">Empresas (CNPJ + Senha)</div>
+          <div class="sm-row">
+            <button class="sm-btn sm-btn-outline" onclick="smSelecionarPlanilha()">
+              <i class="ti ti-upload"></i> Selecionar TXT / Excel
+            </button>
+            <button class="sm-btn sm-btn-outline" id="sm-btn-recarregar" onclick="smRecarregarPlanilha()" style="display:none" title="Recarregar arquivo após alterações">
+              <i class="ti ti-refresh"></i> Recarregar
+            </button>
+            <button class="sm-btn sm-btn-outline" onclick="smBaixarTemplate('txt')" title="Abrir template TXT de exemplo">
+              <i class="ti ti-file-text"></i> Template TXT
+            </button>
+            <button class="sm-btn sm-btn-outline" onclick="smBaixarTemplate('xlsx')" title="Abrir template Excel de exemplo">
+              <i class="ti ti-file-spreadsheet"></i> Template Excel
+            </button>
+            <span id="sm-planilha-path" class="sm-file-path" style="display:none"></span>
+          </div>
+          <div id="sm-empresas-wrap" style="margin-top:12px; display:none;">
+            <table class="sm-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>CNPJ</th><th>Senha</th><th>Status</th>
+                  <th>Emitidas</th><th>Recebidas</th>
+                </tr>
+              </thead>
+              <tbody id="sm-empresas-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Card: Competência -->
+        <div class="sm-card">
+          <div class="sm-card-title">Competência</div>
+          <div class="sm-row">
+            <select class="sm-select" id="sm-mes">
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+              <option value="3">Março</option><option value="4">Abril</option>
+              <option value="5">Maio</option><option value="6">Junho</option>
+              <option value="7">Julho</option><option value="8">Agosto</option>
+              <option value="9">Setembro</option><option value="10">Outubro</option>
+              <option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+            <select class="sm-select" id="sm-ano"></select>
+          </div>
+        </div>
+
+        <!-- Card: Pasta destino -->
+        <div class="sm-card">
+          <div class="sm-card-title">Pasta Destino</div>
+          <div class="sm-row">
+            <span id="sm-pasta-path" class="sm-file-path">Nenhuma pasta selecionada</span>
+            <button class="sm-btn sm-btn-outline" onclick="smSelecionarPasta()">
+              <i class="ti ti-folder-open"></i> Selecionar
+            </button>
+          </div>
+        </div>
+
+        <!-- Card: Execução -->
+        <div class="sm-card">
+          <div class="sm-card-title">Execução</div>
+          <div class="sm-row">
+            <button class="sm-btn sm-btn-primary" id="sm-btn-executar"
+                    onclick="smExecutar()" disabled>
+              <i class="ti ti-player-play"></i> Executar
+            </button>
+            <button class="sm-btn sm-btn-danger" id="sm-btn-cancelar"
+                    onclick="smCancelar()" style="display:none">
+              <i class="ti ti-player-stop"></i> Cancelar
+            </button>
+          </div>
+          <div class="sm-progress-bar-wrap" id="sm-progress-wrap" style="display:none">
+            <div class="sm-progress-bar" id="sm-progress-bar"></div>
+          </div>
+          <div class="sm-log-box" id="sm-log-box" style="display:none"></div>
+        </div>
+
+      </div><!-- /sm-page-executar -->
+
+      <!-- Página: Configuração -->
+      <div class="sm-page" id="sm-page-config">
+        <div class="sm-card">
+          <div class="sm-card-title">Anti-Captcha</div>
+          <p style="font-size:13px;color:var(--sm-txt-m);margin:0 0 10px">
+            Chave de API do <strong>Anti-Captcha</strong> para resolução automática de CAPTCHA.<br>
+            Custo: ~1 tarefa por empresa (+ retries). Sem chave, o login é feito manualmente.
+          </p>
+          <div class="sm-row">
+            <input type="password" class="sm-input" id="sm-cfg-apikey"
+                   placeholder="Chave de API Anti-Captcha" style="flex:1;min-width:260px">
+          </div>
+        </div>
+        <div class="sm-card">
+          <div class="sm-card-title">Opções</div>
+          <div class="sm-row" style="margin-bottom:8px">
+            <input type="checkbox" id="sm-cfg-headless" checked>
+            <label for="sm-cfg-headless" style="font-size:13px;color:var(--sm-txt)">
+              Modo headless (sem janela visível do navegador)
+            </label>
+          </div>
+        </div>
+        <div class="sm-row">
+          <button class="sm-btn sm-btn-primary" onclick="smSalvarConfig()">
+            <i class="ti ti-device-floppy"></i> Salvar
+          </button>
+        </div>
+      </div><!-- /sm-page-config -->
+
+    </div><!-- /sm-content -->
+  </div><!-- /sm-body -->
+</div><!-- /screen-sem-movimento -->
+
+<script>
+/* ================================================================
+   SEM MOVIMENTO NFS-e — Controller (prefixo sm*)
+================================================================ */
+
+let _smEmpresas      = [];   // lista com senha real (memória apenas)
+let _smPastaDestino  = '';
+let _smRodando       = false;
+
+// ── Entrada / saída ───────────────────────────────────────────────────────────
+
+async function smAbrir() {
+  goToPlatformScreen('screen-sem-movimento');
+  smPopularAnos();
+  smPagina('executar');
+  await smCarregarConfig();
+}
+
+function smVoltar() {
+  goToPlatformScreen('screen-module');
+}
+
+function smPagina(nome) {
+  document.querySelectorAll('#screen-sem-movimento .sm-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#screen-sem-movimento .sm-nav-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('sm-page-' + nome).classList.add('active');
+  document.getElementById('sm-pill-' + nome).classList.add('active');
+}
+
+function smPopularAnos() {
+  const sel = document.getElementById('sm-ano');
+  if (sel.options.length > 0) return;
+  const ano = new Date().getFullYear();
+  for (let y = ano; y >= ano - 5; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    sel.appendChild(opt);
+  }
+  // Pré-seleciona mês anterior
+  const mes = new Date().getMonth(); // 0-based
+  document.getElementById('sm-mes').value = mes === 0 ? 12 : mes;
+  if (mes === 0) sel.value = ano - 1;
+}
+
+// ── Planilha ──────────────────────────────────────────────────────────────────
+
+async function smRecarregarPlanilha() {
+  if (!_smPlanilhaCaminho || !api()) return;
+  const r = await api().sm_carregar_planilha(_smPlanilhaCaminho);
+  if (!r.ok) { toast(r.erro || 'Erro ao recarregar planilha.', 'error'); return; }
+  _smEmpresas = r.empresas.map(e => ({ cnpj: e.cnpj, senha: '__from_file__', nome: e.nome, linha: e.linha }));
+  smRenderizarTabela(r.empresas);
+  toast(`Planilha recarregada — ${r.empresas.length} empresa(s).`, 'success');
+  if (r.invalidas && r.invalidas.length > 0)
+    toast(`${r.invalidas.length} linha(s) inválida(s) ignorada(s).`, 'warning');
+}
+
+async function smBaixarTemplate(tipo) {
+  if (!api()) return;
+  await api().sm_abrir_template(tipo);
+}
+
+async function smSelecionarPlanilha() {
+  if (!api()) return;
+  const r0 = await api().sm_selecionar_planilha();
+  const caminho = r0 && r0.caminho;
+  if (!caminho) return;
+  const r = await api().sm_carregar_planilha(caminho);
+  if (!r.ok) { toast(r.erro || 'Erro ao carregar planilha.', 'error'); return; }
+
+  // Guarda lista com senha real em _smEmpresas via segunda chamada (sem máscara)
+  // O JS re-lê o arquivo bruto guardado internamente no backend — a senha real
+  // está em r._empresas_raw quando retornada (nunca exibida, só usada no executar).
+  // Como a API só retorna senha mascarada, precisamos carregar as empresas
+  // de uma chamada interna que preserva a senha — fazemos via sm_executar que
+  // recebe a lista do frontend. Por isso o frontend pede ao usuário para
+  // confirmar o arquivo e guarda o caminho; ao executar re-passa o caminho.
+  _smEmpresas = r.empresas.map(e => ({ cnpj: e.cnpj, senha: '__from_file__', linha: e.linha }));
+  _smPlanilhaCaminho = caminho;  // guardado para re-carregar com senha no executar
+
+  document.getElementById('sm-planilha-path').textContent = caminho;
+  document.getElementById('sm-planilha-path').style.display = '';
+  document.getElementById('sm-btn-recarregar').style.display = '';
+  smRenderizarTabela(r.empresas);
+  if (r.invalidas && r.invalidas.length > 0) {
+    toast(`${r.invalidas.length} linha(s) inválida(s) ignorada(s).`, 'warning');
+  }
+  smAtualizarBotaoExecutar();
+}
+
+let _smPlanilhaCaminho = '';
+
+function smRenderizarTabela(empresas) {
+  const tbody = document.getElementById('sm-empresas-tbody');
+  tbody.innerHTML = '';
+  empresas.forEach((e, i) => {
+    const tr = document.createElement('tr');
+    tr.id = `sm-row-${e.cnpj}`;
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${_smFmtCnpj(e.cnpj)}</td>
+      <td>****</td>
+      <td><span class="sm-badge sm-badge-idle" id="sm-status-${e.cnpj}">—</span></td>
+      <td id="sm-emit-${e.cnpj}">—</td>
+      <td id="sm-receb-${e.cnpj}">—</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('sm-empresas-wrap').style.display = '';
+}
+
+// ── Pasta destino ─────────────────────────────────────────────────────────────
+
+async function smSelecionarPasta() {
+  if (!api()) return;
+  const r = await api().abrir_seletor_pasta();
+  const pasta = r && r.caminho;
+  if (!pasta) return;
+  _smPastaDestino = pasta;
+  document.getElementById('sm-pasta-path').textContent = pasta;
+  smAtualizarBotaoExecutar();
+}
+
+// ── Execução ──────────────────────────────────────────────────────────────────
+
+function smAtualizarBotaoExecutar() {
+  const ok = _smPlanilhaCaminho && _smPastaDestino && !_smRodando;
+  document.getElementById('sm-btn-executar').disabled = !ok;
+}
+
+async function smExecutar() {
+  if (!api()) return;
+  // Re-carrega com senha real via caminho guardado (API retorna senha em claro internamente)
+  const r = await api().sm_carregar_planilha(_smPlanilhaCaminho);
+  if (!r.ok) { toast(r.erro || 'Erro ao carregar planilha.', 'error'); return; }
+  if (!r.total) { toast('Nenhuma empresa válida na planilha.', 'warning'); return; }
+
+  // A senha mascarada não serve para execução — usamos o caminho e deixamos
+  // o backend recarregar com senha real passando o caminho diretamente.
+  const mes = parseInt(document.getElementById('sm-mes').value);
+  const ano = parseInt(document.getElementById('sm-ano').value);
+
+  const res = await api().sm_executar_por_caminho(_smPlanilhaCaminho, mes, ano, _smPastaDestino);
+  if (!res.ok) { toast(res.erro || 'Erro ao iniciar execução.', 'error'); return; }
+
+  _smRodando = true;
+  document.getElementById('sm-btn-executar').disabled = true;
+  document.getElementById('sm-btn-cancelar').style.display = '';
+  document.getElementById('sm-progress-wrap').style.display = '';
+  document.getElementById('sm-log-box').style.display = '';
+  smAtualizarBotaoExecutar();
+}
+
+async function smCancelar() {
+  if (!api()) return;
+  await api().sm_cancelar();
+  toast('Cancelamento solicitado...', 'info');
+}
+
+// ── Eventos do backend ────────────────────────────────────────────────────────
+
+function smOnProgress(dados) {
+  const bar = document.getElementById('sm-progress-bar');
+  if (dados.pct !== null && dados.pct !== undefined) {
+    bar.style.width = dados.pct + '%';
+  }
+  if (dados.msg) {
+    const box = document.getElementById('sm-log-box');
+    box.innerHTML += `<div>${dados.msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+function smOnEmpresa(dados) {
+  const { cnpj, status, emitidas, recebidas } = dados;
+  const badgeCls = status === 'ok' ? 'sm-badge-ok'
+                 : status === 'captcha_falhou' ? 'sm-badge-captcha'
+                 : 'sm-badge-erro';
+  const statusEl = document.getElementById(`sm-status-${cnpj}`);
+  if (statusEl) {
+    statusEl.className = `sm-badge ${badgeCls}`;
+    statusEl.textContent = status;
+  }
+  const emitEl = document.getElementById(`sm-emit-${cnpj}`);
+  if (emitEl) emitEl.textContent = emitidas?.qtd ?? '—';
+  const recebEl = document.getElementById(`sm-receb-${cnpj}`);
+  if (recebEl) recebEl.textContent = recebidas?.qtd ?? '—';
+}
+
+function smOnDone(dados) {
+  _smRodando = false;
+  document.getElementById('sm-btn-cancelar').style.display = 'none';
+  document.getElementById('sm-btn-executar').disabled = false;
+  smAtualizarBotaoExecutar();
+
+  const msg = dados.cancelado
+    ? 'Execução cancelada.'
+    : `Concluído: ${dados.ok_count}/${dados.total} OK, ${dados.erros} erro(s).`;
+  toast(msg, dados.erros > 0 ? 'warning' : 'success');
+
+  if (dados.resumo_arquivo) {
+    const box = document.getElementById('sm-log-box');
+    box.innerHTML += `<div style="color:var(--sm-ok)">Resumo salvo: ${dados.resumo_arquivo}</div>`;
+  }
+}
+
+// ── Configuração ──────────────────────────────────────────────────────────────
+
+async function smCarregarConfig() {
+  if (!api()) return;
+  const r = await api().sm_carregar_config();
+  if (!r.ok) return;
+  document.getElementById('sm-cfg-apikey').value   = r.sm_anticaptcha_api_key || '';
+  document.getElementById('sm-cfg-headless').checked = r.sm_headless !== false;
+}
+
+async function smSalvarConfig() {
+  if (!api()) return;
+  const dados = {
+    sm_anticaptcha_api_key: document.getElementById('sm-cfg-apikey').value.trim(),
+    sm_headless:         document.getElementById('sm-cfg-headless').checked,
+  };
+  const r = await api().sm_salvar_config(dados);
+  toast(r.ok ? 'Configuração salva.' : (r.erro || 'Erro ao salvar.'), r.ok ? 'success' : 'error');
+}
+
+// ── Utilitários ───────────────────────────────────────────────────────────────
+
+function _smFmtCnpj(d) {
+  d = (d || '').replace(/\D/g, '');
+  if (d.length === 14) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+  return d;
+}
+
+// Registra handlers de evento do backend (EventBus → window.__onEvent → aqui)
+registerModuleHandlers('sem_movimento_nfse', {
+  sm_progress: smOnProgress,
+  sm_empresa:  smOnEmpresa,
+  sm_done:     smOnDone,
+});
+</script>
+
+<script>
+/* ================================================================
+   BUSCAR XML — Controller
+   Todos os símbolos com prefixo bx para não colidir com o resto.
+================================================================ */
+
+let _bxGrupo = 'agromix';
+let _bxLojas = [];          // lista de lojas carregada da API
+let _bxTokaiClientes = [];  // lista de clientes tokai
+let _bxDelCompItens = [];   // itens da prévia de deletar competência
+const _bxMeses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// ── Entrada ──────────────────────────────────────────────────────────────────
+
+async function bxAbrir() {
+  goToPlatformScreen('screen-buscar-xml');
+  bxPopularPeriodos();
+  bxSwitchGrupo(_bxGrupo);
+  bxIniciarPolling();
+  // Carrega lojas e clientes TOKAI em background (serviço pode demorar para instanciar)
+  bxCarregarLojas();
+  bxCarregarTokaiClientes();
+}
+
+function bxVoltar() {
+  bxPararPolling();
+  goToPlatformScreen('screen-module');
+}
+
+// ── Navegação ────────────────────────────────────────────────────────────────
+
+function bxNav(page) {
+  document.querySelectorAll('#screen-buscar-xml .bx-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#screen-buscar-xml .bx-nav-pill').forEach(p => p.classList.remove('active'));
+  const pg = document.getElementById('bx-page-' + page);
+  if (pg) pg.classList.add('active');
+  document.querySelectorAll(`[data-bxpage="${page}"]`).forEach(b => b.classList.add('active'));
+
+  if (page === 'logs')      bxCarregarLogs();
+  if (page === 'config')    bxCarregarConfig();
+  if (page === 'tokai-config') bxCarregarConfigTokai();
+  if (page === 'daemons')   bxRefreshDaemons();
+  if (page === 'dashboard') bxRefreshDashboard();
+  if (['nfe','nfce','sped'].includes(page)) {
+    if (_bxLojas.length) bxRenderLojas(page);
+    else bxCarregarLojas();
+  }
+  if (page === 'tokai-exec' && !_bxTokaiClientes.length) bxCarregarTokaiClientes();
+}
+
+function bxSwitchGrupo(g) {
+  _bxGrupo = g;
+  const sel = document.getElementById('bx-grp-select');
+  if (sel && sel.value !== g) sel.value = g;
+  document.getElementById('bx-nav-agromix').style.display = g === 'agromix' ? '' : 'none';
+  document.getElementById('bx-nav-tokai').style.display   = g === 'tokai'   ? '' : 'none';
+  document.getElementById('bx-grupo-label').textContent   = g === 'tokai' ? 'GRUPO TOKAI' : 'AGROMIX/ATACADÃO';
+  bxNav(g === 'tokai' ? 'tokai-exec' : 'dashboard');
+  if (g === 'tokai') bxCarregarTokaiClientes();
+}
+
+// ── Períodos ─────────────────────────────────────────────────────────────────
+
+function bxPopularPeriodos() {
+  const agora = new Date();
+  const anoAtual = agora.getFullYear();
+  const anos = Array.from({length: 5}, (_,i) => anoAtual - i);
+  ['nfe','nfce','sped','tokai'].forEach(m => {
+    const selMes = document.getElementById(`bx-${m}-mes`);
+    const selAno = document.getElementById(`bx-${m}-ano`);
+    if (!selMes || !selAno) return;
+    selMes.innerHTML = _bxMeses.map((n,i) => `<option value="${String(i+1).padStart(2,'0')}">${n}</option>`).join('');
+    selAno.innerHTML = anos.map(a => `<option value="${a}">${a}</option>`).join('');
+    selMes.value = String(agora.getMonth() + 1).padStart(2, '0');
+    selAno.value = String(anoAtual);
+  });
+}
+
+function bxGetPeriodo(modulo) {
+  const mes = document.getElementById(`bx-${modulo}-mes`)?.value || '01';
+  const ano = document.getElementById(`bx-${modulo}-ano`)?.value || '2026';
+  const dataInicio = `${ano}-${mes}-01`;
+  const diasMes = new Date(ano, parseInt(mes), 0).getDate();
+  const dataFim  = `${ano}-${mes}-${String(diasMes).padStart(2,'0')}`;
+  return { data_inicio: dataInicio, data_fim: dataFim, mes_ano: mes + ano };
+}
+
+// ── Lojas ─────────────────────────────────────────────────────────────────────
+
+async function bxCarregarLojas() {
+  if (!api()) return;
+  try {
+    _bxLojas = await api().bx_listar_lojas() || [];
+    ['nfe','nfce','sped'].forEach(m => bxRenderLojas(m));
+  } catch(e) { console.error('[BX] bx_listar_lojas:', e); }
+}
+
+function bxRenderLojas(modulo) {
+  const container = document.getElementById(`bx-${modulo}-lojas`);
+  if (!container) return;
+  container.innerHTML = '';
+
+  const chave = modulo === 'nfce' ? 'tem_nfce' : 'tem_nfe';
+  const grupos = { AGROMIX: [], ATACADAO: [] };
+  _bxLojas.forEach(l => {
+    if (!l[chave]) return;
+    (grupos[l.grupo] || (grupos['OUTRO'] = grupos['OUTRO'] || [])).push(l);
+  });
+
+  let temLojas = false;
+  Object.entries(grupos).forEach(([grp, lojas]) => {
+    if (!lojas.length) return;
+    temLojas = true;
+    const h = document.createElement('div');
+    h.className = 'bx-loja-grupo-header';
+    h.textContent = grp === 'ATACADAO' ? 'ATACADÃO' : grp;
+    container.appendChild(h);
+    lojas.forEach(l => {
+      const wrap = document.createElement('label');
+      wrap.className = 'bx-loja-check';
+      wrap.id = `bx-chip-${modulo}-${l.codigo}`;
+      wrap.innerHTML = `<input type="checkbox" data-mod="${modulo}" data-codigo="${l.codigo}" checked><span>${l.apelido}</span>`;
+      container.appendChild(wrap);
+    });
+  });
+
+  if (!temLojas) {
+    container.innerHTML = '<span style="color:var(--bx-txt-l);font-size:12px">Nenhuma loja encontrada.</span>';
+  }
+}
+
+function bxSelLojas(modulo, selecionar) {
+  document.querySelectorAll(`#bx-${modulo}-lojas input[type=checkbox]`).forEach(cb => {
+    cb.checked = selecionar;
+  });
+}
+
+function bxSelGrupo(modulo, grupo) {
+  document.querySelectorAll(`#bx-${modulo}-lojas input[type=checkbox]`).forEach(cb => {
+    const loja = _bxLojas.find(l => l.codigo === cb.dataset.codigo);
+    if (!loja) return;
+    const pertence = loja.grupo === grupo;
+    cb.checked = pertence;
+  });
+}
+
+function bxGetLojasSelecionadas(modulo) {
+  const selecionadas = [];
+  document.querySelectorAll(`#bx-${modulo}-lojas input[type=checkbox]`).forEach(cb => {
+    if (cb.checked) {
+      const loja = _bxLojas.find(l => l.codigo === cb.dataset.codigo);
+      if (loja) selecionadas.push(loja);
+    }
+  });
+  return selecionadas;
+}
+
+// ── TOKAI Clientes ────────────────────────────────────────────────────────────
+
+async function bxCarregarTokaiClientes() {
+  if (!api()) return;
+  const grid = document.getElementById('bx-tokai-clientes');
+  if (!grid) return;
+  grid.innerHTML = '<span style="color:var(--bx-txt-l);font-size:12px">Carregando...</span>';
+  try {
+    _bxTokaiClientes = await api().bx_listar_clientes_tokai() || [];
+    if (!_bxTokaiClientes.length) {
+      grid.innerHTML = '<span style="color:var(--bx-txt-l);font-size:12px">Nenhuma unidade encontrada.</span>';
+      return;
+    }
+    // Agrupa por região (igual ao original)
+    const regioes = {};
+    _bxTokaiClientes.forEach(c => { (regioes[c.regiao] = regioes[c.regiao] || []).push(c); });
+    let html = '';
+    for (const [reg, items] of Object.entries(regioes)) {
+      html += `<div class="bx-loja-grupo-header">${reg}</div>`;
+      items.forEach(c => {
+        html += `<label class="bx-loja-check">
+          <input type="checkbox" checked value="${c.sp_name}" name="bx-tokai-cliente">
+          <span>${c.codigo} — ${c.nome}</span>
+        </label>`;
+      });
+    }
+    grid.innerHTML = html;
+  } catch(e) {
+    grid.innerHTML = `<span style="color:var(--bx-err);font-size:12px">Erro: ${e}</span>`;
+  }
+}
+
+function bxSelTodosTokai(selecionar) {
+  document.querySelectorAll('input[name="bx-tokai-cliente"]').forEach(cb => cb.checked = selecionar);
+}
+
+function bxGetTokaiClientesSelecionados() {
+  const todos = [...document.querySelectorAll('input[name="bx-tokai-cliente"]')];
+  const selecionados = todos.filter(cb => cb.checked).map(cb => cb.value);
+  // null = todos (igual ao original: se todos marcados não filtra)
+  if (todos.length > 0 && selecionados.length < todos.length) return selecionados;
+  return null;
+}
+
+// ── Execução ──────────────────────────────────────────────────────────────────
+
+async function bxExecutar(modulo) {
+  if (!api()) return;
+  const lojas = bxGetLojasSelecionadas(modulo);
+  if (!lojas.length) { toast('Selecione ao menos uma loja.', 'warn'); return; }
+  const periodo = bxGetPeriodo(modulo);
+
+  document.getElementById(`bx-btn-${modulo}-exec`).style.display = 'none';
+  document.getElementById(`bx-btn-${modulo}-cancel`).style.display = '';
+  const card = document.getElementById(`bx-${modulo}-progress-card`);
+  if (card) card.style.display = '';
+  bxSetProgress(modulo, 0, 'Iniciando...');
+  bxLogClear(modulo);
+
+  let r;
+  try {
+    if (modulo === 'nfe')  r = await api().bx_executar_nfe(lojas, periodo);
+    if (modulo === 'nfce') r = await api().bx_executar_nfce(lojas, periodo);
+    if (modulo === 'sped') r = await api().bx_executar_sped(lojas, periodo);
+    if (!r?.ok) toast(r?.erro || 'Erro ao iniciar execução.', 'error');
+  } catch(e) { toast(String(e), 'error'); }
+}
+
+async function bxExecutarTokai() {
+  if (!api()) return;
+  const clientes = bxGetTokaiClientesSelecionados();
+  const periodo  = {
+    mes: parseInt(document.getElementById('bx-tokai-mes')?.value || '1'),
+    ano: parseInt(document.getElementById('bx-tokai-ano')?.value || new Date().getFullYear()),
+  };
+
+  try {
+    const r = await api().bx_executar_tokai(clientes, periodo);
+    if (!r?.ok) { toast(r?.msg || r?.erro || 'Erro ao iniciar TOKAI.', 'error'); return; }
+    document.getElementById('bx-btn-tokai-exec').style.display = 'none';
+    document.getElementById('bx-btn-tokai-cancel').style.display = '';
+    document.getElementById('bx-tokai-progress-card').style.display = '';
+    bxSetProgress('tokai', 0, 'Iniciando TOKAI...');
+    bxLogClear('tokai');
+    toast('TOKAI iniciado.', 'success');
+  } catch(e) { toast(String(e), 'error'); }
+}
+
+async function bxCompactarTokai() {
+  if (!api()) return;
+  const clientes = bxGetTokaiClientesSelecionados();
+  const periodo  = {
+    mes: parseInt(document.getElementById('bx-tokai-mes')?.value || '1'),
+    ano: parseInt(document.getElementById('bx-tokai-ano')?.value || new Date().getFullYear()),
+  };
+
+  try {
+    const r = await api().bx_compactar_tokai(clientes, periodo);
+    if (!r?.ok) { toast(r?.msg || r?.erro || 'Erro ao iniciar compactação TOKAI.', 'error'); return; }
+    document.getElementById('bx-btn-tokai-compact').disabled = true;
+    document.getElementById('bx-tokai-compact-card').style.display = '';
+    document.getElementById('bx-tokai-compact-bar').style.width = '0%';
+    document.getElementById('bx-tokai-compact-msg').textContent = 'Iniciando compactação...';
+    document.getElementById('bx-tokai-compact-pct').textContent = '0%';
+    toast('Compactação TOKAI iniciada.', 'success');
+  } catch(e) { toast(String(e), 'error'); }
+}
+
+async function bxCancelar(modulo) {
+  if (!api()) return;
+  await api().bx_cancelar(modulo);
+  bxResetBtn(modulo);
+}
+
+// ── Deletar Competência (ação global, escopo = grupo atual) ───────────────────
+
+function bxDelCompCodigo() {
+  const mes = document.getElementById('bx-delcomp-mes')?.value || '01';
+  const ano = document.getElementById('bx-delcomp-ano')?.value || new Date().getFullYear();
+  return `${mes}${ano}`; // MMAAAA
+}
+
+function bxAbrirDeletarComp() {
+  // Popula mês/ano (reaproveita o padrão de bxPopularPeriodos)
+  const agora = new Date();
+  const anoAtual = agora.getFullYear();
+  const anos = Array.from({length: 5}, (_,i) => anoAtual - i);
+  const selMes = document.getElementById('bx-delcomp-mes');
+  const selAno = document.getElementById('bx-delcomp-ano');
+  selMes.innerHTML = _bxMeses.map((n,i) => `<option value="${String(i+1).padStart(2,'0')}">${n}</option>`).join('');
+  selAno.innerHTML = anos.map(a => `<option value="${a}">${a}</option>`).join('');
+  selMes.value = String(agora.getMonth() + 1).padStart(2, '0');
+  selAno.value = String(anoAtual);
+
+  // Escopo conforme grupo atual
+  const escopo = _bxGrupo === 'tokai'
+    ? 'todas as unidades TOKAI'
+    : 'todas as lojas AGROMIX / ATACADÃO';
+  document.getElementById('bx-delcomp-escopo').textContent = escopo;
+
+  // Reseta estado da prévia/confirmação
+  document.getElementById('bx-delcomp-previa').style.display = 'none';
+  document.getElementById('bx-delcomp-acoes').style.display = 'none';
+  document.getElementById('bx-delcomp-lista').style.display = 'none';
+  document.getElementById('bx-delcomp-confirm-wrap').style.display = 'none';
+  document.getElementById('bx-delcomp-confirm').value = '';
+  document.getElementById('bx-delcomp-btn').disabled = true;
+  _bxDelCompItens = [];
+
+  document.getElementById('bx-delcomp-modal').style.display = 'flex';
+}
+
+function bxFecharDeletarComp() {
+  document.getElementById('bx-delcomp-modal').style.display = 'none';
+}
+
+async function bxPreviaDeletarComp() {
+  if (!api()) return;
+  const comp = bxDelCompCodigo();
+  const resumo = document.getElementById('bx-delcomp-resumo');
+  const lista  = document.getElementById('bx-delcomp-lista');
+  const previa = document.getElementById('bx-delcomp-previa');
+  const confWrap = document.getElementById('bx-delcomp-confirm-wrap');
+
+  previa.style.display = 'block';
+  resumo.textContent = 'Verificando...';
+  lista.style.display = 'none';
+  confWrap.style.display = 'none';
+  document.getElementById('bx-delcomp-btn').disabled = true;
+
+  try {
+    const r = await api().bx_previa_deletar_competencia(_bxGrupo, comp);
+    if (!r?.ok) { resumo.textContent = r?.msg || r?.erro || 'Erro na verificação.'; return; }
+
+    if (!r.pastas) {
+      resumo.innerHTML = `<span style="color:var(--bx-warn)"><b>Nenhuma pasta encontrada</b> para ${comp.slice(0,2)}/${comp.slice(2)} neste grupo.</span>`;
+      return;
+    }
+
+    // Guarda os itens para recálculo conforme a seleção de empresas
+    _bxDelCompItens = r.itens;
+
+    // Lista com checkboxes (todas marcadas) — usuário escolhe empresas específicas
+    lista.innerHTML = r.itens.map((it, i) =>
+      `<label class="bx-delcomp-item">
+        <input type="checkbox" data-i="${i}" data-arq="${it.arquivos}" data-caminho="${it.caminho.replace(/"/g,'&quot;')}"
+               checked onchange="bxAtualizarResumoDelComp()">
+        <span>${it.modulo} · ${it.loja} — ${it.arquivos} arq.</span>
+      </label>`
+    ).join('');
+    lista.style.display = 'block';
+    document.getElementById('bx-delcomp-acoes').style.display = 'flex';
+
+    // Habilita o campo de confirmação
+    document.getElementById('bx-delcomp-codigo').textContent = comp;
+    confWrap.style.display = 'block';
+    document.getElementById('bx-delcomp-confirm').value = '';
+    bxAtualizarResumoDelComp();
+  } catch(e) {
+    resumo.textContent = String(e);
+  }
+}
+
+function bxGetDelCompMarcados() {
+  return [...document.querySelectorAll('#bx-delcomp-lista input[type=checkbox]')]
+    .filter(cb => cb.checked);
+}
+
+function bxSelDelComp(marcar) {
+  document.querySelectorAll('#bx-delcomp-lista input[type=checkbox]').forEach(cb => cb.checked = marcar);
+  bxAtualizarResumoDelComp();
+}
+
+function bxAtualizarResumoDelComp() {
+  const comp = bxDelCompCodigo();
+  const marcados = bxGetDelCompMarcados();
+  const arquivos = marcados.reduce((s, cb) => s + parseInt(cb.dataset.arq || '0'), 0);
+  const resumo = document.getElementById('bx-delcomp-resumo');
+  if (marcados.length === 0) {
+    resumo.innerHTML = `<span style="color:var(--bx-warn)">Nenhuma empresa marcada — selecione ao menos uma.</span>`;
+  } else {
+    resumo.innerHTML = `Serão removidas <b style="color:var(--bx-err)">${marcados.length} pasta(s)</b> `
+      + `(${arquivos} arquivo(s)) da competência <b>${comp.slice(0,2)}/${comp.slice(2)}</b>.`;
+  }
+  bxValidarConfirmDelComp();
+}
+
+function bxValidarConfirmDelComp() {
+  const comp = bxDelCompCodigo();
+  const val  = document.getElementById('bx-delcomp-confirm').value.trim();
+  const temMarcados = bxGetDelCompMarcados().length > 0;
+  document.getElementById('bx-delcomp-btn').disabled = (val !== comp || !temMarcados);
+}
+
+async function bxConfirmarDeletarComp() {
+  if (!api()) return;
+  const comp = bxDelCompCodigo();
+  const confirmacao = document.getElementById('bx-delcomp-confirm').value.trim();
+  const btn = document.getElementById('bx-delcomp-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Deletando...';
+
+  const caminhos = bxGetDelCompMarcados().map(cb => cb.dataset.caminho);
+
+  try {
+    const r = await api().bx_deletar_competencia(_bxGrupo, comp, confirmacao, caminhos);
+    if (r?.ok) {
+      toast(`Competência ${comp.slice(0,2)}/${comp.slice(2)} removida (${r.removidas} pasta(s), via ${r.modo}).`, 'success');
+      bxFecharDeletarComp();
+    } else if (r?.removidas) {
+      toast(`Removidas ${r.removidas} de ${r.total}, com ${r.erros?.length || 0} erro(s). Veja os logs.`, 'warn');
+      bxFecharDeletarComp();
+    } else {
+      toast(r?.msg || r?.erro || 'Falha ao deletar competência.', 'error');
+    }
+  } catch(e) {
+    toast(String(e), 'error');
+  } finally {
+    btn.innerHTML = '<i class="ti ti-trash"></i> Deletar definitivamente';
+    bxValidarConfirmDelComp();
+  }
+}
+
+// ── Progress e Logs ───────────────────────────────────────────────────────────
+
+function bxSetProgress(modulo, pct, msg) {
+  const bar = document.getElementById(`bx-${modulo}-bar`);
+  const msgEl = document.getElementById(`bx-${modulo}-msg`);
+  const pctEl = document.getElementById(`bx-${modulo}-pct`);
+  if (bar && pct !== null) bar.style.width = pct + '%';
+  if (msgEl && msg) msgEl.textContent = msg;
+  if (pctEl && pct !== null) pctEl.textContent = pct + '%';
+}
+
+function bxLogAppend(modulo, texto, nivel) {
+  const box = document.getElementById(`bx-${modulo}-log`);
+  if (!box) return;
+  const div = document.createElement('div');
+  div.className = 'bx-log-line' + (nivel === 'ERROR' ? ' err' : nivel === 'WARNING' ? ' warn' : '');
+  div.textContent = texto;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function bxLogClear(modulo) {
+  const box = document.getElementById(`bx-${modulo}-log`);
+  if (box) box.innerHTML = '';
+}
+
+function bxResetBtn(modulo) {
+  const exec   = document.getElementById(`bx-btn-${modulo}-exec`);
+  const cancel = document.getElementById(`bx-btn-${modulo}-cancel`);
+  if (exec)   exec.style.display = '';
+  if (cancel) cancel.style.display = 'none';
+}
+
+// ── Callback do EventBus ──────────────────────────────────────────────────────
+
+function bxOnEvent(evento, dados) {
+  // Progresso NF-e
+  if (evento === 'nfe_progress') {
+    bxSetProgress('nfe', dados.pct, dados.msg);
+    if (dados.msg) bxLogAppend('nfe', dados.msg);
+  }
+  if (evento === 'nfe_done') {
+    bxResetBtn('nfe');
+    bxSetProgress('nfe', dados.ok ? 100 : null, dados.ok ? 'Concluído.' : (dados.msg || 'Erro.'));
+    toast(dados.ok ? 'NF-e concluída!' : ('Erro: ' + (dados.msg || '')), dados.ok ? 'success' : 'error');
+  }
+  // Progresso NFCe
+  if (evento === 'nfce_progress') {
+    bxSetProgress('nfce', dados.pct, dados.msg);
+    if (dados.msg) bxLogAppend('nfce', dados.msg);
+  }
+  if (evento === 'nfce_done') {
+    bxResetBtn('nfce');
+    bxSetProgress('nfce', dados.ok ? 100 : null, dados.ok ? 'Concluído.' : (dados.msg || 'Erro.'));
+    toast(dados.ok ? 'NFCe concluída!' : ('Erro: ' + (dados.msg || '')), dados.ok ? 'success' : 'error');
+  }
+  // Progresso SPED
+  if (evento === 'sped_progress') {
+    bxSetProgress('sped', dados.pct, dados.msg);
+    if (dados.msg) bxLogAppend('sped', dados.msg);
+  }
+  if (evento === 'sped_done') {
+    bxResetBtn('sped');
+    bxSetProgress('sped', dados.ok ? 100 : null, dados.ok ? 'Concluído.' : (dados.msg || 'Erro.'));
+    toast(dados.ok ? 'SPED concluído!' : ('Erro: ' + (dados.msg || '')), dados.ok ? 'success' : 'error');
+  }
+  // Progresso TOKAI
+  if (evento === 'tokai_progress') {
+    bxSetProgress('tokai', dados.pct, dados.msg);
+    if (dados.msg) bxLogAppend('tokai', dados.msg);
+  }
+  if (evento === 'tokai_done') {
+    bxResetBtn('tokai');
+    bxSetProgress('tokai', dados.ok ? 100 : null, dados.ok ? 'Concluído.' : (dados.msg || 'Erro.'));
+    toast(dados.ok ? 'TOKAI concluído!' : ('Erro: ' + (dados.msg || '')), dados.ok ? 'success' : 'error');
+  }
+  if (evento === 'tokai_zip_progress') {
+    const bar = document.getElementById('bx-tokai-compact-bar');
+    const msg = document.getElementById('bx-tokai-compact-msg');
+    const pct = document.getElementById('bx-tokai-compact-pct');
+    if (bar) bar.style.width = (dados.pct || 0) + '%';
+    if (msg) msg.textContent = dados.msg || '';
+    if (pct) pct.textContent = (dados.pct || 0) + '%';
+    if (dados.msg) bxLogAppend('tokai', dados.msg);
+  }
+  if (evento === 'tokai_zip_done') {
+    const btn = document.getElementById('bx-btn-tokai-compact');
+    if (btn) btn.disabled = false;
+    const bar = document.getElementById('bx-tokai-compact-bar');
+    const msg = document.getElementById('bx-tokai-compact-msg');
+    const pct = document.getElementById('bx-tokai-compact-pct');
+    if (dados.ok) {
+      if (bar) bar.style.width = '100%';
+      if (msg) msg.textContent = `Concluído — ${dados.sucessos ?? 0} cliente(s) compactado(s).`;
+      if (pct) pct.textContent = '100%';
+      toast(`Compactação TOKAI concluída — ${dados.sucessos ?? 0} cliente(s).`, 'success');
+    } else {
+      if (msg) msg.textContent = 'Erro: ' + (dados.msg || 'Falha na compactação.');
+      toast('Erro na compactação TOKAI: ' + (dados.msg || ''), 'error');
+    }
+  }
+  // Daemons
+  if (evento === 'daemon_idle_stop') bxRefreshDaemons();
+  // Log em tempo real
+  if (evento === '_log') {
+    const modulo = dados.modulo?.toLowerCase() || '';
+    let alvo = null;
+    if (modulo.includes('nfe') && !modulo.includes('nfce')) alvo = 'nfe';
+    if (modulo.includes('nfce')) alvo = 'nfce';
+    if (modulo.includes('sped')) alvo = 'sped';
+    if (modulo.includes('tokai')) alvo = 'tokai';
+    if (alvo) bxLogAppend(alvo, `[${dados.time}] ${dados.msg}`, dados.level);
+  }
+}
+
+// Integra ao EventBus da Central DMF
+(function() {
+  const _orig = window.__onEvent;
+  window.__onEvent = function(ev) {
+    if (_orig) _orig(ev);
+    // Eventos do BuscarXML chegam com module = 'buscar_xml'
+    if (ev && ev.module === 'buscar_xml') {
+      bxOnEvent(ev.event, ev.data || {});
+    }
+  };
+})();
+
+// ── Daemons ───────────────────────────────────────────────────────────────────
+
+async function bxRefreshDaemons() {
+  if (!api()) return;
+  try {
+    const s = await api().bx_get_status_daemons();
+    bxAtualizarDotDaemon('emails',   s.emails   || s.leitura_emails);
+    bxAtualizarDotDaemon('arquivos', s.arquivos || s.nfe_arquivos);
+  } catch(e) {}
+}
+
+function bxAtualizarDotDaemon(nome, info) {
+  const dot   = document.getElementById(`bx-dot-${nome}`);
+  const badge = document.getElementById(`bx-dmn-${nome}-badge`);
+  const toggle= document.getElementById(`bx-toggle-${nome}`);
+  const alive = info?.alive;
+  if (dot) {
+    dot.className = 'bx-dot' + (alive ? ' on' : (info?.erro ? ' err' : ''));
+  }
+  if (badge) {
+    badge.className = 'bx-badge ' + (alive ? 'bx-badge-ok' : 'bx-badge-wait');
+    badge.textContent = alive ? 'ativo' : 'parado';
+  }
+  if (toggle) toggle.checked = !!alive;
+}
+
+async function bxToggleDaemon(nome, ligar) {
+  if (!api()) return;
+  if (ligar) await api().bx_start_daemon(nome);
+  else       await api().bx_stop_daemon(nome);
+  setTimeout(bxRefreshDaemons, 600);
+}
+
+// ── Drive Z: ──────────────────────────────────────────────────────────────────
+
+async function bxVerificarZ() {
+  if (!api()) return;
+  const r = await api().bx_verificar_disco_z();
+  const dot = document.getElementById('bx-dot-drive-z');
+  if (dot) dot.className = 'bx-dot' + (r.ok ? ' on' : ' err');
+  toast(r.ok ? `Drive Z:\\ acessível (${r.path})` : 'Drive Z:\\ inacessível!', r.ok ? 'success' : 'error');
+}
+
+async function bxMapearZ() {
+  bxVerificarZ();
+}
+
+// ── Configuração ──────────────────────────────────────────────────────────────
+
+async function bxCarregarConfig() {
+  if (!api()) return;
+  try {
+    const c = await api().bx_carregar_config();
+    document.getElementById('bx-cfg-erp-usuario').value = c.erp?.usuario || '';
+    document.getElementById('bx-cfg-erp-senha').value   = c.erp?.senha   || '';
+    document.getElementById('bx-cfg-erp-email').value   = c.erp?.email_destino || '';
+    document.getElementById('bx-cfg-nfce-url').value    = c.nfce?.url_base || '';
+    document.getElementById('bx-cfg-nfce-usuario').value= c.nfce?.usuario || '';
+    document.getElementById('bx-cfg-nfce-senha').value  = c.nfce?.senha   || '';
+    document.getElementById('bx-cfg-imap-usuario').value= c.imap?.usuario || '';
+    document.getElementById('bx-cfg-imap-senha').value  = c.imap?.senha   || '';
+    document.getElementById('bx-cfg-path-base').value   = c.paths?.base_z || '';
+    document.getElementById('bx-cfg-path-nfe').value    = c.paths?.nfe    || '';
+    document.getElementById('bx-cfg-path-nfce').value   = c.paths?.nfce   || '';
+    document.getElementById('bx-cfg-path-sped').value   = c.paths?.sped   || '';
+  } catch(e) { console.error('[BX] bx_carregar_config:', e); }
+}
+
+async function bxSalvarConfig() {
+  if (!api()) return;
+  const dados = {
+    erp:   { usuario: v('bx-cfg-erp-usuario'), senha: v('bx-cfg-erp-senha'), email_destino: v('bx-cfg-erp-email') },
+    nfce:  { url_base: v('bx-cfg-nfce-url'), usuario: v('bx-cfg-nfce-usuario'), senha: v('bx-cfg-nfce-senha') },
+    imap:  { usuario: v('bx-cfg-imap-usuario'), senha: v('bx-cfg-imap-senha') },
+    paths: { base_z: v('bx-cfg-path-base'), nfe: v('bx-cfg-path-nfe'), nfce: v('bx-cfg-path-nfce'), sped: v('bx-cfg-path-sped') },
+  };
+  const r = await api().bx_salvar_config(dados);
+  toast(r?.ok ? 'Configurações salvas.' : ('Erro: ' + (r?.erro || '')), r?.ok ? 'success' : 'error');
+}
+
+async function bxCarregarConfigTokai() {
+  if (!api()) return;
+  try {
+    const c = await api().bx_carregar_config();
+    document.getElementById('bx-tcfg-sp-url').value       = c.tokai?.sharepoint_url   || '';
+    document.getElementById('bx-tcfg-email-user').value   = c.tokai?.email_user        || '';
+    document.getElementById('bx-tcfg-gmail-label').value  = c.tokai?.gmail_label       || 'TOKAI - XML';
+    document.getElementById('bx-tcfg-net-path').value     = c.tokai?.network_path      || '';
+    document.getElementById('bx-tcfg-headless').checked   = !!c.tokai?.headless_mode;
+    document.getElementById('bx-tcfg-max-age').value      = c.tokai?.max_email_age_days || 35;
+  } catch(e) {}
+}
+
+async function bxSalvarConfigTokai() {
+  if (!api()) return;
+  const cfg = await api().bx_carregar_config() || {};
+  cfg.tokai = {
+    ...(cfg.tokai || {}),
+    sharepoint_url:     v('bx-tcfg-sp-url'),
+    email_user:         v('bx-tcfg-email-user'),
+    gmail_label:        v('bx-tcfg-gmail-label') || 'TOKAI - XML',
+    network_path:       v('bx-tcfg-net-path'),
+    headless_mode:      document.getElementById('bx-tcfg-headless')?.checked,
+    max_email_age_days: parseInt(v('bx-tcfg-max-age')) || 35,
+  };
+  const r = await api().bx_salvar_config(cfg);
+  toast(r?.ok ? 'Config TOKAI salva.' : ('Erro: ' + (r?.erro || '')), r?.ok ? 'success' : 'error');
+}
+
+async function bxTestarERP() {
+  if (!api()) return;
+  toast('Testando conexão ERP...', 'info');
+  const r = await api().bx_testar_conexao_erp();
+  toast(r?.ok ? 'Conexão ERP OK!' : ('Falha: ' + (r?.msg || '')), r?.ok ? 'success' : 'error');
+}
+
+// ── Logs ──────────────────────────────────────────────────────────────────────
+
+async function bxCarregarLogs() {
+  if (!api()) return;
+  const box = document.getElementById('bx-log-viewer');
+  box.innerHTML = '<span style="color:var(--bx-txt-l)">Carregando...</span>';
+  try {
+    const linhas = await api().bx_get_logs('', 300) || [];
+    if (!linhas.length) { box.innerHTML = '<span style="color:var(--bx-txt-l)">Sem logs.</span>'; return; }
+    box.innerHTML = linhas.map(l => {
+      const nivel = typeof l === 'object' ? l.level : 'INFO';
+      const msg   = typeof l === 'object' ? l.msg   : l;
+      const cls   = nivel === 'ERROR' ? ' err' : nivel === 'WARNING' ? ' warn' : '';
+      return `<div class="bx-log-line${cls}">${msg}</div>`;
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  } catch(e) { box.innerHTML = `<span style="color:var(--bx-err)">${e}</span>`; }
+}
+
+async function bxLimparLogs() {
+  if (!api()) return;
+  const r = await api().bx_limpar_logs();
+  if (r?.ok) bxCarregarLogs();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+async function bxRefreshDashboard() {
+  if (!api()) return;
+  try {
+    const hist = await api().bx_get_historico() || [];
+    const box  = document.getElementById('bx-historico');
+    if (box) box.innerHTML = hist.length
+      ? hist.map(l => `<div class="bx-log-line">${l}</div>`).join('')
+      : '<span style="color:var(--bx-txt-l)">Nenhum histórico.</span>';
+  } catch(e) {}
+  bxRefreshDaemons();
+}
+
+// ── Polling ───────────────────────────────────────────────────────────────────
+
+let _bxPollingTimer = null;
+function bxIniciarPolling() {
+  bxVerificarZ();
+  bxRefreshDaemons();
+  _bxPollingTimer = setInterval(() => { bxRefreshDaemons(); }, 8000);
+}
+function bxPararPolling() {
+  if (_bxPollingTimer) { clearInterval(_bxPollingTimer); _bxPollingTimer = null; }
+}
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
+
+</script>
 </body>
 </html>
