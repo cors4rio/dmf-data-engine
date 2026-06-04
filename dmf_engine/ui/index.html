@@ -1499,10 +1499,18 @@ function aplicarSessaoNoUI(sessao) {
   document.getElementById('supervisor-papel').textContent =
     '· ' + (PAPEL_LABEL[sessao.papel] || sessao.papel);
   document.getElementById('login-overlay').style.display = 'none';
-  // Aba Admin só para o papel admin
   const navAdmin = document.getElementById('nav-admin');
   if (navAdmin) navAdmin.style.display = (sessao.papel === 'admin') ? '' : 'none';
   aplicarPermissoesUI();
+  // Carrega avatar, tema e prefs persistidos após login
+  if (api()) {
+    api().perfil_carregar().then(p => {
+      if (!p || !p.ok) return;
+      window._perfil = p;
+      if (p.avatar) pfAtualizarAvatarSidebar(p.avatar);
+      if (p.prefs && p.prefs.tema) pfAplicarTema(p.prefs.tema);
+    }).catch(() => {});
+  }
 }
 
 async function checarLogin() {
@@ -3002,13 +3010,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnV = document.getElementById('btn-voltar-modulos');
   if (btnV) btnV.addEventListener('click', pfVoltarParaModulos);
 
-  /* Aplica tema salvo e avatar na carga inicial */
-  try {
-    const prefs = JSON.parse(localStorage.getItem('dmf_prefs') || '{}');
-    pfAplicarTema(prefs.tema || 'auto');
-    const avatar = localStorage.getItem('dmf_avatar');
-    if (avatar) pfAtualizarAvatarSidebar(avatar);
-  } catch(e) {}
+  /* Tema padrão na carga inicial — perfil carregado após login via aplicarSessaoNoUI */
+  pfAplicarTema('auto');
 });
 
 /* ======================================================= */
@@ -3122,7 +3125,7 @@ function pfRenderHome() {
   /* Comunicados mock */
   const comList = document.getElementById('pf-comunicados-list');
   if (comList) {
-    const prefs = JSON.parse(localStorage.getItem('dmf_prefs') || '{}');
+    const prefs = (window._perfil && window._perfil.prefs) || {};
     if (prefs.notif_comunicados === false) {
       comList.innerHTML = '<div class="pf-recente-empty"><i class="ti ti-bell-off"></i><span>Comunicados desativados nas preferências.</span></div>';
       return;
@@ -3772,27 +3775,28 @@ function pfOpenProfile() {
   const msg = document.getElementById('pf-profile-msg');
   if (msg) { msg.textContent = ''; msg.className = 'pf-profile-msg'; }
 
-  /* Carrega dados de localStorage */
-  const info = JSON.parse(localStorage.getItem('dmf_perfil') || '{}');
-  ['nome','sobrenome','email','telefone','cargo','dpto'].forEach(k => {
-    const el = document.getElementById('pf-info-' + k);
-    if (el) el.value = info[k] || '';
-  });
-
-  /* Carrega avatar */
-  const avatar = localStorage.getItem('dmf_avatar');
-  pfAtualizarAvatarModal(avatar);
-
-  /* Carrega preferências */
-  const prefs = JSON.parse(localStorage.getItem('dmf_prefs') || '{}');
-  const tema = document.getElementById('pf-pref-tema');
-  if (tema) tema.value = prefs.tema || 'auto';
-  const notifExec = document.getElementById('pf-notif-exec');
-  if (notifExec) notifExec.checked = prefs.notif_exec !== false;
-  const notifSom = document.getElementById('pf-notif-som');
-  if (notifSom) notifSom.checked = prefs.notif_som === true;
-  const notifCom = document.getElementById('pf-notif-comunicados');
-  if (notifCom) notifCom.checked = prefs.notif_comunicados !== false;
+  /* Carrega perfil persistido no servidor */
+  if (api()) {
+    const p = await api().perfil_carregar();
+    if (p && p.ok) {
+      const info = p.info || {};
+      ['nome','sobrenome','email','telefone','cargo','dpto'].forEach(k => {
+        const el = document.getElementById('pf-info-' + k);
+        if (el) el.value = info[k] || '';
+      });
+      pfAtualizarAvatarModal(p.avatar || null);
+      pfAtualizarAvatarSidebar(p.avatar || null);
+      const prefs = p.prefs || {};
+      const tema = document.getElementById('pf-pref-tema');
+      if (tema) tema.value = prefs.tema || 'auto';
+      const notifExec = document.getElementById('pf-notif-exec');
+      if (notifExec) notifExec.checked = prefs.notif_exec !== false;
+      const notifSom = document.getElementById('pf-notif-som');
+      if (notifSom) notifSom.checked = prefs.notif_som === true;
+      const notifCom = document.getElementById('pf-notif-comunicados');
+      if (notifCom) notifCom.checked = prefs.notif_comunicados !== false;
+    }
+  }
 
   /* Mensagens */
   const mi = document.getElementById('pf-msg-info');
@@ -3821,11 +3825,11 @@ function pfAvatarUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     const dataURL = e.target.result;
-    localStorage.setItem('dmf_avatar', dataURL);
     pfAtualizarAvatarModal(dataURL);
     pfAtualizarAvatarSidebar(dataURL);
+    if (api()) await api().perfil_salvar({ avatar: dataURL });
   };
   reader.readAsDataURL(file);
 }
@@ -3853,34 +3857,34 @@ function pfAtualizarAvatarSidebar(dataURL) {
   }
 }
 
-function pfAvatarRemover() {
-  localStorage.removeItem('dmf_avatar');
+async function pfAvatarRemover() {
   pfAtualizarAvatarModal(null);
   pfAtualizarAvatarSidebar(null);
   document.getElementById('pf-avatar-input').value = '';
+  if (api()) await api().perfil_salvar({ avatar: null });
 }
 
-function pfSalvarInfo() {
+async function pfSalvarInfo() {
   const info = {};
   ['nome','sobrenome','email','telefone','cargo','dpto'].forEach(k => {
     const el = document.getElementById('pf-info-' + k);
     info[k] = el ? el.value.trim() : '';
   });
-  localStorage.setItem('dmf_perfil', JSON.stringify(info));
+  if (api()) await api().perfil_salvar({ info });
   const msg = document.getElementById('pf-msg-info');
   if (msg) { msg.className = 'pf-msg-info ok'; msg.textContent = 'Informações salvas com sucesso!'; }
   toast('Perfil atualizado.', 'success');
   setTimeout(() => { const m = document.getElementById('pf-msg-info'); if (m) m.textContent = ''; }, 3000);
 }
 
-function pfSalvarPrefs() {
+async function pfSalvarPrefs() {
   const prefs = {
     tema:               document.getElementById('pf-pref-tema').value,
     notif_exec:         document.getElementById('pf-notif-exec').checked,
     notif_som:          document.getElementById('pf-notif-som').checked,
     notif_comunicados:  document.getElementById('pf-notif-comunicados').checked
   };
-  localStorage.setItem('dmf_prefs', JSON.stringify(prefs));
+  if (api()) await api().perfil_salvar({ prefs });
   pfAplicarTema(prefs.tema);
   const msg = document.getElementById('pf-msg-prefs');
   if (msg) { msg.className = 'pf-msg-prefs ok'; msg.textContent = 'Preferências salvas!'; }

@@ -284,6 +284,41 @@ def resetar_senha(base_dir, nome):
     return {"ok": True}
 
 
+# ── Perfil de usuário (avatar + info + prefs) ─────────────
+
+def salvar_perfil(base_dir, nome, dados: dict) -> dict:
+    """
+    Grava avatar, info e prefs no registro do usuário em supervisores.json.
+    dados pode conter: {avatar, info{...}, prefs{...}} — qualquer subconjunto.
+    """
+    data = _carregar(base_dir)
+    s = _buscar(data, nome)
+    if not s:
+        return {"ok": False, "erro": "Usuário não encontrado."}
+    s.setdefault("perfil", {})
+    if "avatar" in dados:
+        s["perfil"]["avatar"] = dados["avatar"]
+    if "info" in dados:
+        s["perfil"]["info"] = dados["info"]
+    if "prefs" in dados:
+        s["perfil"]["prefs"] = dados["prefs"]
+    _gravar(base_dir, data)
+    return {"ok": True}
+
+
+def carregar_perfil(base_dir, nome) -> dict:
+    """Retorna {avatar, info, prefs} do usuário ou defaults vazios."""
+    data = _carregar(base_dir)
+    s = _buscar(data, nome)
+    perfil = s.get("perfil", {}) if s else {}
+    return {
+        "ok":     True,
+        "avatar": perfil.get("avatar", None),
+        "info":   perfil.get("info",   {}),
+        "prefs":  perfil.get("prefs",  {}),
+    }
+
+
 # ── Autorização ────────────────────────────────────────────
 
 def pode_executar(papel, modulo):

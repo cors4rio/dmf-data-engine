@@ -126,6 +126,16 @@ class Api:
             return {"ok": False, "erro": "Apenas o admin pode resetar senhas."}
         return self._auth.resetar_senha(self._base_dir, nome)
 
+    def perfil_carregar(self) -> dict:
+        if not self._sessao:
+            return {"ok": False, "erro": "Sessão não autenticada."}
+        return self._auth.carregar_perfil(self._base_dir, self._sessao["nome"])
+
+    def perfil_salvar(self, dados: dict) -> dict:
+        if not self._sessao:
+            return {"ok": False, "erro": "Sessão não autenticada."}
+        return self._auth.salvar_perfil(self._base_dir, self._sessao["nome"], dados)
+
     def abrir_guia_uso(self):
         import webbrowser
         url = ("https://any.coop/AAKr8LpD6zoPuFhRs2EXVjQQEVdcaqM2JW8XPhRpS9JjL4FV/"
