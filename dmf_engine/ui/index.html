@@ -3764,7 +3764,7 @@ function pfVoltarParaModulos() {
 }
 
 /* ===== PERFIL ===== */
-function pfOpenProfile() {
+async function pfOpenProfile() {
   const s = window._sessao || {};
   const PAPEL_LABEL = { admin: 'Administrador', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP' };
   document.getElementById('pf-modal-name').textContent = s.label || s.nome || '—';
@@ -4194,6 +4194,29 @@ async function pfSalvarSenha() {
   .bx-log-line:last-child { border-bottom: none; }
   .bx-log-line.err { color: var(--bx-err); }
   .bx-log-line.warn { color: var(--bx-warn); }
+  .bx-log-line.hidden { display: none; }
+
+  /* Wrapper de log com toolbar ─────────────────────── */
+  .bx-log-wrap { margin-top: 8px; }
+  .bx-log-toolbar {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .bx-log-filter {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--bx-border);
+    background: var(--bx-surface); color: var(--bx-txt-m); cursor: pointer;
+    font-family: var(--font-sans); transition: background .1s, color .1s;
+  }
+  .bx-log-filter.active { background: var(--bx-accent); color: #fff; border-color: var(--bx-accent); }
+  .bx-log-toolbar-right { margin-left: auto; display: flex; gap: 4px; }
+  .bx-log-action {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--bx-border);
+    background: var(--bx-surface); color: var(--bx-txt-m); cursor: pointer;
+    font-family: var(--font-sans); display: flex; align-items: center; gap: 3px;
+    transition: background .1s;
+  }
+  .bx-log-action:hover { background: var(--bx-card); color: var(--bx-txt); }
+  .bx-log-box-expanded { max-height: 500px !important; }
 
   .bx-form-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bx-surface); border: 1px solid var(--bx-border); border-radius: var(--bx-r-sm); margin-bottom: 8px; }
   .bx-form-label { font-size: 13px; font-weight: 500; color: var(--bx-txt); }
@@ -4381,7 +4404,18 @@ async function pfSalvarSenha() {
             <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-nfe-bar"></div></div>
             <div class="bx-progress-info"><span id="bx-nfe-msg">Aguardando...</span><span id="bx-nfe-pct">0%</span></div>
           </div>
-          <div class="bx-log-box" id="bx-nfe-log" style="margin-top:8px"></div>
+          <div class="bx-log-wrap" id="bx-nfe-log-wrap">
+            <div class="bx-log-toolbar">
+              <button class="bx-log-filter active" data-log="nfe" data-nivel="all" onclick="bxLogFiltrar('nfe','all',this)">Todos</button>
+              <button class="bx-log-filter" data-log="nfe" data-nivel="ERROR" onclick="bxLogFiltrar('nfe','ERROR',this)">Erros</button>
+              <button class="bx-log-filter" data-log="nfe" data-nivel="WARNING" onclick="bxLogFiltrar('nfe','WARNING',this)">Avisos</button>
+              <div class="bx-log-toolbar-right">
+                <button class="bx-log-action" onclick="bxLogCopiar('nfe')"><i class="ti ti-copy" style="font-size:12px"></i> Copiar</button>
+                <button class="bx-log-action" onclick="bxLogExpandir('nfe',this)"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Expandir</button>
+              </div>
+            </div>
+            <div class="bx-log-box" id="bx-nfe-log"></div>
+          </div>
         </div>
       </div>
 
@@ -4423,7 +4457,18 @@ async function pfSalvarSenha() {
             <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-nfce-bar"></div></div>
             <div class="bx-progress-info"><span id="bx-nfce-msg">Aguardando...</span><span id="bx-nfce-pct">0%</span></div>
           </div>
-          <div class="bx-log-box" id="bx-nfce-log" style="margin-top:8px"></div>
+          <div class="bx-log-wrap" id="bx-nfce-log-wrap">
+            <div class="bx-log-toolbar">
+              <button class="bx-log-filter active" data-log="nfce" data-nivel="all" onclick="bxLogFiltrar('nfce','all',this)">Todos</button>
+              <button class="bx-log-filter" data-log="nfce" data-nivel="ERROR" onclick="bxLogFiltrar('nfce','ERROR',this)">Erros</button>
+              <button class="bx-log-filter" data-log="nfce" data-nivel="WARNING" onclick="bxLogFiltrar('nfce','WARNING',this)">Avisos</button>
+              <div class="bx-log-toolbar-right">
+                <button class="bx-log-action" onclick="bxLogCopiar('nfce')"><i class="ti ti-copy" style="font-size:12px"></i> Copiar</button>
+                <button class="bx-log-action" onclick="bxLogExpandir('nfce',this)"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Expandir</button>
+              </div>
+            </div>
+            <div class="bx-log-box" id="bx-nfce-log"></div>
+          </div>
         </div>
       </div>
 
@@ -4465,7 +4510,18 @@ async function pfSalvarSenha() {
             <div class="bx-progress-bg"><div class="bx-progress-fill" id="bx-sped-bar"></div></div>
             <div class="bx-progress-info"><span id="bx-sped-msg">Aguardando...</span><span id="bx-sped-pct">0%</span></div>
           </div>
-          <div class="bx-log-box" id="bx-sped-log" style="margin-top:8px"></div>
+          <div class="bx-log-wrap" id="bx-sped-log-wrap">
+            <div class="bx-log-toolbar">
+              <button class="bx-log-filter active" data-log="sped" data-nivel="all" onclick="bxLogFiltrar('sped','all',this)">Todos</button>
+              <button class="bx-log-filter" data-log="sped" data-nivel="ERROR" onclick="bxLogFiltrar('sped','ERROR',this)">Erros</button>
+              <button class="bx-log-filter" data-log="sped" data-nivel="WARNING" onclick="bxLogFiltrar('sped','WARNING',this)">Avisos</button>
+              <div class="bx-log-toolbar-right">
+                <button class="bx-log-action" onclick="bxLogCopiar('sped')"><i class="ti ti-copy" style="font-size:12px"></i> Copiar</button>
+                <button class="bx-log-action" onclick="bxLogExpandir('sped',this)"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Expandir</button>
+              </div>
+            </div>
+            <div class="bx-log-box" id="bx-sped-log"></div>
+          </div>
         </div>
       </div>
 
@@ -4521,7 +4577,18 @@ async function pfSalvarSenha() {
         </div>
         <div class="bx-card">
           <div class="bx-card-title"><i class="ti ti-terminal-2"></i> Log em Tempo Real</div>
-          <div class="bx-log-box" id="bx-tokai-log" style="max-height:280px"></div>
+          <div class="bx-log-wrap" id="bx-tokai-log-wrap">
+            <div class="bx-log-toolbar">
+              <button class="bx-log-filter active" data-log="tokai" data-nivel="all" onclick="bxLogFiltrar('tokai','all',this)">Todos</button>
+              <button class="bx-log-filter" data-log="tokai" data-nivel="ERROR" onclick="bxLogFiltrar('tokai','ERROR',this)">Erros</button>
+              <button class="bx-log-filter" data-log="tokai" data-nivel="WARNING" onclick="bxLogFiltrar('tokai','WARNING',this)">Avisos</button>
+              <div class="bx-log-toolbar-right">
+                <button class="bx-log-action" onclick="bxLogCopiar('tokai')"><i class="ti ti-copy" style="font-size:12px"></i> Copiar</button>
+                <button class="bx-log-action" onclick="bxLogExpandir('tokai',this)"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Expandir</button>
+              </div>
+            </div>
+            <div class="bx-log-box" id="bx-tokai-log" style="max-height:280px"></div>
+          </div>
         </div>
       </div>
 
@@ -4750,11 +4817,35 @@ async function pfSalvarSenha() {
     height: 6px; background: var(--sm-border); border-radius: 3px; overflow: hidden; margin-top: 8px;
   }
   #screen-sem-movimento .sm-progress-bar { height: 100%; background: var(--sm-accent); width: 0%; transition: width .3s; }
+  #screen-sem-movimento .sm-log-wrap { margin-top: 8px; }
+  #screen-sem-movimento .sm-log-toolbar {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px;
+  }
+  #screen-sem-movimento .sm-log-filter {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--sm-border);
+    background: var(--sm-surface); color: var(--sm-txt-m); cursor: pointer;
+    font-family: var(--font-sans); transition: background .1s, color .1s;
+  }
+  #screen-sem-movimento .sm-log-filter.active { background: var(--sm-accent); color: #fff; border-color: var(--sm-accent); }
+  #screen-sem-movimento .sm-log-toolbar-right { margin-left: auto; display: flex; gap: 4px; }
+  #screen-sem-movimento .sm-log-action {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--sm-border);
+    background: var(--sm-surface); color: var(--sm-txt-m); cursor: pointer;
+    font-family: var(--font-sans); display: flex; align-items: center; gap: 3px;
+    transition: background .1s;
+  }
+  #screen-sem-movimento .sm-log-action:hover { background: var(--sm-card); color: var(--sm-txt); }
   #screen-sem-movimento .sm-log-box {
     background: var(--sm-surface); border: 1px solid var(--sm-border); border-radius: var(--sm-r-sm);
     padding: 10px; font-size: 12px; font-family: monospace; color: var(--sm-txt-m);
-    max-height: 140px; overflow-y: auto; margin-top: 8px;
+    max-height: 200px; overflow-y: auto;
   }
+  #screen-sem-movimento .sm-log-box-expanded { max-height: 500px !important; }
+  #screen-sem-movimento .sm-log-line { display: flex; gap: 4px; padding: 1px 0; border-bottom: 1px solid var(--sm-border); }
+  #screen-sem-movimento .sm-log-line:last-child { border-bottom: none; }
+  #screen-sem-movimento .sm-log-line.err  { color: var(--sm-err); }
+  #screen-sem-movimento .sm-log-line.warn { color: #856404; }
+  #screen-sem-movimento .sm-log-line.hidden { display: none; }
   #screen-sem-movimento .sm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   #screen-sem-movimento .sm-table th {
     text-align: left; padding: 8px 10px; background: var(--sm-surface);
@@ -4877,7 +4968,18 @@ async function pfSalvarSenha() {
           <div class="sm-progress-bar-wrap" id="sm-progress-wrap" style="display:none">
             <div class="sm-progress-bar" id="sm-progress-bar"></div>
           </div>
-          <div class="sm-log-box" id="sm-log-box" style="display:none"></div>
+          <div class="sm-log-wrap" id="sm-log-wrap" style="display:none">
+            <div class="sm-log-toolbar">
+              <button class="sm-log-filter active" data-nivel="all" onclick="smLogFiltrar('all',this)">Todos</button>
+              <button class="sm-log-filter" data-nivel="ERROR" onclick="smLogFiltrar('ERROR',this)">Erros</button>
+              <button class="sm-log-filter" data-nivel="WARNING" onclick="smLogFiltrar('WARNING',this)">Avisos</button>
+              <div class="sm-log-toolbar-right">
+                <button class="sm-log-action" onclick="smLogCopiar()"><i class="ti ti-copy" style="font-size:12px"></i> Copiar</button>
+                <button class="sm-log-action" onclick="smLogExpandir(this)"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Expandir</button>
+              </div>
+            </div>
+            <div class="sm-log-box" id="sm-log-box"></div>
+          </div>
         </div>
 
       </div><!-- /sm-page-executar -->
@@ -5064,7 +5166,7 @@ async function smExecutar() {
   document.getElementById('sm-btn-executar').disabled = true;
   document.getElementById('sm-btn-cancelar').style.display = '';
   document.getElementById('sm-progress-wrap').style.display = '';
-  document.getElementById('sm-log-box').style.display = '';
+  document.getElementById('sm-log-wrap').style.display = '';
   smAtualizarBotaoExecutar();
 }
 
@@ -5076,16 +5178,80 @@ async function smCancelar() {
 
 // ── Eventos do backend ────────────────────────────────────────────────────────
 
+function smLogAppend(texto, nivel) {
+  const box = document.getElementById('sm-log-box');
+  if (!box) return;
+
+  const now = new Date();
+  const ts  = now.toTimeString().slice(0, 8);
+
+  const div = document.createElement('div');
+  let cls = 'sm-log-line';
+  if (nivel === 'ERROR')   cls += ' err';
+  if (nivel === 'WARNING') cls += ' warn';
+  div.className = cls;
+  div.dataset.nivel = nivel || 'INFO';
+
+  const filtroAtivo = box.dataset.filtro || 'all';
+  if (filtroAtivo !== 'all' && div.dataset.nivel !== filtroAtivo) {
+    div.classList.add('hidden');
+  }
+
+  const tsSpan = document.createElement('span');
+  tsSpan.style.cssText = 'color:var(--sm-txt-l);margin-right:6px;user-select:none;flex-shrink:0';
+  tsSpan.textContent = ts;
+
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = texto;
+
+  div.appendChild(tsSpan);
+  div.appendChild(msgSpan);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function smLogFiltrar(nivel, btn) {
+  const box = document.getElementById('sm-log-box');
+  if (!box) return;
+  box.dataset.filtro = nivel;
+  document.querySelectorAll('#sm-log-wrap .sm-log-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  box.querySelectorAll('.sm-log-line').forEach(line => {
+    if (nivel === 'all' || line.dataset.nivel === nivel) {
+      line.classList.remove('hidden');
+    } else {
+      line.classList.add('hidden');
+    }
+  });
+}
+
+function smLogCopiar() {
+  const box = document.getElementById('sm-log-box');
+  if (!box) return;
+  const linhas = Array.from(box.querySelectorAll('.sm-log-line'))
+    .map(el => el.textContent.trim()).join('\n');
+  if (!linhas) { toast('Log vazio.', 'info'); return; }
+  navigator.clipboard.writeText(linhas).then(
+    () => toast('Log copiado!', 'success', 2000),
+    () => toast('Falha ao copiar.', 'error')
+  );
+}
+
+function smLogExpandir(btn) {
+  const box = document.getElementById('sm-log-box');
+  if (!box) return;
+  const expandido = box.classList.toggle('sm-log-box-expanded');
+  const icon = btn.querySelector('i');
+  if (icon) icon.className = expandido ? 'ti ti-arrows-minimize' : 'ti ti-arrows-maximize';
+  box.scrollTop = box.scrollHeight;
+}
+
 function smOnProgress(dados) {
   const bar = document.getElementById('sm-progress-bar');
   if (dados.pct !== null && dados.pct !== undefined) {
     bar.style.width = dados.pct + '%';
   }
-  if (dados.msg) {
-    const box = document.getElementById('sm-log-box');
-    box.innerHTML += `<div>${dados.msg}</div>`;
-    box.scrollTop = box.scrollHeight;
-  }
+  if (dados.msg) smLogAppend(dados.msg);
 }
 
 function smOnEmpresa(dados) {
@@ -5116,8 +5282,7 @@ function smOnDone(dados) {
   toast(msg, dados.erros > 0 ? 'warning' : 'success');
 
   if (dados.resumo_arquivo) {
-    const box = document.getElementById('sm-log-box');
-    box.innerHTML += `<div style="color:var(--sm-ok)">Resumo salvo: ${dados.resumo_arquivo}</div>`;
+    smLogAppend(`Resumo salvo: ${dados.resumo_arquivo}`);
   }
 }
 
@@ -5591,16 +5756,101 @@ function bxSetProgress(modulo, pct, msg) {
 function bxLogAppend(modulo, texto, nivel) {
   const box = document.getElementById(`bx-${modulo}-log`);
   if (!box) return;
+
+  const now = new Date();
+  const ts  = now.toTimeString().slice(0, 8);
+
   const div = document.createElement('div');
-  div.className = 'bx-log-line' + (nivel === 'ERROR' ? ' err' : nivel === 'WARNING' ? ' warn' : '');
-  div.textContent = texto;
+  let cls = 'bx-log-line';
+  if (nivel === 'ERROR')   cls += ' err';
+  if (nivel === 'WARNING') cls += ' warn';
+  div.className = cls;
+  div.dataset.nivel = nivel || 'INFO';
+
+  // Aplica filtro ativo imediatamente
+  const filtroAtivo = box.dataset.filtro || 'all';
+  if (filtroAtivo !== 'all' && div.dataset.nivel !== filtroAtivo) {
+    cls += ' hidden';
+    div.className = cls;
+  }
+
+  const tsSpan = document.createElement('span');
+  tsSpan.style.cssText = 'color:var(--bx-txt-l);margin-right:6px;user-select:none;flex-shrink:0';
+  tsSpan.textContent = ts;
+
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = texto;
+
+  div.style.display = 'flex';
+  div.style.gap = '4px';
+  div.appendChild(tsSpan);
+  div.appendChild(msgSpan);
+
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
 
 function bxLogClear(modulo) {
   const box = document.getElementById(`bx-${modulo}-log`);
-  if (box) box.innerHTML = '';
+  if (!box) return;
+  box.innerHTML = '';
+  box.dataset.filtro = 'all';
+  // Reseta pills para "Todos"
+  const wrap = document.getElementById(`bx-${modulo}-log-wrap`);
+  if (wrap) {
+    wrap.querySelectorAll('.bx-log-filter').forEach(b => b.classList.remove('active'));
+    const all = wrap.querySelector('[data-nivel="all"]');
+    if (all) all.classList.add('active');
+  }
+}
+
+function bxLogFiltrar(modulo, nivel, btn) {
+  const box = document.getElementById(`bx-${modulo}-log`);
+  if (!box) return;
+  box.dataset.filtro = nivel;
+
+  // Atualiza pills
+  const wrap = document.getElementById(`bx-${modulo}-log-wrap`);
+  if (wrap) {
+    wrap.querySelectorAll('.bx-log-filter').forEach(b => b.classList.remove('active'));
+  }
+  btn.classList.add('active');
+
+  // Mostra/esconde linhas existentes
+  box.querySelectorAll('.bx-log-line').forEach(line => {
+    if (nivel === 'all') {
+      line.classList.remove('hidden');
+    } else {
+      if (line.dataset.nivel === nivel) {
+        line.classList.remove('hidden');
+      } else {
+        line.classList.add('hidden');
+      }
+    }
+  });
+}
+
+function bxLogCopiar(modulo) {
+  const box = document.getElementById(`bx-${modulo}-log`);
+  if (!box) return;
+  const linhas = Array.from(box.querySelectorAll('.bx-log-line'))
+    .map(el => el.textContent.trim())
+    .join('\n');
+  if (!linhas) { toast('Log vazio.', 'info'); return; }
+  navigator.clipboard.writeText(linhas).then(
+    () => toast('Log copiado!', 'success', 2000),
+    () => toast('Falha ao copiar.', 'error')
+  );
+}
+
+function bxLogExpandir(modulo, btn) {
+  const box = document.getElementById(`bx-${modulo}-log`);
+  if (!box) return;
+  const expandido = box.classList.toggle('bx-log-box-expanded');
+  const icon = btn.querySelector('i');
+  if (icon) icon.className = expandido ? 'ti ti-arrows-minimize' : 'ti ti-arrows-maximize';
+  btn.title = expandido ? 'Recolher' : 'Expandir';
+  box.scrollTop = box.scrollHeight;
 }
 
 function bxResetBtn(modulo) {
