@@ -33,11 +33,11 @@ Antes de escrever qualquer código, leia os documentos abaixo conforme o escopo 
 ## Comandos do Projeto
 
 ```
-# Rodar Central DMF (dev) — py -3-32 enquanto houver deps residuais de engine/
-py -3-32 dmf_engine/main.py
+# Rodar Central DMF (dev) — 64-bit (banco via DSN-less, ver docs/migracao-64bit.md)
+py -3-64 dmf_engine/main.py
 
 # Rodar Automação de Horas (dev)
-py -3-32 services/automacao_horas/main.py
+py -3-64 services/automacao_horas/main.py
 
 # Build do executável
 build.bat
@@ -48,7 +48,7 @@ build.bat
 ## O Que Nunca Fazer
 
 - Não versionar `config.json`, `supervisores.json`, logs, planilhas ou qualquer dado de cliente.
-- Não buildar com Python 64-bit — quebra o driver ODBC Sybase (apenas 32-bit disponível).
+- Não reintroduzir conexão via `DSN=` ao banco — usar sempre DSN-less (DRIVER+host+porta). O banco é SQL Anywhere 17 com driver 64-bit; a antiga amarra 32-bit foi removida (ver docs/migracao-64bit.md).
 - Não escrever lógica de negócio em `main.py` da Central.
 - Não usar `print()` em produção — usar `logging.getLogger("NomeDoModulo")`.
 - Não hardcodar caminhos de máquina — usar `config.json`.
