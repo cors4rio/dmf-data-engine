@@ -153,12 +153,12 @@ import ah_compat  # shim: expõe db, estado_sh, PROJECT_ROOT, window
 _config = ConfigManager(CONFIG_FILE)
 try:
     _cfg_boot = _config.load()
-    compat.db.configurar_de_cfg(_cfg_boot)
+    ah_compat.db.configurar_de_cfg(_cfg_boot)
 except Exception as _e:
     logging.error("[BOOT] Falha ao configurar DB: %s", _e)
 
 # Referência global à janela — atualizada após create_window.
-# Também exposta via compat.window para os módulos que precisam de file dialog.
+# Também exposta via ah_compat.window para os módulos que precisam de file dialog.
 window = None
 
 _bus    = EventBus(lambda: window)
@@ -182,7 +182,7 @@ api = Api(
     auth=__import__("ah_auth"),
     bus=_bus,
     base_dir=BASE_DIR,
-    project_root=compat.PROJECT_ROOT,
+    project_root=ah_compat.PROJECT_ROOT,
     window_fn=lambda: window,
     sessao_inicial=_sessao_sso,
 )
@@ -198,7 +198,7 @@ window = webview.create_window(
 )
 
 # Propaga a referência para o compat (módulos que chamam _main.window)
-compat.window = window
+ah_compat.window = window
 
 if __name__ == "__main__":
     webview.start(debug=False, icon=os.path.join(RESOURCES_DIR, "ui", "logo.ico"))

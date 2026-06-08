@@ -61,6 +61,20 @@ class DominioDatabase:
         self.connection_string = self._montar_connection_string()
         self.disconnect()
 
+    def configurar_de_cfg(self, cfg: dict):
+        """Configura a conexão a partir do dict de config (DSN-less + fallback DSN)."""
+        self.configurar(
+            dsn=cfg.get("db_dsn"),
+            uid=cfg.get("db_uid"),
+            pwd=cfg.get("db_pwd") or self.pwd,
+            timeout=cfg.get("db_timeout", 5),
+            driver=cfg.get("db_driver"),
+            server=cfg.get("db_server"),
+            host=cfg.get("db_host"),
+            port=cfg.get("db_port"),
+            database=cfg.get("db_database"),
+        )
+
     def connect(self):
         """Tenta estabelecer conexao, retorna True se sucesso."""
         try:
