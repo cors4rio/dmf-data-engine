@@ -43,6 +43,11 @@ class ConfigManager:
         "sm_headless":               True,
         "sm_captcha_timeout_s":      60,
         "sm_pausa_entre_empresas_s": 2,
+        # TFF Salvador
+        "tf_anticaptcha_api_key":     "",
+        "tf_headless":               True,
+        "tf_captcha_timeout_s":      60,
+        "tf_pausa_entre_clientes_s": 3,
     }
 
     def __init__(self, config_path: str):

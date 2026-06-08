@@ -20,6 +20,12 @@ datas = [
     (os.path.join(PROJECT_ROOT, "dmf_engine", "ui"), "dmf_engine/ui"),
 ]
 
+# usuarios.json é a fonte da verdade de quem pode logar. Empacota como fallback
+# (auth.py também procura ao lado do exe, permitindo editar sem rebuildar).
+_usuarios_src = os.path.join(PROJECT_ROOT, "dmf_engine", "usuarios.json")
+if os.path.exists(_usuarios_src):
+    datas.append((_usuarios_src, "dmf_engine"))
+
 # Imports indiretos que o PyInstaller não detecta sozinho
 hiddenimports = [
     "clr_loader.ffi",

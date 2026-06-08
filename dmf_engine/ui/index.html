@@ -355,11 +355,11 @@
   .sector-decor svg { position: absolute; }
   .sector-decor svg.right { right: -80px; top: 50%; transform: translateY(-50%); width: 760px; height: 760px; opacity: 0.6; }
   .sector-decor svg.left  { left: -120px; bottom: -80px; width: 460px; height: 460px; opacity: 0.45; }
-  .sector-container { width: 100%; max-width: 700px; position: relative; }
+  .sector-container { width: 100%; max-width: 900px; position: relative; }
   .identity-block { text-align: center; margin-bottom: 48px; }
   .identity-sep { height: 20px; }
   .identity-instruction { font-size: 14px; color: var(--color-text-muted); margin: 0; }
-  .sector-block-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .sector-block-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
   .sector-block { background: #ffffff; border-radius: var(--radius-md); overflow: hidden; cursor: pointer; transition: all 0.18s ease; display: flex; flex-direction: column; min-height: 260px; border: none; padding: 0; font-family: inherit; text-align: left; }
   .sector-block:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(27,52,97,0.18); }
   .sector-block .blk-top { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 18px; text-align: center; color: #ffffff; }
@@ -369,10 +369,11 @@
   .sector-block .blk-bottom p { font-size: 11.5px; color: var(--color-text-muted); margin: 0; line-height: 1.4; }
   .sector-block .blk-bottom i { color: var(--color-text-light); font-size: 16px; flex-shrink: 0; transition: transform 0.18s ease; }
   .sector-block:hover .blk-bottom i { transform: translateX(3px); color: var(--color-text-main); }
-  .sector-block.gestao   .blk-top { background: var(--color-dmf-blue); }
-  .sector-block.fiscal   .blk-top { background: #B06A00; }
-  .sector-block.contabil .blk-top { background: var(--color-dmf-green); }
-  .sector-block.pessoal  .blk-top { background: #8B3A3A; }
+  .sector-block.gestao        .blk-top { background: var(--color-dmf-blue); }
+  .sector-block.fiscal        .blk-top { background: #B06A00; }
+  .sector-block.contabil      .blk-top { background: var(--color-dmf-green); }
+  .sector-block.pessoal       .blk-top { background: #8B3A3A; }
+  .sector-block.procuradoria  .blk-top { background: #4A3080; }
 
   /* Tela 2 — Login */
   .login-pf-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 24px; position: relative; overflow: hidden; }
@@ -1468,7 +1469,7 @@ window._loginPendente = null;  // {nome, senha} durante troca obrigatória
 
 const PAPEL_LABEL = {
   admin: 'Admin', contabil: 'Contábil', fiscal: 'Fiscal',
-  dp: 'DP', legalizacao: 'Legalização'
+  dp: 'DP', legalizacao: 'Legalização', procuradoria: 'Procuradoria'
 };
 
 function mostrarOverlayLogin() {
@@ -3021,17 +3022,19 @@ document.addEventListener('DOMContentLoaded', () => {
 let _pfCurrentSector = '';
 
 const _pfSectorConfig = {
-  'GESTÃO':   { icon: 'ti-layout-dashboard', color: '#2B65B5', bgAlpha: 'rgba(43,101,181,0.10)' },
-  'FISCAL':   { icon: 'ti-file-invoice',     color: '#B06A00', bgAlpha: 'rgba(176,106,0,0.10)'  },
-  'CONTÁBIL': { icon: 'ti-calculator',       color: '#2A7A45', bgAlpha: 'rgba(42,122,69,0.10)'  },
-  'PESSOAL':  { icon: 'ti-users',            color: '#8B3A3A', bgAlpha: 'rgba(139,58,58,0.10)'  }
+  'GESTÃO':        { icon: 'ti-layout-dashboard', color: '#2B65B5', bgAlpha: 'rgba(43,101,181,0.10)'  },
+  'FISCAL':        { icon: 'ti-file-invoice',     color: '#B06A00', bgAlpha: 'rgba(176,106,0,0.10)'   },
+  'CONTÁBIL':      { icon: 'ti-calculator',       color: '#2A7A45', bgAlpha: 'rgba(42,122,69,0.10)'   },
+  'PESSOAL':       { icon: 'ti-users',            color: '#8B3A3A', bgAlpha: 'rgba(139,58,58,0.10)'   },
+  'PROCURADORIA':  { icon: 'ti-gavel',            color: '#4A3080', bgAlpha: 'rgba(74,48,128,0.10)'   }
 };
 
 const _pfSectors = [
-  { name: 'GESTÃO',   label: 'Gestão',   sub: 'Controle de Horas • Financeiro', icon: 'ti-layout-dashboard', cls: 'gestao'   },
-  { name: 'FISCAL',   label: 'Fiscal',   sub: 'Apuração • Declarações',         icon: 'ti-file-invoice',     cls: 'fiscal'   },
-  { name: 'CONTÁBIL', label: 'Contábil', sub: 'Lançamentos • Balancetes',       icon: 'ti-calculator',       cls: 'contabil' },
-  { name: 'PESSOAL',  label: 'Pessoal',  sub: 'DP • Folha • Admissões',         icon: 'ti-users',            cls: 'pessoal'  }
+  { name: 'GESTÃO',       label: 'Gestão',       sub: 'Controle de Horas • Financeiro', icon: 'ti-layout-dashboard', cls: 'gestao'       },
+  { name: 'FISCAL',       label: 'Fiscal',       sub: 'Apuração • Declarações',         icon: 'ti-file-invoice',     cls: 'fiscal'       },
+  { name: 'CONTÁBIL',     label: 'Contábil',     sub: 'Lançamentos • Balancetes',       icon: 'ti-calculator',       cls: 'contabil'     },
+  { name: 'PESSOAL',      label: 'Pessoal',      sub: 'DP • Folha • Admissões',         icon: 'ti-users',            cls: 'pessoal'      },
+  { name: 'PROCURADORIA', label: 'Procuradoria', sub: 'CND • TFF • Regularidade',       icon: 'ti-gavel',            cls: 'procuradoria' }
 ];
 
 const _pfModuleCatalog = {
@@ -3057,6 +3060,11 @@ const _pfModuleCatalog = {
     { id: 'folha',     nome: 'Folha de Pagamento',       desc: 'Processamento de folha, proventos e descontos.',               status: 'breve', icon: 'ti-receipt',     color: '#8B3A3A' },
     { id: 'admissoes', nome: 'Admissões e Demissões',    desc: 'Contratos, admissões, rescisões e documentação.',              status: 'breve', icon: 'ti-user-plus',   color: '#2B65B5' },
     { id: 'ponto',     nome: 'Ponto e Jornada',          desc: 'Controle de ponto, horas extras e banco de horas.',            status: 'breve', icon: 'ti-clock',       color: '#2A7A45' }
+  ],
+  'PROCURADORIA': [
+    { id: 'tff_salvador', nome: 'TFF Salvador',          desc: 'Download automático das 4 guias de Taxa de Fiscalização e Funcionamento para lote de clientes.', status: 'disponivel', icon: 'ti-file-download', color: '#4A3080' },
+    { id: 'cnd',          nome: 'CND / Certidões',       desc: 'Consulta e download de certidões negativas de débito em órgãos federais, estaduais e municipais.', status: 'breve', icon: 'ti-certificate',   color: '#4A3080' },
+    { id: 'parcelamentos',nome: 'Parcelamentos',         desc: 'Controle de parcelamentos tributários ativos por cliente.',    status: 'breve', icon: 'ti-clipboard-list', color: '#6B4FA0' }
   ]
 };
 
@@ -3215,7 +3223,7 @@ async function pfDoLogin() {
 
 function pfRenderModules() {
   const cfg = _pfSectorConfig[_pfCurrentSector];
-  const PAPEL_LABEL = { admin: 'Administrador', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP' };
+  const PAPEL_LABEL = { admin: 'Administrador', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP', legalizacao: 'Legalização', procuradoria: 'Procuradoria' };
 
   const topIcon = document.getElementById('pf-top-sector-icon');
   if (topIcon && cfg) { topIcon.className = 'ti ' + cfg.icon; topIcon.style.color = cfg.color; }
@@ -3305,6 +3313,11 @@ async function pfAbrirModulo(modulo) {
 
   if (modulo === 'sem_movimento_nfse') {
     smAbrir();
+    return;
+  }
+
+  if (modulo === 'tff_salvador') {
+    tfAbrir();
     return;
   }
 
@@ -3766,7 +3779,7 @@ function pfVoltarParaModulos() {
 /* ===== PERFIL ===== */
 async function pfOpenProfile() {
   const s = window._sessao || {};
-  const PAPEL_LABEL = { admin: 'Administrador', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP' };
+  const PAPEL_LABEL = { admin: 'Administrador', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP', legalizacao: 'Legalização', procuradoria: 'Procuradoria' };
   document.getElementById('pf-modal-name').textContent = s.label || s.nome || '—';
   document.getElementById('pf-modal-role').textContent = PAPEL_LABEL[s.papel] || s.papel || '';
   document.getElementById('pf-pwd-atual').value = '';
@@ -4745,6 +4758,540 @@ async function pfSalvarSenha() {
     </div>
   </div>
 </div><!-- /screen-buscar-xml -->
+
+<!-- ================================================================
+   TFF SALVADOR
+================================================================ -->
+<div class="screen" id="screen-tff-salvador">
+<style>
+  #screen-tff-salvador {
+    --tf-bg: #F5F0FA; --tf-card: #FDFBFF; --tf-surface: #EDE7F6; --tf-border: #D9CFF0;
+    --tf-txt: #1E1530; --tf-txt-m: #5C5070; --tf-txt-l: #9A8FB0;
+    --tf-accent: #4A3080; --tf-accent-soft: #EDE7F6;
+    --tf-ok: #3B6D11; --tf-err: #A32D2D;
+    --tf-r: 8px; --tf-r-sm: 5px;
+    background: var(--tf-bg); flex-direction: column; height: 100vh;
+  }
+  #screen-tff-salvador .tf-topbar {
+    height: 48px; background: var(--tf-card); border-bottom: 1px solid var(--tf-border);
+    display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0;
+  }
+  #screen-tff-salvador .tf-back-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border: 1px solid var(--tf-border); border-radius: var(--tf-r-sm);
+    background: var(--tf-card); color: var(--tf-txt-m); font-size: 13px; cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  #screen-tff-salvador .tf-back-btn:hover { background: var(--tf-surface); }
+  #screen-tff-salvador .tf-tb-title { font-size: 14px; font-weight: 600; color: var(--tf-txt); display: flex; align-items: center; gap: 8px; }
+  #screen-tff-salvador .tf-tb-title i { font-size: 18px; color: var(--tf-accent); }
+  #screen-tff-salvador .tf-body { display: flex; flex: 1; overflow: hidden; }
+  #screen-tff-salvador .tf-sidebar {
+    width: 180px; background: var(--tf-card); border-right: 1px solid var(--tf-border);
+    display: flex; flex-direction: column; padding: 12px 0; flex-shrink: 0;
+  }
+  #screen-tff-salvador .tf-nav-pill {
+    display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 500; color: var(--tf-txt-m); cursor: pointer;
+    border: none; border-left: 2px solid transparent;
+    font-family: var(--font-sans); width: 100%; text-align: left; background: transparent;
+  }
+  #screen-tff-salvador .tf-nav-pill:hover { background: var(--tf-surface); color: var(--tf-txt); }
+  #screen-tff-salvador .tf-nav-pill.active { color: var(--tf-accent); font-weight: 600; border-left-color: var(--tf-accent); background: var(--tf-accent-soft); }
+  #screen-tff-salvador .tf-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  #screen-tff-salvador .tf-page { display: none; flex-direction: column; gap: 16px; }
+  #screen-tff-salvador .tf-page.active { display: flex; }
+  #screen-tff-salvador .tf-card {
+    background: var(--tf-card); border: 1px solid var(--tf-border); border-radius: var(--tf-r); padding: 16px;
+  }
+  #screen-tff-salvador .tf-card-title { font-size: 12px; font-weight: 600; color: var(--tf-txt-l); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  #screen-tff-salvador .tf-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #screen-tff-salvador .tf-btn {
+    padding: 7px 16px; border-radius: var(--tf-r-sm); font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; font-family: var(--font-sans);
+  }
+  #screen-tff-salvador .tf-btn-primary { background: var(--tf-accent); color: #fff; }
+  #screen-tff-salvador .tf-btn-primary:hover { opacity: .9; }
+  #screen-tff-salvador .tf-btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  #screen-tff-salvador .tf-btn-outline {
+    background: transparent; color: var(--tf-txt-m); border: 1px solid var(--tf-border);
+  }
+  #screen-tff-salvador .tf-btn-outline:hover { background: var(--tf-surface); }
+  #screen-tff-salvador .tf-btn-danger { background: #A32D2D; color: #fff; }
+  #screen-tff-salvador .tf-btn-danger:hover { opacity: .9; }
+  #screen-tff-salvador .tf-select, #screen-tff-salvador .tf-input {
+    padding: 6px 10px; border: 1px solid var(--tf-border); border-radius: var(--tf-r-sm);
+    font-size: 13px; font-family: var(--font-sans); background: var(--tf-surface); color: var(--tf-txt);
+    outline: none;
+  }
+  #screen-tff-salvador .tf-select:focus, #screen-tff-salvador .tf-input:focus { border-color: var(--tf-accent); }
+  #screen-tff-salvador .tf-progress-bar-wrap {
+    height: 6px; background: var(--tf-border); border-radius: 3px; overflow: hidden; margin-top: 8px;
+  }
+  #screen-tff-salvador .tf-progress-bar { height: 100%; background: var(--tf-accent); width: 0%; transition: width .3s; }
+  #screen-tff-salvador .tf-log-wrap { margin-top: 8px; }
+  #screen-tff-salvador .tf-log-toolbar {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px;
+  }
+  #screen-tff-salvador .tf-log-filter {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--tf-border);
+    background: var(--tf-surface); color: var(--tf-txt-m); cursor: pointer;
+    font-family: var(--font-sans); transition: background .1s, color .1s;
+  }
+  #screen-tff-salvador .tf-log-filter.active { background: var(--tf-accent); color: #fff; border-color: var(--tf-accent); }
+  #screen-tff-salvador .tf-log-toolbar-right { margin-left: auto; display: flex; gap: 4px; }
+  #screen-tff-salvador .tf-log-action {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--tf-border);
+    background: var(--tf-surface); color: var(--tf-txt-m); cursor: pointer;
+    font-family: var(--font-sans); display: flex; align-items: center; gap: 3px;
+    transition: background .1s;
+  }
+  #screen-tff-salvador .tf-log-action:hover { background: var(--tf-card); color: var(--tf-txt); }
+  #screen-tff-salvador .tf-log-box {
+    background: var(--tf-surface); border: 1px solid var(--tf-border); border-radius: var(--tf-r-sm);
+    padding: 10px; font-size: 12px; font-family: monospace; color: var(--tf-txt-m);
+    max-height: 200px; overflow-y: auto;
+  }
+  #screen-tff-salvador .tf-log-box-expanded { max-height: 500px !important; }
+  #screen-tff-salvador .tf-log-line { display: flex; gap: 4px; padding: 1px 0; border-bottom: 1px solid var(--tf-border); }
+  #screen-tff-salvador .tf-log-line:last-child { border-bottom: none; }
+  #screen-tff-salvador .tf-log-line.err  { color: var(--tf-err); }
+  #screen-tff-salvador .tf-log-line.warn { color: #856404; }
+  #screen-tff-salvador .tf-log-line.hidden { display: none; }
+  #screen-tff-salvador .tf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #screen-tff-salvador .tf-table th {
+    text-align: left; padding: 8px 10px; background: var(--tf-surface);
+    border-bottom: 1px solid var(--tf-border); font-weight: 600; color: var(--tf-txt-m); font-size: 11px; text-transform: uppercase;
+  }
+  #screen-tff-salvador .tf-table td { padding: 8px 10px; border-bottom: 1px solid var(--tf-border); color: var(--tf-txt); vertical-align: middle; }
+  #screen-tff-salvador .tf-table tr:last-child td { border-bottom: none; }
+  #screen-tff-salvador .tf-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  }
+  #screen-tff-salvador .tf-badge-ok         { background: #D4EDDA; color: #3B6D11; }
+  #screen-tff-salvador .tf-badge-pago       { background: #D4EDDA; color: #3B6D11; }
+  #screen-tff-salvador .tf-badge-parcial    { background: #FFF3CD; color: #856404; }
+  #screen-tff-salvador .tf-badge-sem-divida { background: #E2E3E5; color: #4B4B4B; }
+  #screen-tff-salvador .tf-badge-erro       { background: #F8D7DA; color: #A32D2D; }
+  #screen-tff-salvador .tf-badge-captcha    { background: #FFE8B2; color: #7A4800; }
+  #screen-tff-salvador .tf-badge-idle       { background: var(--tf-surface); color: var(--tf-txt-l); }
+  #screen-tff-salvador .tf-file-path {
+    font-size: 12px; color: var(--tf-txt-m); background: var(--tf-surface);
+    border: 1px solid var(--tf-border); border-radius: var(--tf-r-sm); padding: 5px 10px;
+    flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+</style>
+
+  <!-- Topbar -->
+  <div class="tf-topbar">
+    <button class="tf-back-btn" onclick="tfVoltar()">
+      <i class="ti ti-arrow-left"></i> Voltar
+    </button>
+    <div class="tf-tb-title">
+      <i class="ti ti-file-download"></i>
+      TFF Salvador
+    </div>
+  </div>
+
+  <div class="tf-body">
+    <!-- Sidebar -->
+    <div class="tf-sidebar">
+      <button class="tf-nav-pill active" id="tf-pill-executar" onclick="tfPagina('executar')">
+        <i class="ti ti-player-play"></i> Executar
+      </button>
+      <button class="tf-nav-pill" id="tf-pill-config" onclick="tfPagina('config')">
+        <i class="ti ti-settings"></i> Configuração
+      </button>
+    </div>
+
+    <div class="tf-content">
+
+      <!-- Página: Executar -->
+      <div class="tf-page active" id="tf-page-executar">
+
+        <!-- Card: Clientes -->
+        <div class="tf-card">
+          <div class="tf-card-title">Clientes (CGA + Razão Social + Município)</div>
+          <div class="tf-row">
+            <button class="tf-btn tf-btn-outline" onclick="tfSelecionarPlanilha()">
+              <i class="ti ti-upload"></i> Selecionar TXT / Excel
+            </button>
+            <button class="tf-btn tf-btn-outline" id="tf-btn-recarregar" onclick="tfRecarregarPlanilha()" style="display:none" title="Recarregar arquivo após alterações">
+              <i class="ti ti-refresh"></i> Recarregar
+            </button>
+            <button class="tf-btn tf-btn-outline" onclick="tfBaixarTemplate('txt')" title="Abrir template TXT de exemplo">
+              <i class="ti ti-file-text"></i> Template TXT
+            </button>
+            <button class="tf-btn tf-btn-outline" onclick="tfBaixarTemplate('xlsx')" title="Abrir template Excel de exemplo">
+              <i class="ti ti-file-spreadsheet"></i> Template Excel
+            </button>
+            <span id="tf-planilha-path" class="tf-file-path" style="display:none"></span>
+          </div>
+          <div id="tf-clientes-wrap" style="margin-top:12px; display:none;">
+            <table class="tf-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Razão Social</th><th>CNPJ</th><th>Município</th><th>CGA</th>
+                  <th>Status</th><th>Guias</th>
+                </tr>
+              </thead>
+              <tbody id="tf-clientes-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Card: Ano de competência -->
+        <div class="tf-card">
+          <div class="tf-card-title">Ano de Competência</div>
+          <div class="tf-row">
+            <select class="tf-select" id="tf-ano"></select>
+          </div>
+        </div>
+
+        <!-- Card: Pasta destino -->
+        <div class="tf-card">
+          <div class="tf-card-title">Pasta Destino</div>
+          <div class="tf-row">
+            <span id="tf-pasta-path" class="tf-file-path">Nenhuma pasta selecionada</span>
+            <button class="tf-btn tf-btn-outline" onclick="tfSelecionarPasta()">
+              <i class="ti ti-folder-open"></i> Selecionar
+            </button>
+          </div>
+        </div>
+
+        <!-- Card: Execução -->
+        <div class="tf-card">
+          <div class="tf-card-title">Execução</div>
+          <div class="tf-row">
+            <button class="tf-btn tf-btn-primary" id="tf-btn-executar"
+                    onclick="tfExecutar()" disabled>
+              <i class="ti ti-player-play"></i> Executar
+            </button>
+            <button class="tf-btn tf-btn-danger" id="tf-btn-cancelar"
+                    onclick="tfCancelar()" style="display:none">
+              <i class="ti ti-player-stop"></i> Cancelar
+            </button>
+          </div>
+          <div class="tf-progress-bar-wrap" id="tf-progress-wrap" style="display:none">
+            <div class="tf-progress-bar" id="tf-progress-bar"></div>
+          </div>
+          <div class="tf-log-wrap" id="tf-log-wrap" style="display:none">
+            <div class="tf-log-toolbar">
+              <button class="tf-log-filter active" data-nivel="all" onclick="tfLogFiltrar('all',this)">Todos</button>
+              <button class="tf-log-filter" data-nivel="ERROR" onclick="tfLogFiltrar('ERROR',this)">Erros</button>
+              <button class="tf-log-filter" data-nivel="WARNING" onclick="tfLogFiltrar('WARNING',this)">Avisos</button>
+              <div class="tf-log-toolbar-right">
+                <button class="tf-log-action" onclick="tfLogCopiar()"><i class="ti ti-copy" style="font-size:12px"></i> Copiar</button>
+                <button class="tf-log-action" onclick="tfLogExpandir(this)"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Expandir</button>
+              </div>
+            </div>
+            <div class="tf-log-box" id="tf-log-box"></div>
+          </div>
+        </div>
+
+      </div><!-- /tf-page-executar -->
+
+      <!-- Página: Configuração -->
+      <div class="tf-page" id="tf-page-config">
+        <div class="tf-card">
+          <div class="tf-card-title">Anti-Captcha</div>
+          <p style="font-size:13px;color:var(--tf-txt-m);margin:0 0 10px">
+            Chave de API do <strong>Anti-Captcha</strong> para resolução automática do CAPTCHA.<br>
+            Custo: ~1 tarefa por cliente (+ retries). Sem chave, o CAPTCHA deve ser resolvido manualmente.
+          </p>
+          <div class="tf-row">
+            <input type="password" class="tf-input" id="tf-cfg-apikey"
+                   placeholder="Chave de API Anti-Captcha" style="flex:1;min-width:260px">
+          </div>
+        </div>
+        <div class="tf-card">
+          <div class="tf-card-title">Opções</div>
+          <div class="tf-row" style="margin-bottom:8px">
+            <input type="checkbox" id="tf-cfg-headless" checked>
+            <label for="tf-cfg-headless" style="font-size:13px;color:var(--tf-txt)">
+              Modo headless (sem janela visível do navegador)
+            </label>
+          </div>
+        </div>
+        <div class="tf-row">
+          <button class="tf-btn tf-btn-primary" onclick="tfSalvarConfig()">
+            <i class="ti ti-device-floppy"></i> Salvar
+          </button>
+        </div>
+      </div><!-- /tf-page-config -->
+
+    </div><!-- /tf-content -->
+  </div><!-- /tf-body -->
+</div><!-- /screen-tff-salvador -->
+
+<script>
+/* ================================================================
+   TFF SALVADOR — Controller (prefixo tf*)
+================================================================ */
+
+let _tfClientes        = [];
+let _tfPlanilhaCaminho = '';
+let _tfPastaDestino    = '';
+let _tfRodando         = false;
+
+// ── Entrada / saída ───────────────────────────────────────────────────────────
+
+async function tfAbrir() {
+  goToPlatformScreen('screen-tff-salvador');
+  tfPopularAnos();
+  tfPagina('executar');
+  await tfCarregarConfig();
+}
+
+function tfVoltar() {
+  goToPlatformScreen('screen-module');
+}
+
+function tfPagina(nome) {
+  document.querySelectorAll('#screen-tff-salvador .tf-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#screen-tff-salvador .tf-nav-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('tf-page-' + nome).classList.add('active');
+  document.getElementById('tf-pill-' + nome).classList.add('active');
+}
+
+function tfPopularAnos() {
+  const sel = document.getElementById('tf-ano');
+  if (sel.options.length > 0) return;
+  const ano = new Date().getFullYear();
+  for (let y = ano; y >= ano - 5; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    sel.appendChild(opt);
+  }
+}
+
+// ── Planilha ──────────────────────────────────────────────────────────────────
+
+async function tfRecarregarPlanilha() {
+  if (!_tfPlanilhaCaminho || !api()) return;
+  const r = await api().tf_carregar_planilha(_tfPlanilhaCaminho);
+  if (!r.ok) { toast(r.erro || 'Erro ao recarregar planilha.', 'error'); return; }
+  _tfClientes = r.clientes;
+  tfRenderizarTabela(r.clientes);
+  toast(`Planilha recarregada — ${r.clientes.length} cliente(s).`, 'success');
+  if (r.invalidos && r.invalidos.length > 0)
+    toast(`${r.invalidos.length} linha(s) inválida(s) ignorada(s).`, 'warning');
+}
+
+async function tfBaixarTemplate(tipo) {
+  if (!api()) return;
+  await api().tf_abrir_template(tipo);
+}
+
+async function tfSelecionarPlanilha() {
+  if (!api()) return;
+  const r0 = await api().tf_selecionar_planilha();
+  const caminho = r0 && r0.caminho;
+  if (!caminho) return;
+  const r = await api().tf_carregar_planilha(caminho);
+  if (!r.ok) { toast(r.erro || 'Erro ao carregar planilha.', 'error'); return; }
+
+  _tfClientes = r.clientes;
+  _tfPlanilhaCaminho = caminho;
+
+  document.getElementById('tf-planilha-path').textContent = caminho;
+  document.getElementById('tf-planilha-path').style.display = '';
+  document.getElementById('tf-btn-recarregar').style.display = '';
+  tfRenderizarTabela(r.clientes);
+  if (r.invalidos && r.invalidos.length > 0)
+    toast(`${r.invalidos.length} linha(s) inválida(s) ignorada(s).`, 'warning');
+  tfAtualizarBotaoExecutar();
+}
+
+function tfRenderizarTabela(clientes) {
+  const tbody = document.getElementById('tf-clientes-tbody');
+  tbody.innerHTML = '';
+  clientes.forEach((c, i) => {
+    const tr = document.createElement('tr');
+    tr.id = `tf-row-${c.cga}`;
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${c.razao_social || '—'}</td>
+      <td>${c.cnpj || '—'}</td>
+      <td>${c.municipio || '—'}</td>
+      <td>${c.cga}</td>
+      <td><span class="tf-badge tf-badge-idle" id="tf-status-${c.cga}">—</span></td>
+      <td id="tf-guias-${c.cga}">—</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tf-clientes-wrap').style.display = '';
+}
+
+// ── Pasta destino ─────────────────────────────────────────────────────────────
+
+async function tfSelecionarPasta() {
+  if (!api()) return;
+  const r = await api().abrir_seletor_pasta();
+  const pasta = r && r.caminho;
+  if (!pasta) return;
+  _tfPastaDestino = pasta;
+  document.getElementById('tf-pasta-path').textContent = pasta;
+  tfAtualizarBotaoExecutar();
+}
+
+// ── Execução ──────────────────────────────────────────────────────────────────
+
+function tfAtualizarBotaoExecutar() {
+  const ok = _tfPlanilhaCaminho && _tfPastaDestino && !_tfRodando;
+  document.getElementById('tf-btn-executar').disabled = !ok;
+}
+
+async function tfExecutar() {
+  if (!api()) return;
+  const r = await api().tf_carregar_planilha(_tfPlanilhaCaminho);
+  if (!r.ok) { toast(r.erro || 'Erro ao carregar planilha.', 'error'); return; }
+  if (!r.total) { toast('Nenhum cliente válido na planilha.', 'warning'); return; }
+
+  const ano = parseInt(document.getElementById('tf-ano').value);
+  const res = await api().tf_executar_por_caminho(_tfPlanilhaCaminho, ano, _tfPastaDestino);
+  if (!res.ok) { toast(res.erro || 'Erro ao iniciar execução.', 'error'); return; }
+
+  _tfRodando = true;
+  document.getElementById('tf-btn-executar').disabled = true;
+  document.getElementById('tf-btn-cancelar').style.display = '';
+  document.getElementById('tf-progress-wrap').style.display = '';
+  document.getElementById('tf-log-wrap').style.display = '';
+  tfAtualizarBotaoExecutar();
+}
+
+async function tfCancelar() {
+  if (!api()) return;
+  await api().tf_cancelar();
+  toast('Cancelamento solicitado...', 'info');
+}
+
+// ── Eventos do backend ────────────────────────────────────────────────────────
+
+function tfLogAppend(texto, nivel) {
+  const box = document.getElementById('tf-log-box');
+  if (!box) return;
+  const ts  = new Date().toTimeString().slice(0, 8);
+  const div = document.createElement('div');
+  let cls = 'tf-log-line';
+  if (nivel === 'ERROR')   cls += ' err';
+  if (nivel === 'WARNING') cls += ' warn';
+  div.className = cls;
+  div.dataset.nivel = nivel || 'INFO';
+
+  const filtroAtivo = box.dataset.filtro || 'all';
+  if (filtroAtivo !== 'all' && div.dataset.nivel !== filtroAtivo) div.classList.add('hidden');
+
+  const tsSpan = document.createElement('span');
+  tsSpan.style.cssText = 'color:var(--tf-txt-l);margin-right:6px;user-select:none;flex-shrink:0';
+  tsSpan.textContent = ts;
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = texto;
+  div.appendChild(tsSpan);
+  div.appendChild(msgSpan);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function tfLogFiltrar(nivel, btn) {
+  const box = document.getElementById('tf-log-box');
+  if (!box) return;
+  box.dataset.filtro = nivel;
+  document.querySelectorAll('#tf-log-wrap .tf-log-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  box.querySelectorAll('.tf-log-line').forEach(line => {
+    if (nivel === 'all' || line.dataset.nivel === nivel) line.classList.remove('hidden');
+    else line.classList.add('hidden');
+  });
+}
+
+function tfLogCopiar() {
+  const box = document.getElementById('tf-log-box');
+  if (!box) return;
+  const linhas = Array.from(box.querySelectorAll('.tf-log-line')).map(el => el.textContent.trim()).join('\n');
+  if (!linhas) { toast('Log vazio.', 'info'); return; }
+  navigator.clipboard.writeText(linhas).then(
+    () => toast('Log copiado!', 'success', 2000),
+    () => toast('Falha ao copiar.', 'error')
+  );
+}
+
+function tfLogExpandir(btn) {
+  const box = document.getElementById('tf-log-box');
+  if (!box) return;
+  const expandido = box.classList.toggle('tf-log-box-expanded');
+  const icon = btn.querySelector('i');
+  if (icon) icon.className = expandido ? 'ti ti-arrows-minimize' : 'ti ti-arrows-maximize';
+  box.scrollTop = box.scrollHeight;
+}
+
+function tfOnProgress(dados) {
+  const bar = document.getElementById('tf-progress-bar');
+  if (dados.pct !== null && dados.pct !== undefined) bar.style.width = dados.pct + '%';
+  if (dados.msg) tfLogAppend(dados.msg);
+}
+
+function tfOnCliente(dados) {
+  const { cga, status, guias } = dados;
+  const badgeCls = status === 'ok'          ? 'tf-badge-ok'
+                 : status === 'pago'        ? 'tf-badge-pago'
+                 : status === 'sem_divida'  ? 'tf-badge-sem-divida'
+                 : status === 'parcial'     ? 'tf-badge-parcial'
+                 : status === 'captcha_erro'? 'tf-badge-captcha'
+                 : 'tf-badge-erro';
+  const statusEl = document.getElementById(`tf-status-${cga}`);
+  if (statusEl) {
+    statusEl.className = `tf-badge ${badgeCls}`;
+    statusEl.textContent = status;
+  }
+  const guiasEl = document.getElementById(`tf-guias-${cga}`);
+  if (guiasEl) {
+    const ok = (guias || []).filter(g => g.arquivo).length;
+    guiasEl.textContent = `${ok}/${(guias || []).length}`;
+  }
+}
+
+function tfOnDone(dados) {
+  _tfRodando = false;
+  document.getElementById('tf-btn-cancelar').style.display = 'none';
+  document.getElementById('tf-btn-executar').disabled = false;
+  tfAtualizarBotaoExecutar();
+
+  const msg = dados.cancelado
+    ? 'Execução cancelada.'
+    : `Concluído: ${dados.ok_count}/${dados.total} OK, ${dados.erros} erro(s).`;
+  toast(msg, dados.erros > 0 ? 'warning' : 'success');
+
+  if (dados.resumo_arquivo) tfLogAppend(`Resumo salvo: ${dados.resumo_arquivo}`);
+}
+
+// ── Configuração ──────────────────────────────────────────────────────────────
+
+async function tfCarregarConfig() {
+  if (!api()) return;
+  const r = await api().tf_carregar_config();
+  if (!r.ok) return;
+  document.getElementById('tf-cfg-apikey').value     = r.tf_anticaptcha_api_key || '';
+  document.getElementById('tf-cfg-headless').checked = r.tf_headless !== false;
+}
+
+async function tfSalvarConfig() {
+  if (!api()) return;
+  const dados = {
+    tf_anticaptcha_api_key: document.getElementById('tf-cfg-apikey').value.trim(),
+    tf_headless:            document.getElementById('tf-cfg-headless').checked,
+  };
+  const r = await api().tf_salvar_config(dados);
+  toast(r.ok ? 'Configuração salva.' : (r.erro || 'Erro ao salvar.'), r.ok ? 'success' : 'error');
+}
+
+// Registra handlers de evento do backend
+registerModuleHandlers('tff_salvador', {
+  tf_progress: tfOnProgress,
+  tf_cliente:  tfOnCliente,
+  tf_done:     tfOnDone,
+});
+</script>
 
 <!-- ================================================================
      SEM MOVIMENTO NFS-e SALVADOR

@@ -95,6 +95,7 @@ from dmf_engine.modules.m_automacao_horas import AutomacaoHorasLauncher
 from dmf_engine.modules.m_relatorio_rendimentos import RelatorioRendimentosModule
 from dmf_engine.modules.m_buscar_xml import BuscarXMLModule
 from dmf_engine.modules.m_sem_movimento_nfse import SemMovimentoNfseModule
+from dmf_engine.modules.m_tff_salvador import TffSalvadorModule
 from dmf_engine.api import Api
 
 _config = ConfigManager(CONFIG_FILE)
@@ -112,6 +113,7 @@ _registry.register(AutomacaoHorasLauncher(_bus, _config, _sessao_fn))
 _registry.register(RelatorioRendimentosModule(_bus, _config, _sessao_fn))
 _registry.register(BuscarXMLModule(_bus, _config, _sessao_fn))
 _registry.register(SemMovimentoNfseModule(_bus, _config, _sessao_fn))
+_registry.register(TffSalvadorModule(_bus, _config, _sessao_fn))
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
 

@@ -2,11 +2,11 @@
 #define MyAppVersion   "1.0.0"
 #define MyAppPublisher "DMF Automacao"
 #define MyAppExeName   "DMF Engine.exe"
-#define MyAppID        "{B4A2F8E1-3C7D-4F9A-82BE-1D5E6F0A3C9B}"
+#define MyAppID        "B4A2F8E1-3C7D-4F9A-82BE-1D5E6F0A3C9B"
 #define DistDir        "dist\DMF Engine"
 
 [Setup]
-AppId={#MyAppID}
+AppId={{{#MyAppID}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -18,8 +18,7 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 DisableProgramGroupPage=yes
-; Nao exige admin — instala por usuario se preferir
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequired=admin
 ; Icone do instalador (mesmo do app)
 SetupIconFile=dmf_engine\ui\logo.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
@@ -37,7 +36,7 @@ Source: "{#DistDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs cr
 [Icons]
 Name: "{group}\{#MyAppName}";   Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\Desinstalar";    Filename: "{uninstallexe}"
-Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar {#MyAppName} agora"; Flags: nowait postinstall skipifsilent

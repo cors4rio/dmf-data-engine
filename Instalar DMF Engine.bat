@@ -30,6 +30,33 @@ if (-not (Test-Path $destino)) {
     New-Item -ItemType Directory -Path $destino -Force | Out-Null
 }
 
+# 3.1) Limpa resíduos de instalações antigas que copiavam o projeto inteiro.
+#      Esses diretórios de código solto (dmf_engine\, engine\, modulos\, ...) ficam
+#      no sys.path do exe e SOBREPÕEM o código empacotado em _internal, fazendo o app
+#      rodar uma versão antiga do auth.py (login quebrado, usuários sumindo).
+#      A versão correta vive SEMPRE dentro de _internal — nunca solta na raiz.
+$residuos = @(
+    "dmf_engine", "engine", "modulos", "services", "core",
+    "build", "dist", "scratch", "skills", "ESTRUTURA", "ENTRADAS_MANUAIS",
+    "Specs_Definitivos", ".claude", ".vscode", "__pycache__"
+)
+$limpos = 0
+foreach ($r in $residuos) {
+    $alvo = Join-Path $destino $r
+    if (Test-Path $alvo) {
+        Remove-Item -LiteralPath $alvo -Recurse -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path $alvo)) { $limpos++ }
+    }
+}
+# Remove .py soltos na raiz (código de dev que não deve coexistir com o exe)
+Get-ChildItem -Path $destino -Filter "*.py" -File -ErrorAction SilentlyContinue | ForEach-Object {
+    Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+    $limpos++
+}
+if ($limpos -gt 0) {
+    Write-Host "Limpeza: $limpos resíduo(s) de instalação antiga removido(s)." -ForegroundColor Yellow
+}
+
 # 4) Coleta de arquivos e cópia com progresso
 $excluir = @(
     "config.json", 

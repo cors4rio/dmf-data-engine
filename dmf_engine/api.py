@@ -1071,3 +1071,110 @@ class Api:
             log.error(f"[SM] sm_salvar_config: {e}")
             return {"ok": False, "erro": str(e)}
 
+    # ── TFF Salvador ─────────────────────────────────────────────────────────
+
+    def _tf_svc(self):
+        mod = self._registry.get("tff_salvador")
+        if mod is None:
+            raise RuntimeError("Módulo tff_salvador não registrado.")
+        return mod._get_service()
+
+    def tf_selecionar_planilha(self) -> dict:
+        """Abre diálogo para selecionar TXT ou xlsx de clientes TFF."""
+        import webview
+        tipos = ("Planilha TXT Excel (*.txt;*.xlsx;*.xlsm)", "Todos os arquivos (*.*)")
+        result = self._win().create_file_dialog(
+            webview.OPEN_DIALOG, allow_multiple=False, file_types=tipos
+        )
+        if result and result[0]:
+            return {"ok": True, "caminho": result[0]}
+        return {"ok": False, "caminho": None}
+
+    def tf_carregar_planilha(self, caminho: str) -> dict:
+        """Parse TXT/xlsx com CGA+Razão Social+Município. Retorna preview."""
+        try:
+            self._tf_svc()  # garante que o path do serviço já foi injetado
+            from tf_planilha import carregar  # noqa: E402
+            resultado = carregar(caminho)
+            return {
+                "ok":        True,
+                "clientes":  resultado["clientes"],
+                "total":     len(resultado["clientes"]),
+                "invalidos": resultado["invalidos"],
+            }
+        except Exception as e:
+            log.error(f"[TF] tf_carregar_planilha: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def tf_executar_por_caminho(self, caminho: str, ano: int,
+                                pasta_destino: str) -> dict:
+        """Recarrega a planilha e inicia o lote."""
+        try:
+            if not os.path.isdir(pasta_destino):
+                return {"ok": False, "erro": f"Pasta não encontrada: {pasta_destino}"}
+            self._tf_svc()  # garante path injetado
+            from tf_planilha import carregar  # noqa: E402
+            resultado = carregar(caminho)
+            if not resultado["clientes"]:
+                return {"ok": False, "erro": "Nenhum cliente válido na planilha."}
+            return self._tf_svc().executar(resultado["clientes"], ano, pasta_destino)
+        except Exception as e:
+            log.error(f"[TF] tf_executar_por_caminho: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def tf_cancelar(self) -> dict:
+        try:
+            return self._tf_svc().cancelar()
+        except Exception as e:
+            log.error(f"[TF] tf_cancelar: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def tf_get_status(self) -> dict:
+        try:
+            return {"ok": True, **self._tf_svc().get_status()}
+        except Exception as e:
+            return {"ok": False, "erro": str(e)}
+
+    def tf_carregar_config(self) -> dict:
+        try:
+            cfg = self._config.load()
+            return {
+                "ok":                        True,
+                "tf_anticaptcha_api_key":    cfg.get("tf_anticaptcha_api_key", ""),
+                "tf_headless":               cfg.get("tf_headless", True),
+                "tf_captcha_timeout_s":      cfg.get("tf_captcha_timeout_s", 60),
+                "tf_pausa_entre_clientes_s": cfg.get("tf_pausa_entre_clientes_s", 3),
+            }
+        except Exception as e:
+            return {"ok": False, "erro": str(e)}
+
+    def tf_salvar_config(self, dados: dict) -> dict:
+        try:
+            cfg = self._config.load()
+            for chave in ("tf_anticaptcha_api_key", "tf_headless",
+                          "tf_captcha_timeout_s", "tf_pausa_entre_clientes_s"):
+                if chave in dados:
+                    cfg[chave] = dados[chave]
+            self._config.save(cfg)
+            return {"ok": True}
+        except Exception as e:
+            log.error(f"[TF] tf_salvar_config: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def tf_abrir_template(self, tipo: str) -> dict:
+        """Abre o template TXT ou XLSX de exemplo no aplicativo padrão do SO."""
+        import subprocess
+        nome = f"template_tff.{'txt' if tipo == 'txt' else 'xlsx'}"
+        caminho = os.path.join(self._base_dir, "ui", nome)
+        if not os.path.exists(caminho):
+            return {"ok": False, "erro": f"Template não encontrado: {caminho}"}
+        try:
+            os.startfile(caminho)
+            return {"ok": True}
+        except Exception as e:
+            try:
+                subprocess.Popen(["explorer", caminho])
+                return {"ok": True}
+            except Exception:
+                return {"ok": False, "erro": str(e)}
+

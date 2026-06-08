@@ -10,6 +10,7 @@ sofisticado, mas impede que uma pessoa entre na conta da outra mesmo tendo a sen
 """
 
 import os
+import sys
 import json
 import hashlib
 import hmac
@@ -20,26 +21,56 @@ from datetime import datetime
 
 
 # ── Usuários autorizados (carregados de arquivo externo) ──────────────────
+# usuarios.json é a fonte da verdade de quem pode logar. Precisa ser encontrado
+# tanto em dev (ao lado deste arquivo) quanto no exe empacotado (frozen).
+# No frozen, __file__ aponta para dentro do _MEIPASS (read-only e pode não conter
+# o arquivo); por isso procuramos em vários locais, na ordem de prioridade.
 _AUTH_DIR = os.path.dirname(os.path.abspath(__file__))
-_USUARIOS_FILE = os.path.join(_AUTH_DIR, "usuarios.json")
 
-USUARIOS_AUTORIZADOS = []
-if os.path.exists(_USUARIOS_FILE):
-    try:
-        with open(_USUARIOS_FILE, "r", encoding="utf-8") as _f:
-            USUARIOS_AUTORIZADOS = json.load(_f)
-    except Exception as _e:
-        logging.warning(f"[AUTH] Não foi possível ler usuarios.json: {_e}")
-else:
-    logging.warning("[AUTH] usuarios.json não encontrado. Copie usuarios_template.json → usuarios.json")
+
+def _candidatos_usuarios_file():
+    """Locais possíveis de usuarios.json, em ordem de prioridade."""
+    cands = []
+    # 1) Ao lado do executável (frozen) — permite editar sem rebuildar
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(sys.executable)
+        cands.append(os.path.join(exe_dir, "usuarios.json"))
+        cands.append(os.path.join(exe_dir, "dmf_engine", "usuarios.json"))
+        # 2) Empacotado dentro do bundle (_MEIPASS)
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            cands.append(os.path.join(meipass, "dmf_engine", "usuarios.json"))
+            cands.append(os.path.join(meipass, "usuarios.json"))
+    # 3) Ao lado deste módulo (dev: dmf_engine/usuarios.json)
+    cands.append(os.path.join(_AUTH_DIR, "usuarios.json"))
+    return cands
+
+
+def _carregar_usuarios_autorizados():
+    for caminho in _candidatos_usuarios_file():
+        if os.path.exists(caminho):
+            try:
+                with open(caminho, "r", encoding="utf-8") as _f:
+                    dados = json.load(_f)
+                logging.info(f"[AUTH] usuarios.json carregado de: {caminho} ({len(dados)} usuário(s))")
+                return dados
+            except Exception as _e:
+                logging.warning(f"[AUTH] Falha ao ler {caminho}: {_e}")
+    logging.warning("[AUTH] usuarios.json não encontrado em nenhum local conhecido: "
+                    f"{_candidatos_usuarios_file()}")
+    return []
+
+
+USUARIOS_AUTORIZADOS = _carregar_usuarios_autorizados()
 
 # Quais módulos cada papel pode executar (escrita)
 PERMISSOES_EXECUCAO = {
-    "admin":       {"fiscal", "contabil", "dp"},
-    "contabil":    {"contabil"},
-    "fiscal":      {"fiscal"},
-    "dp":          {"dp"},
-    "legalizacao": set(),
+    "admin":         {"fiscal", "contabil", "dp", "procuradoria"},
+    "contabil":      {"contabil"},
+    "fiscal":        {"fiscal"},
+    "dp":            {"dp"},
+    "legalizacao":   set(),
+    "procuradoria":  {"procuradoria"},
 }
 
 ITERACOES = 120_000
