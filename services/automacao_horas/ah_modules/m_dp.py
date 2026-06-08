@@ -14,7 +14,7 @@ import logging
 import traceback
 from datetime import datetime
 
-from modules.base import BaseModule, ModuleMeta
+from ah_modules.base import BaseModule, ModuleMeta
 
 log = logging.getLogger("DPModule")
 
@@ -43,9 +43,9 @@ class DPModule(BaseModule):
 
     def _fase1_importar_carol(self, opcoes: dict) -> dict:
         import webview
-        from engine.excel_parser import ExcelParser
+        from ah_engine.excel_parser import ExcelParser
 
-        import compat as _main
+        import ah_compat as _main
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT
         window = _main.window
@@ -108,11 +108,11 @@ class DPModule(BaseModule):
     # ── Fase 2: injetar na master (threaded via ThreadRunner) ────────────────
 
     def _fase2_injetar_master(self, opcoes: dict) -> dict:
-        from modulos.dp import extrair_e_preencher_dp
-        from engine.master_writer import MasterWriter
-        from engine.lock_master import adquirir_lock, liberar_lock
+        from ah_modulos.dp import extrair_e_preencher_dp
+        from ah_engine.master_writer import MasterWriter
+        from ah_engine.lock_master import adquirir_lock, liberar_lock
 
-        import compat as _main
+        import ah_compat as _main
         db = _main.db
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT

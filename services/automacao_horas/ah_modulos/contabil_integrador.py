@@ -14,8 +14,8 @@ import datetime
 import logging
 import openpyxl
 
-from modulos.excecoes import ler_codigos_setor
-from engine.onedrive_helper import esta_online_only, forcar_download
+from ah_modulos.excecoes import ler_codigos_setor
+from ah_engine.onedrive_helper import esta_online_only, forcar_download
 
 
 # Layout da HORAS CONTABEIS (Spec 1.2)

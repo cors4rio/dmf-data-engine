@@ -14,12 +14,12 @@ import sys
 import platform
 
 # ── Ajuste de sys.path ────────────────────────────────────────────────────────
-# _ROOT = services/automacao_horas/  — local dos módulos desta aplicação
+# _ROOT = services/automacao_horas/  — local dos módulos desta aplicação.
+# Os pacotes têm prefixo ah_* (ah_engine, ah_modulos, ah_core, ah_modules,
+# ah_api, ah_compat, ah_auth) para não colidir com os da Central quando rodam
+# no mesmo processo. Ver memória colisao-pacotes-engine-config / migracao-horas-inline.
 _ROOT = os.path.dirname(os.path.abspath(__file__))
-# Insere na frente para que "engine", "modulos", "modules", "core", "auth"
-# resolvam para as cópias locais em vez de qualquer outra instalação.
 sys.path.insert(0, _ROOT)
-# Raiz do projeto também precisa estar no path para importar o compat e outros.
 sys.path.insert(0, os.path.dirname(os.path.dirname(_ROOT)))
 
 import threading
@@ -139,15 +139,15 @@ def _recuperar_sessao_via_token():
 _sessao_sso = _recuperar_sessao_via_token()
 
 # ── Plugin Module System ───────────────────────────────────────────────────────
-from core.config import ConfigManager
-from core.event_bus import EventBus
-from core.thread_runner import ThreadRunner
-from modules.registry import ModuleRegistry
-from modules.m_fiscal import FiscalModule
-from modules.m_dp import DPModule
-from modules.m_contabil import ContabilModule
-from api import Api
-import compat  # shim: expõe db, estado_sh, PROJECT_ROOT, window
+from ah_core.config import ConfigManager
+from ah_core.event_bus import EventBus
+from ah_core.thread_runner import ThreadRunner
+from ah_modules.registry import ModuleRegistry
+from ah_modules.m_fiscal import FiscalModule
+from ah_modules.m_dp import DPModule
+from ah_modules.m_contabil import ContabilModule
+from ah_api import Api
+import ah_compat  # shim: expõe db, estado_sh, PROJECT_ROOT, window
 
 # Aplica credenciais do config.json no singleton db
 _config = ConfigManager(CONFIG_FILE)
@@ -179,7 +179,7 @@ _registry.register(ContabilModule(_bus, _config, _sessao_fn))
 api = Api(
     registry=_registry,
     config=_config,
-    auth=__import__("auth"),
+    auth=__import__("ah_auth"),
     bus=_bus,
     base_dir=BASE_DIR,
     project_root=compat.PROJECT_ROOT,

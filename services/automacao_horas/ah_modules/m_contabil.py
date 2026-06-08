@@ -11,7 +11,7 @@ import logging
 import traceback
 from datetime import datetime
 
-from modules.base import BaseModule, ModuleMeta
+from ah_modules.base import BaseModule, ModuleMeta
 
 log = logging.getLogger("ContabilModule")
 
@@ -39,9 +39,9 @@ class ContabilModule(BaseModule):
     # ── Fase 2: processar HORAS CONTABEIS ───────────────────────────────────
 
     def _fase2_processar(self, opcoes: dict) -> dict:
-        from modulos.contabil_preenchedor import preencher_horas_contabeis
+        from ah_modulos.contabil_preenchedor import preencher_horas_contabeis
 
-        import compat as _main
+        import ah_compat as _main
         db = _main.db
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT
@@ -94,11 +94,11 @@ class ContabilModule(BaseModule):
     # ── Fase 5: injetar na master ────────────────────────────────────────────
 
     def _fase5_injetar_master(self, opcoes: dict) -> dict:
-        from modulos.contabil_integrador import injetar_contabil_na_master
-        from engine.master_writer import MasterWriter
-        from engine.lock_master import adquirir_lock, liberar_lock
+        from ah_modulos.contabil_integrador import injetar_contabil_na_master
+        from ah_engine.master_writer import MasterWriter
+        from ah_engine.lock_master import adquirir_lock, liberar_lock
 
-        import compat as _main
+        import ah_compat as _main
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT
 

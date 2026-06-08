@@ -2,7 +2,7 @@ import openpyxl
 import logging
 import os
 import re
-from engine.onedrive_helper import preparar_para_uso, chamar_com_retry, esta_online_only, forcar_download
+from ah_engine.onedrive_helper import preparar_para_uso, chamar_com_retry, esta_online_only, forcar_download
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

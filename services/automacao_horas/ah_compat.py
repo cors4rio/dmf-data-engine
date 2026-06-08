@@ -9,8 +9,8 @@ Aqui fornecemos as mesmas refs sem depender do dmf_engine. Apenas troque:
 """
 import os
 
-from engine.database import db                        # noqa: F401
-from engine import estado_compartilhado as estado_sh  # noqa: F401
+from ah_engine.database import db                        # noqa: F401
+from ah_engine import estado_compartilhado as estado_sh  # noqa: F401
 
 # Raiz do projeto: este arquivo está em services/automacao_horas/
 # services/automacao_horas/compat.py → automacao_horas/ → services/ → repo root (3 dirname)

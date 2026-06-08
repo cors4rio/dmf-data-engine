@@ -55,7 +55,7 @@ class Api:
 
         try:
             cfg = self._config.load()
-            from engine.database import db
+            from ah_engine.database import db
             db.configurar(
                 dsn=cfg.get("db_dsn"),
                 uid=cfg.get("db_uid"),
@@ -70,7 +70,7 @@ class Api:
         return self._sessao
 
     def testar_conexao(self):
-        from engine.database import db
+        from ah_engine.database import db
         cfg = self._config.load()
         db.configurar(
             dsn=cfg.get("db_dsn"),
@@ -270,7 +270,7 @@ class Api:
     # ── Estado por módulo ─────────────────────────────────────────────────────
 
     def obter_estado_fiscal(self, data_inicio):
-        from engine import estado_compartilhado as estado_sh
+        from ah_engine import estado_compartilhado as estado_sh
         master_path = self._master_path()
         comp = (data_inicio or "")[:7]
         sh = estado_sh.obter(master_path, "fiscal", comp)
@@ -283,7 +283,7 @@ class Api:
         }
 
     def obter_estado_dp(self, data_inicio):
-        from engine import estado_compartilhado as estado_sh
+        from ah_engine import estado_compartilhado as estado_sh
         cfg = self._config.load()
         comp = (data_inicio or "")[:7]
         master_path = self._master_path()
@@ -304,7 +304,7 @@ class Api:
         }
 
     def obter_estado_contabil(self, data_inicio):
-        from engine import estado_compartilhado as estado_sh
+        from ah_engine import estado_compartilhado as estado_sh
         cfg = self._config.load()
         comp = (data_inicio or "")[:7]
         master_path = self._master_path()
@@ -338,7 +338,7 @@ class Api:
         }
 
     def obter_lock_master(self):
-        from engine.lock_master import verificar_lock
+        from ah_engine.lock_master import verificar_lock
         master_path = self._master_path()
         if not os.path.exists(master_path):
             return {"lock": None}
@@ -359,7 +359,7 @@ class Api:
         }
 
     def obter_dashboard_completo(self, competencia=None):
-        from engine.onedrive_helper import esta_online_only, forcar_download
+        from ah_engine.onedrive_helper import esta_online_only, forcar_download
         master_path = self._master_path()
         vazio = {
             "ok": False, "clientes": 0, "matches": 0, "pendencias": 0, "cnpj_dup": 0,
@@ -600,7 +600,7 @@ class Api:
             return vazio
 
     def listar_competencias_master(self):
-        from engine.onedrive_helper import esta_online_only, forcar_download
+        from ah_engine.onedrive_helper import esta_online_only, forcar_download
         master_path = self._master_path()
         if not master_path or not os.path.exists(master_path):
             return {"ok": False, "msg": "Master não encontrada", "competencias": []}
@@ -626,7 +626,7 @@ class Api:
     # ── Exceções por setor ────────────────────────────────────────────────────
 
     def listar_excecoes(self, setor=None):
-        from modulos.excecoes import caminho_excecao, ler_codigos_setor, metadados_setor, PASTA
+        from ah_modulos.excecoes import caminho_excecao, ler_codigos_setor, metadados_setor, PASTA
         if setor in ("dp", "contabil", "fiscal"):
             info = metadados_setor(setor)
             info["codigos"] = sorted(ler_codigos_setor(setor), key=lambda c: int(c))
@@ -636,7 +636,7 @@ class Api:
 
     def importar_excecoes(self, setor):
         import webview, shutil
-        from modulos.excecoes import caminho_excecao, ler_codigos_setor, metadados_setor, PASTA
+        from ah_modulos.excecoes import caminho_excecao, ler_codigos_setor, metadados_setor, PASTA
         if setor not in ("dp", "contabil", "fiscal"):
             return {"ok": False, "erro": f"Setor inválido: {setor}"}
         tipos = ["Arquivo texto (*.txt)", "Todos os arquivos (*.*)"]
@@ -659,7 +659,7 @@ class Api:
         return info
 
     def abrir_pasta_excecoes(self):
-        from modulos.excecoes import PASTA
+        from ah_modulos.excecoes import PASTA
         pasta = os.path.join(self._project_root, PASTA)
         try:
             os.startfile(pasta)
@@ -670,7 +670,7 @@ class Api:
     # ── Diagnóstico Contábil ──────────────────────────────────────────────────
 
     def obter_status_contabil(self):
-        from engine.onedrive_helper import esta_online_only, forcar_download
+        from ah_engine.onedrive_helper import esta_online_only, forcar_download
         cfg = self._config.load()
         candidatos = [
             cfg.get("contabil_origem_path"),
@@ -821,10 +821,10 @@ class Api:
 
     def executar_ciclo(self, opcoes: dict):
         """Executa fiscal+dp em sequência sem plugin. Mantido por retrocompat."""
-        from engine.master_writer import MasterWriter
-        from modulos.fiscal import extrair_e_preencher_fiscal
-        from modulos.dp import extrair_e_preencher_dp
-        from core.event_bus import json_safe
+        from ah_engine.master_writer import MasterWriter
+        from ah_modulos.fiscal import extrair_e_preencher_fiscal
+        from ah_modulos.dp import extrair_e_preencher_dp
+        from ah_core.event_bus import json_safe
 
         win = self._win()
         project_root = self._project_root

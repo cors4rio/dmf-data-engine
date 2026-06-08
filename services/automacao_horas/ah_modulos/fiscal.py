@@ -1,6 +1,6 @@
 import logging
-from engine.database import db
-from modulos.excecoes import ler_codigos_setor
+from ah_engine.database import db
+from ah_modulos.excecoes import ler_codigos_setor
 
 def extrair_e_preencher_fiscal(writer, data_inicio, data_fim, adicional_pct=80):
     """

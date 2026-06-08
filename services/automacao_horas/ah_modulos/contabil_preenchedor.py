@@ -14,8 +14,8 @@ import logging
 from datetime import datetime
 import openpyxl
 
-from engine.database import db
-from engine.onedrive_helper import preparar_para_uso, chamar_com_retry
+from ah_engine.database import db
+from ah_engine.onedrive_helper import preparar_para_uso, chamar_com_retry
 
 # Colunas-alvo na planilha HORAS CONTABEIS (1-indexadas para openpyxl)
 COL_CODIGO = 1   # A

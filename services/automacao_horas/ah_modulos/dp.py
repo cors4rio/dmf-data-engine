@@ -1,7 +1,7 @@
 import logging
 import os
-from engine.database import db
-from engine.excel_parser import ExcelParser
+from ah_engine.database import db
+from ah_engine.excel_parser import ExcelParser
 
 def extrair_e_preencher_dp(writer, data_inicio, data_fim, fator_carga=0.33, overhead_fixo=1.5, tempo_minimo_minutos=5.0, consultoria_horas=1.5, tempo_fixo_apenas_socios=1.0, caminho_carol=None):
     """
@@ -104,7 +104,7 @@ def extrair_e_preencher_dp(writer, data_inicio, data_fim, fator_carga=0.33, over
 
 def _ler_dp_nao(consultoria_horas=1.5):
     """Lê a lista de exceções do DP NÃO."""
-    from modulos.excecoes import caminho_excecao
+    from ah_modulos.excecoes import caminho_excecao
     arquivo = caminho_excecao("dp")
     excecoes = {}
     if os.path.exists(arquivo):

@@ -7,7 +7,7 @@ import logging
 import traceback
 from datetime import datetime
 
-from modules.base import BaseModule, ModuleMeta
+from ah_modules.base import BaseModule, ModuleMeta
 
 log = logging.getLogger("FiscalModule")
 
@@ -27,11 +27,11 @@ class FiscalModule(BaseModule):
         )
 
     def execute(self, opcoes: dict) -> dict:
-        from modulos.fiscal import extrair_e_preencher_fiscal
-        from engine.master_writer import MasterWriter
-        from engine.lock_master import adquirir_lock, liberar_lock
+        from ah_modulos.fiscal import extrair_e_preencher_fiscal
+        from ah_engine.master_writer import MasterWriter
+        from ah_engine.lock_master import adquirir_lock, liberar_lock
 
-        import compat as _main
+        import ah_compat as _main
         db = _main.db
         estado_sh = _main.estado_sh
         PROJECT_ROOT = _main.PROJECT_ROOT
