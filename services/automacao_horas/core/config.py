@@ -27,9 +27,15 @@ class ConfigManager:
         "dp_consultoria_horas": 1.5,
         "contabil_origem_path": r"C:\Users\DMF-AUTOMACAO\OneDrive - DMF\DMF - Documentos\Administrativo\HORAS CONTABEIS.xlsx",
         "contabil_aplicar_excecoes": True,
-        "db_dsn": "Contabil",
-        "db_uid": "EXTERNO",
-        "db_timeout": 5,
+        "db_dsn":      "Contabil",
+        "db_uid":      "EXTERNO",
+        "db_pwd":      "",
+        "db_timeout":  5,
+        "db_driver":   "SQL Anywhere 17",
+        "db_server":   "srvlinux",
+        "db_host":     "192.168.25.102",
+        "db_port":     2638,
+        "db_database": "contabil",
         "governanca_match_minimo": 2,
         "governanca_bloquear_cnpj_dup": True,
         "governanca_gravar_zero": True,
@@ -47,6 +53,9 @@ class ConfigManager:
                 cfg.update(saved)
             except Exception as e:
                 log.warning(f"Falha ao ler config.json: {e}")
+        # db_uid="dba" nunca autentica — o usuário real do banco é EXTERNO.
+        if str(cfg.get("db_uid", "")).strip().lower() == "dba":
+            cfg["db_uid"] = "EXTERNO"
         return cfg
 
     def save(self, updates: dict) -> bool:

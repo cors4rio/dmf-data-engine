@@ -6,28 +6,76 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class DominioDatabase:
     """
-    Gerenciador resiliente de conexão ODBC com o banco Domínio (Sybase).
+    Gerenciador resiliente de conexão ODBC com o banco Domínio (SAP SQL Anywhere 17).
     Isola falhas de conexão para não derrubar o motor principal.
+
+    Conexão DSN-less (preferida): monta a string direto do DRIVER + host/porta/server,
+    sem depender do DSN configurado no Windows de cada máquina. Funciona em 32 e 64-bit.
+    Fallback DSN (compatibilidade): se nenhum host for informado mas houver um DSN,
+    usa `DSN={dsn};...` como antes (modo legado da transição).
+    Ver docs/migracao-64bit.md.
     """
     def __init__(self):
-        self.dsn = os.environ.get("DOMINIO_DSN", "Contabil")
-        self.uid = os.environ.get("DOMINIO_UID", "EXTERNO")
-        self.pwd = os.environ.get("DOMINIO_PWD", "")
-        self.timeout = int(os.environ.get("DOMINIO_TIMEOUT", "5"))
-        self.connection_string = f"DSN={self.dsn};UID={self.uid};PWD={self.pwd}"
+        self.dsn      = os.environ.get("DOMINIO_DSN", "Contabil")
+        self.uid      = os.environ.get("DOMINIO_UID", "EXTERNO")
+        self.pwd      = os.environ.get("DOMINIO_PWD", "")
+        self.timeout  = int(os.environ.get("DOMINIO_TIMEOUT", "5"))
+        # Parâmetros DSN-less (defaults conhecidos da rede interna)
+        self.driver   = os.environ.get("DOMINIO_DRIVER",   "SQL Anywhere 17")
+        self.server   = os.environ.get("DOMINIO_SERVER",   "srvlinux")
+        self.host     = os.environ.get("DOMINIO_HOST",     "192.168.25.102")
+        self.port     = int(os.environ.get("DOMINIO_PORT", "2638"))
+        self.database = os.environ.get("DOMINIO_DB",       "contabil")
         self.conn = None
         self.ultimo_erro = None
+        self.connection_string = self._montar_connection_string()
 
-    def configurar(self, dsn=None, uid=None, pwd=None, timeout=None):
-        """Atualiza credenciais em runtime (sem reiniciar o app)."""
-        if dsn is not None: self.dsn = dsn
-        if uid is not None: self.uid = uid
-        if pwd is not None: self.pwd = pwd
+    def _montar_connection_string(self) -> str:
+        """
+        Monta a string de conexão. Prefere DSN-less (host presente); senão DSN legado.
+        """
+        if self.host:
+            return (
+                f"DRIVER={self.driver};ENG={self.server};DBN={self.database};"
+                f"LINKS=TCPIP{{host={self.host};serverport={self.port}}};"
+                f"UID={self.uid};PWD={self.pwd}"
+            )
+        # Fallback legado — DSN configurado no Windows
+        return f"DSN={self.dsn};UID={self.uid};PWD={self.pwd}"
+
+    def configurar(self, dsn=None, uid=None, pwd=None, timeout=None,
+                   driver=None, server=None, host=None, port=None, database=None):
+        """Atualiza credenciais/parâmetros em runtime (sem reiniciar o app)."""
+        if dsn      is not None: self.dsn = dsn
+        if uid      is not None: self.uid = uid
+        if pwd      is not None: self.pwd = pwd
+        if driver   is not None: self.driver = driver
+        if server   is not None: self.server = server
+        if host     is not None: self.host = host
+        if database is not None: self.database = database
+        if port is not None:
+            try: self.port = int(port)
+            except (TypeError, ValueError): pass
         if timeout is not None:
             try: self.timeout = int(timeout)
             except (TypeError, ValueError): pass
-        self.connection_string = f"DSN={self.dsn};UID={self.uid};PWD={self.pwd}"
+        self.connection_string = self._montar_connection_string()
         self.disconnect()
+
+    def configurar_de_cfg(self, cfg: dict):
+        """Configura a conexão a partir do dict de config da Central.
+        Centraliza o mapeamento config→conexão (DSN-less + fallback DSN)."""
+        self.configurar(
+            dsn=cfg.get("db_dsn"),
+            uid=cfg.get("db_uid"),
+            pwd=cfg.get("db_pwd") or self.pwd,
+            timeout=cfg.get("db_timeout", 5),
+            driver=cfg.get("db_driver"),
+            server=cfg.get("db_server"),
+            host=cfg.get("db_host"),
+            port=cfg.get("db_port"),
+            database=cfg.get("db_database"),
+        )
 
     def connect(self):
         """Tenta estabelecer conexao, retorna True se sucesso."""
@@ -38,7 +86,8 @@ class DominioDatabase:
             return True
         except Exception as e:
             self.ultimo_erro = str(e)
-            logging.error(f"Falha ao conectar no banco Domínio (DSN={self.dsn}): {e}")
+            alvo = f"{self.host}:{self.port}" if self.host else f"DSN={self.dsn}"
+            logging.error(f"Falha ao conectar no banco Domínio ({alvo}): {e}")
             return False
 
     def disconnect(self):

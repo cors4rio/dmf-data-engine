@@ -153,12 +153,7 @@ import compat  # shim: expõe db, estado_sh, PROJECT_ROOT, window
 _config = ConfigManager(CONFIG_FILE)
 try:
     _cfg_boot = _config.load()
-    compat.db.configurar(
-        dsn=_cfg_boot.get("db_dsn"),
-        uid=_cfg_boot.get("db_uid"),
-        pwd=_cfg_boot.get("db_pwd") or compat.db.pwd,
-        timeout=_cfg_boot.get("db_timeout", 5),
-    )
+    compat.db.configurar_de_cfg(_cfg_boot)
 except Exception as _e:
     logging.error("[BOOT] Falha ao configurar DB: %s", _e)
 

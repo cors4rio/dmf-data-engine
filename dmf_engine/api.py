@@ -49,12 +49,7 @@ class Api:
         try:
             cfg = self._config.load()
             from engine.database import db
-            db.configurar(
-                dsn=cfg.get("db_dsn"),
-                uid=cfg.get("db_uid"),
-                pwd=cfg.get("db_pwd") or db.pwd,
-                timeout=cfg.get("db_timeout", 5),
-            )
+            db.configurar_de_cfg(cfg)
         except Exception as e:
             log.error(f"[BOOT] Falha ao aplicar credenciais do config: {e}")
 
@@ -158,12 +153,7 @@ class Api:
     def testar_conexao(self):
         from engine.database import db
         cfg = self._config.load()
-        db.configurar(
-            dsn=cfg.get("db_dsn"),
-            uid=cfg.get("db_uid"),
-            pwd=cfg.get("db_pwd") or db.pwd,
-            timeout=cfg.get("db_timeout", 5),
-        )
+        db.configurar_de_cfg(cfg)
         ok = db.connect()
         resultado = {
             "ok": ok,
