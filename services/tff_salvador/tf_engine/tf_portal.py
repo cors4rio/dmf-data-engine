@@ -38,6 +38,7 @@ Seletores confirmados por mapeamento ao vivo (2026-06-05):
 """
 import os
 import re
+import traceback
 import logging
 
 log = logging.getLogger("TffSalvador.Portal")
@@ -333,7 +334,18 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
                         for cota in cotas:
                             if stop_flag.is_set():
                                 break
-                            g = emitir_cota(page, cga, cota, nome_final, ano, pasta_destino)
+                            # Nova page por cota: o portal auto-fecha a página
+                            # após exibir o PDF (Principal.aspx), invalidando
+                            # o objeto page se reutilizado entre cotas.
+                            cota_page = ctx.new_page()
+                            cota_page.set_default_timeout(60_000)
+                            try:
+                                g = emitir_cota(cota_page, cga, cota, nome_final, ano, pasta_destino)
+                            finally:
+                                try:
+                                    cota_page.close()
+                                except Exception:
+                                    pass
                             guias.append(g)
 
                         guias_ok = sum(1 for g in guias if g.get("arquivo"))
@@ -377,7 +389,7 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
                     status    = "erro"
                     detalhe   = str(e)
                     err_count += 1
-                    log.error(f"[CGA {cga}] Erro inesperado: {e}")
+                    log.error(f"[CGA {cga}] Erro inesperado: {e}\n{traceback.format_exc()}")
 
                 finally:
                     try:

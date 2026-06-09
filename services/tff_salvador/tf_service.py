@@ -8,12 +8,16 @@ import sys
 import threading
 import logging
 
-_HERE       = os.path.dirname(os.path.abspath(__file__))
-_ENGINE_DIR = os.path.join(_HERE, "tf_engine")
-
-for _p in (_ENGINE_DIR, _HERE):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+# Em dev: injeta tf_engine/ no sys.path para que tf_portal, tf_planilha etc.
+# sejam importáveis como nomes flat. No exe (PyInstaller frozen), os módulos
+# tf_* já estão em sys._MEIPASS via pathex — injetar __file__-relativo dentro
+# de _internal causaria ImportError.
+if not getattr(sys, "frozen", False):
+    _HERE       = os.path.dirname(os.path.abspath(__file__))
+    _ENGINE_DIR = os.path.join(_HERE, "tf_engine")
+    for _p in (_ENGINE_DIR, _HERE):
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
 
 log = logging.getLogger("TffSalvador.Service")
 

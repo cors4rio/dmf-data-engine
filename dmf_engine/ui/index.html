@@ -4944,7 +4944,7 @@ async function pfSalvarSenha() {
               <thead>
                 <tr>
                   <th>#</th><th>Razão Social</th><th>CNPJ</th><th>Município</th><th>CGA</th>
-                  <th>Status</th><th>Guias</th>
+                  <th>Status</th><th>Guias</th><th>Detalhe</th>
                 </tr>
               </thead>
               <tbody id="tf-clientes-tbody"></tbody>
@@ -5129,6 +5129,7 @@ function tfRenderizarTabela(clientes) {
       <td>${c.cga}</td>
       <td><span class="tf-badge tf-badge-idle" id="tf-status-${c.cga}">—</span></td>
       <td id="tf-guias-${c.cga}">—</td>
+      <td id="tf-detalhe-${c.cga}" style="font-size:11px;color:#888;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="">—</td>
     `;
     tbody.appendChild(tr);
   });
@@ -5244,7 +5245,7 @@ function tfOnProgress(dados) {
 }
 
 function tfOnCliente(dados) {
-  const { cga, status, guias } = dados;
+  const { cga, status, guias, detalhe } = dados;
   const badgeCls = status === 'ok'          ? 'tf-badge-ok'
                  : status === 'pago'        ? 'tf-badge-pago'
                  : status === 'sem_divida'  ? 'tf-badge-sem-divida'
@@ -5260,6 +5261,14 @@ function tfOnCliente(dados) {
   if (guiasEl) {
     const ok = (guias || []).filter(g => g.arquivo).length;
     guiasEl.textContent = `${ok}/${(guias || []).length}`;
+  }
+  const detalheEl = document.getElementById(`tf-detalhe-${cga}`);
+  if (detalheEl && detalhe) {
+    detalheEl.textContent = detalhe;
+    detalheEl.title = detalhe;
+  }
+  if (detalhe && status !== 'ok' && status !== 'pago' && status !== 'sem_divida') {
+    tfLogAppend(`[${cga}] ${status}: ${detalhe}`);
   }
 }
 

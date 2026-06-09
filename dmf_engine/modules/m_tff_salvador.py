@@ -15,14 +15,23 @@ from dmf_engine.modules.base import BaseModule, ModuleMeta
 
 log = logging.getLogger("TffSalvador")
 
-_SVC_DIR    = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "services", "tff_salvador")
-)
-_ENGINE_DIR = os.path.join(_SVC_DIR, "tf_engine")
-
 
 def _injetar_path():
-    for p in (_ENGINE_DIR, _SVC_DIR):
+    """
+    Em dev: injeta services/tff_salvador/ e tf_engine/ para que tf_service,
+    tf_planilha, tf_portal etc. sejam importáveis como nomes flat.
+    No exe (PyInstaller): os módulos tf_* já estão em sys._MEIPASS (pathex),
+    portanto não há nada a injetar — qualquer path relativo a __file__ dentro
+    de _internal seria inválido.
+    """
+    if getattr(sys, "frozen", False):
+        return  # exe: módulos flat já estão em sys._MEIPASS via pathex
+
+    svc_dir    = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "services", "tff_salvador")
+    )
+    engine_dir = os.path.join(svc_dir, "tf_engine")
+    for p in (engine_dir, svc_dir):
         if p not in sys.path:
             sys.path.insert(0, p)
 
