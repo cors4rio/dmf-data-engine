@@ -388,6 +388,11 @@ def executar_lote(empresas: list, mes: int, ano: int, pasta_destino: str,
 
     progress_cb(0, f"Iniciando lote de {total} empresa(s)...", "")
 
+    import sys as _sys, asyncio as _asyncio
+    if _sys.platform == "win32":
+        _loop = _asyncio.ProactorEventLoop()
+        _asyncio.set_event_loop(_loop)
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         try:

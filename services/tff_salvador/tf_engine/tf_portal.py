@@ -275,14 +275,6 @@ def _nome_arquivo(cga: str, razao_social: str, cota_label: str, ano: int) -> str
 
 def executar_lote(clientes: list, ano: int, pasta_destino: str,
                   stop_flag, progress_cb, cliente_cb, cfg: dict) -> dict:
-    # No exe (PyInstaller + pywebview), o main.py seta WindowsSelectorEventLoopPolicy
-    # globalmente para evitar conflito de IOCP com winforms. Isso quebra o Playwright
-    # nesta thread porque o SelectorEventLoop não suporta as operações async que ele
-    # precisa (NotImplementedError). Resetamos para o default do Windows (Proactor)
-    # apenas nesta thread antes de iniciar o sync_playwright.
-    import sys as _sys, asyncio as _asyncio
-    if _sys.platform == "win32" and getattr(_sys, "frozen", False):
-        _asyncio.set_event_loop_policy(_asyncio.DefaultEventLoopPolicy())
     """
     Processa um lote de clientes sequencialmente.
 
@@ -303,6 +295,16 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
     pausa_s   = float(cfg.get("tf_pausa_entre_clientes_s", 3))
 
     progress_cb(0, f"Iniciando lote de {total} cliente(s)...", "")
+
+    # No exe (PyInstaller+pywebview), o main.py seta WindowsSelectorEventLoopPolicy
+    # globalmente. SelectorEventLoop não suporta subprocessos no Windows
+    # (_make_subprocess_transport → NotImplementedError), que é o que o Playwright
+    # usa para lançar node.exe. Solução: instalar um ProactorEventLoop nesta thread
+    # diretamente, sem alterar a policy global (que afetaria o pywebview).
+    import sys as _sys, asyncio as _asyncio
+    if _sys.platform == "win32":
+        _loop = _asyncio.ProactorEventLoop()
+        _asyncio.set_event_loop(_loop)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
