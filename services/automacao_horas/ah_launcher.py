@@ -124,10 +124,20 @@ def abrir_janela_horas(sessao: dict | None = None) -> dict:
     )
     api_ref["api"] = api
 
+    # URL como file:// (não caminho local). O HTTP server do pywebview é único
+    # por processo e seu root é fixado no commonpath das janelas existentes no
+    # webview.start() — ou seja, no diretório da UI da Central. Uma 2a janela
+    # criada depois com um caminho local fora desse root é servida relativa ao
+    # root da Central e dá 404 (/ui/index.html não existe lá). Uma URL file://
+    # é carregada direto do disco (is_local_url=False), contornando o problema.
+    import pathlib
+    ui_path = os.path.join(resources_dir, "ui", "index.html")
+    ui_url = pathlib.Path(ui_path).as_uri()
+
     try:
         janela = webview.create_window(
             title="DMF — Automação de Horas",
-            url=os.path.join(resources_dir, "ui", "index.html"),
+            url=ui_url,
             js_api=api,
             width=1100,
             height=720,
