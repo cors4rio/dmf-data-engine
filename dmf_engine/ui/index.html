@@ -5283,6 +5283,7 @@ function tfOnDone(dados) {
     : `Concluído: ${dados.ok_count}/${dados.total} OK, ${dados.erros} erro(s).`;
   toast(msg, dados.erros > 0 ? 'warning' : 'success');
 
+  if (dados.detalhe) tfLogAppend(`ERRO FATAL: ${dados.detalhe}`);
   if (dados.resumo_arquivo) tfLogAppend(`Resumo salvo: ${dados.resumo_arquivo}`);
 }
 

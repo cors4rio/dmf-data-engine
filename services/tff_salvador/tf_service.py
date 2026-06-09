@@ -68,9 +68,6 @@ class TffSalvadorService:
     # ── Thread principal ──────────────────────────────────────────────────────
 
     def _run_lote(self, clientes, ano, pasta_destino, stop, cfg):
-        from tf_portal import executar_lote
-        from tf_resumo import gerar as gerar_resumo
-
         def progress_cb(pct, msg, cga):
             self._cb("tf_progress", {"pct": pct, "msg": msg, "cga": cga})
 
@@ -91,6 +88,8 @@ class TffSalvadorService:
 
         resumo_arquivo = None
         try:
+            from tf_portal import executar_lote
+            from tf_resumo import gerar as gerar_resumo
             res = executar_lote(
                 clientes=clientes,
                 ano=ano,
@@ -116,13 +115,23 @@ class TffSalvadorService:
                 "resumo_arquivo": resumo_arquivo,
             })
 
-        except Exception as e:
-            log.error(f"Erro fatal no lote: {e}")
+        except BaseException as e:
+            import traceback as _tb
+            msg = f"{type(e).__name__}: {e}\n{_tb.format_exc()}"
+            log.error(f"Erro fatal no lote: {msg}")
+            # Escreve em arquivo temporário para diagnóstico mesmo sem log configurado
+            try:
+                import tempfile, os as _os
+                p = _os.path.join(tempfile.gettempdir(), "dmf_tff_erro.txt")
+                with open(p, "w", encoding="utf-8") as fh:
+                    fh.write(msg)
+            except Exception:
+                pass
             self._cb("tf_done", {
                 "ok": False, "total": len(clientes),
                 "ok_count": 0, "erros": len(clientes),
                 "cancelado": False, "resumo_arquivo": None,
-                "detalhe": str(e),
+                "detalhe": msg[:300],
             })
         finally:
             self._running.pop("lote", None)
