@@ -40,6 +40,12 @@ class ConfigManager:
         "db_host":     "192.168.25.102",
         "db_port":     2638,
         "db_database": "contabil",
+        # Caminho de rede universal (o antigo "disco Z"). Usa UNC por padrão —
+        # visível a qualquer processo, ao contrário da letra Z: mapeada por sessão.
+        # Ver dmf_engine/core/network_path.py.
+        "network_unc":    r"\\srvdmf\CELULAS 2013",
+        "network_subdir": r"#ROTINA AUTOMATICA NF",
+        "network_letra":  "Z:",
         "governanca_match_minimo": 2,
         "governanca_bloquear_cnpj_dup": True,
         "governanca_gravar_zero": True,

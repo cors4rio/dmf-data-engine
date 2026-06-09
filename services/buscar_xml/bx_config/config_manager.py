@@ -29,11 +29,13 @@ DEFAULT_CONFIG = {
         "senha":           "",
         "idle_max_ciclos": 5,  # ciclos sem e-mail → encerra daemon da sessão
     },
+    # Caminhos de rede via UNC (visível a qualquer processo), não pela letra Z:
+    # mapeada — que é por-sessão e invisível ao exe. Ver dmf_engine/core/network_path.py.
     "paths": {
-        "base_z": r"Z:\#ROTINA AUTOMATICA NF",
-        "nfe":    r"Z:\#ROTINA AUTOMATICA NF\NFe",
-        "nfce":   r"Z:\#ROTINA AUTOMATICA NF\NFCe",
-        "sped":   r"Z:\#ROTINA AUTOMATICA NF\SPED",
+        "base_z": r"\\srvdmf\CELULAS 2013\#ROTINA AUTOMATICA NF",
+        "nfe":    r"\\srvdmf\CELULAS 2013\#ROTINA AUTOMATICA NF\NFe",
+        "nfce":   r"\\srvdmf\CELULAS 2013\#ROTINA AUTOMATICA NF\NFCe",
+        "sped":   r"\\srvdmf\CELULAS 2013\#ROTINA AUTOMATICA NF\SPED",
     },
     "telegram": {
         "bot_token": "",
@@ -81,7 +83,9 @@ class ConfigManager:
         try:
             with open(self._path, "r", encoding="utf-8") as f:
                 dados = json.load(f)
-            return _merge(DEFAULT_CONFIG, dados)
+            cfg = _merge(DEFAULT_CONFIG, dados)
+            _migrar_z_para_unc(cfg)
+            return cfg
         except Exception:
             return _deep_copy(DEFAULT_CONFIG)
 
@@ -115,3 +119,27 @@ def _merge(default: dict, override: dict) -> dict:
 
 def _deep_copy(d):
     return json.loads(json.dumps(d))
+
+
+# UNC universal (visível a qualquer processo) substituindo a letra Z: mapeada,
+# que é por-sessão e invisível ao exe. Ver dmf_engine/core/network_path.py.
+_UNC_BASE = r"\\srvdmf\CELULAS 2013\#ROTINA AUTOMATICA NF"
+
+
+def _migrar_z_para_unc(cfg: dict) -> None:
+    """Self-healing: troca caminhos legados 'Z:\\#ROTINA AUTOMATICA NF' pelo UNC,
+    em configs já salvas em cada máquina. Idempotente."""
+    def _troca(valor):
+        if isinstance(valor, str):
+            low = valor.lower()
+            if low.startswith("z:\\#rotina automatica nf") or low == "z:\\#rotina automatica nf":
+                return _UNC_BASE + valor[len(r"Z:\#ROTINA AUTOMATICA NF"):]
+        return valor
+
+    paths = cfg.get("paths")
+    if isinstance(paths, dict):
+        for k, v in list(paths.items()):
+            paths[k] = _troca(v)
+    tokai = cfg.get("tokai")
+    if isinstance(tokai, dict) and "network_path" in tokai:
+        tokai["network_path"] = _troca(tokai["network_path"])

@@ -900,9 +900,43 @@ class Api:
             log.error(f"[BX] bx_testar_conexao_erp: {e}")
             return {"ok": False, "erro": str(e)}
 
-    def bx_verificar_disco_z(self) -> dict:
+    # ── Caminho de rede universal (o antigo "disco Z") ───────────────────────
+    # Resolve via UNC (visível a qualquer processo) em vez da letra Z: mapeada,
+    # que é por-sessão e frequentemente invisível ao exe. Usável por qualquer
+    # módulo. Ver dmf_engine/core/network_path.py.
+
+    def verificar_rede(self) -> dict:
+        """Estado do caminho de rede universal: {ok, base, via, tentados}."""
         try:
-            return self._bx_svc().verificar_disco_z()
+            from dmf_engine.core.network_path import verificar
+            return verificar(self._config.load())
+        except Exception as e:
+            log.error(f"[REDE] verificar_rede: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def mapear_rede(self, unc: str = "") -> dict:
+        """
+        Salva o UNC do caminho de rede no config (override manual) e revalida.
+        Para máquinas onde o share/servidor difere do padrão.
+        """
+        try:
+            from dmf_engine.core.network_path import verificar
+            if unc and unc.strip():
+                self._config.save({"network_unc": unc.strip()})
+            return verificar(self._config.load())
+        except Exception as e:
+            log.error(f"[REDE] mapear_rede: {e}")
+            return {"ok": False, "erro": str(e)}
+
+    def bx_verificar_disco_z(self) -> dict:
+        # Delegado ao resolvedor universal (UNC-first). Mantém o nome antigo
+        # para compatibilidade com a UI do Buscar XML.
+        try:
+            from dmf_engine.core.network_path import verificar
+            r = verificar(self._config.load())
+            # Compat: a UI antiga espera {ok, path, drive}
+            return {"ok": r.get("ok"), "path": r.get("base"),
+                    "drive": r.get("base"), "via": r.get("via")}
         except Exception as e:
             log.error(f"[BX] bx_verificar_disco_z: {e}")
             return {"ok": False, "erro": str(e)}
