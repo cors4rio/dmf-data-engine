@@ -377,6 +377,14 @@ def executar_lote(empresas: list, mes: int, ano: int, pasta_destino: str,
 
     Retorna: {"total": int, "ok": int, "erros": int, "cancelado": bool}
     """
+    # Ver tf_portal.executar_lote: no exe, o Playwright bundled não acha o Chromium
+    # (driver procura em _internal, vazio). Apontamos para o ms-playwright do usuário.
+    if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        _browsers_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ms-playwright")
+        if os.path.isdir(_browsers_dir):
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _browsers_dir
+            log.info(f"PLAYWRIGHT_BROWSERS_PATH = {_browsers_dir}")
+
     from playwright.sync_api import sync_playwright
 
     total     = len(empresas)

@@ -286,6 +286,19 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
 
     Retorna: {"total": int, "ok": int, "erros": int, "cancelado": bool}
     """
+    # No exe, o Playwright empacotado não sabe onde está o Chromium: o driver
+    # bundled procura em _internal/.../.local-browsers (vazio). O instalador instala
+    # o Chromium no path PADRÃO do usuário (%LOCALAPPDATA%\ms-playwright). Sem
+    # apontar PLAYWRIGHT_BROWSERS_PATH para lá, chromium.launch() trava esperando um
+    # navegador que nunca encontra. Em dev o site-packages já resolve o path sozinho.
+    if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        _browsers_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ms-playwright")
+        if os.path.isdir(_browsers_dir):
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _browsers_dir
+            log.info(f"PLAYWRIGHT_BROWSERS_PATH = {_browsers_dir}")
+        else:
+            log.warning(f"ms-playwright não encontrado em {_browsers_dir} — launch pode falhar.")
+
     from playwright.sync_api import sync_playwright
 
     total     = len(clientes)
@@ -314,7 +327,11 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
 
     try:
       with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
+        log.info(f"Iniciando Chromium (headless={headless})...")
+        # timeout explícito: se o launch travar (browser não encontrado, IOCP
+        # preso), lança TimeoutError em vez de pendurar a thread para sempre.
+        browser = p.chromium.launch(headless=headless, timeout=60_000)
+        log.info("Chromium pronto.")
         try:
             for idx, cliente in enumerate(clientes, start=1):
                 if stop_flag.is_set():
