@@ -1571,13 +1571,25 @@ async function confirmarTrocaSenha() {
     window._loginPendente.nome, window._loginPendente.senha, s1
   );
   if (!r.ok) { erro.textContent = r.erro || 'Falha ao trocar senha.'; return; }
+  // Encerra a sessão no backend e volta para o login: o usuário entra de novo
+  // com a senha nova. Evita tela em branco ao tentar entrar direto pelo fluxo
+  // legado (bootApp) que não casa com o sistema de telas pf-*.
+  try { await api().logout(); } catch (e) {}
   window._loginPendente = null;
+  window._sessao = null;
   document.getElementById('troca-nova').value = '';
   document.getElementById('troca-nova2').value = '';
-  document.getElementById('login-senha').value = '';
-  aplicarSessaoNoUI({nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina});
-  toast('Senha definida com sucesso. Conta vinculada a esta máquina.', 'success', 5000);
-  await bootApp();
+  const ls = document.getElementById('login-senha'); if (ls) ls.value = '';
+  const ps = document.getElementById('pf-senha');    if (ps) ps.value = '';
+  // Restaura o overlay para o formulário de login e vai à seleção de setor.
+  document.getElementById('login-form').style.display = '';
+  document.getElementById('troca-senha-form').style.display = 'none';
+  document.getElementById('login-titulo').innerHTML = '<i class="ti ti-shield-lock"></i> DMF Engine';
+  document.getElementById('login-subtitulo').textContent = 'Faça login para continuar';
+  document.getElementById('login-erro').textContent = '';
+  toast('Senha definida com sucesso. Entre com a sua nova senha.', 'success', 5000);
+  pfRenderSectorScreen();
+  goToPlatformScreen('screen-sector');
 }
 
 async function fazerLogout() {

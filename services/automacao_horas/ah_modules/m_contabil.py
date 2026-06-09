@@ -134,9 +134,11 @@ class ContabilModule(BaseModule):
                         "erro": "Master está aberta no Excel. Feche o arquivo."}
 
             self.progress(20, "Abrindo planilha master...")
-            writer = MasterWriter(master_path)
+            # Contábil grava na aba da própria competência (= dropdown, mês-1).
+            competencia_aba = opcoes.get("competencia_aba") or (data_inicio or "")[:7]
+            writer = MasterWriter(master_path, competencia=competencia_aba)
             if not writer.carregar():
-                return {"ok": False, "erro": "Falha ao abrir master."}
+                return {"ok": False, **(writer.ultimo_erro or {"erro": "Falha ao abrir master."})}
 
             self.progress(50, "Lendo horas validadas e lançando na master...")
             resultado = injetar_contabil_na_master(writer, caminho, data_inicio, data_fim)

@@ -1055,9 +1055,9 @@
         <div class="card" style="background:#eff6ff;border-color:#bfdbfe">
           <div class="card-header"><div class="card-title" style="color:var(--color-accent)"><i class="ti ti-calendar-stats"></i> Competência de processamento</div></div>
           <div style="font-size:13px;color:var(--color-text-muted);line-height:1.7">
-            Regra do módulo Fiscal: <b>mês corrente − 2</b> (uma posição abaixo do Contábil/DP).
-            <br>Dropdown da topbar: <b id="fiscal-base">—</b>
-            <br>Janela aplicada ao Fiscal: <b style="color:var(--color-accent)" id="fiscal-derivado">—</b>
+            O Fiscal busca os <b>dados de 2 meses atrás</b> (mês − 2) e os <b>lança na aba do mês selecionado</b> no dropdown.
+            <br>Aba de destino (dropdown): <b style="color:var(--color-accent)" id="fiscal-base">—</b>
+            <br>Período dos dados consultados: <b id="fiscal-derivado">—</b>
           </div>
         </div>
         <div class="card">
@@ -2301,13 +2301,15 @@ function janelaCompetencia(modulo) {
 
 async function executarFiscal() {
   if (!api()) return semBridge();
-  const comp = janelaCompetencia('fiscal');
+  const comp = janelaCompetencia('fiscal');          // período dos DADOS (mês-2)
+  const abaComp = janelaCompetencia('dp').competencia; // aba de DESTINO (dropdown, mês-1)
   setBadge('fiscal-exec-badge', 'executando…', 'status-wait');
   document.getElementById('btn-executar-fiscal').disabled = true;
   atualizarProgresso(0, 'Iniciando Fiscal…');
   const r = await api().executar_fiscal_individual({
     data_inicio: comp.data_inicio,
-    data_fim: comp.data_fim
+    data_fim: comp.data_fim,
+    competencia_aba: abaComp   // grava na aba do mês selecionado, não na ativa
   });
   if (r && r.ok === false) {
     const tipo = r.tipo === 'locked_concorrente' ? 'warning' : 'error';

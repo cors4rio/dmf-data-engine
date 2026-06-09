@@ -46,6 +46,10 @@ class FiscalModule(BaseModule):
         )
         data_inicio = opcoes.get("data_inicio")
         data_fim = opcoes.get("data_fim")
+        # Aba de destino = competência do dropdown (mês-1). É DIFERENTE do período
+        # de dados do Fiscal (data_inicio = mês-2). Sem competencia_aba explícita,
+        # cai no data_inicio (compat) — mas o frontend deve enviá-la.
+        competencia_aba = opcoes.get("competencia_aba") or (data_inicio or "")[:7]
 
         if not data_inicio or not data_fim:
             return {"ok": False, "erro": "Competência ausente."}
@@ -69,9 +73,9 @@ class FiscalModule(BaseModule):
                 return {"ok": False, "erro": "Falha na conexão ODBC."}
 
             self.progress(30, "Abrindo master...")
-            writer = MasterWriter(master_path)
+            writer = MasterWriter(master_path, competencia=competencia_aba)
             if not writer.carregar():
-                return {"ok": False, "erro": "Falha ao abrir master."}
+                return {"ok": False, **(writer.ultimo_erro or {"erro": "Falha ao abrir master."})}
 
             self.progress(55, f"Executando Fiscal ({data_inicio[:7]})...")
             ok = extrair_e_preencher_fiscal(

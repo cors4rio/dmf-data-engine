@@ -11,8 +11,11 @@ class MasterWriter:
     Componente central responsável por ler e escrever de forma segura na Planilha Master.
     Aplica validação dupla (Codi_emp e CNPJ) e formatação correta de horas.
     """
-    def __init__(self, caminho_master):
+    def __init__(self, caminho_master, competencia=None):
         self.caminho = caminho_master
+        # competencia "AAAA-MM" ou "MM/AAAA" → seleciona a aba "MM.AAAA" para
+        # escrita. Se None, cai no comportamento legado (aba ativa) com aviso.
+        self.competencia = competencia
         self.wb = None
         self.ws = None
         self.row_map = {}
@@ -55,7 +58,10 @@ class MasterWriter:
                 tentativas=4, intervalo_inicial=0.6,
                 descricao="load_workbook(master)",
             )
-            self.ws = self.wb.active
+            # Seleciona a aba pela competência ("MM.AAAA"). Sem competência,
+            # ou aba inexistente → erro claro (NÃO grava na aba errada).
+            if not self._selecionar_aba():
+                return False
             self._mapear_linhas()
             self.ultimo_erro = None
             return True
@@ -68,7 +74,47 @@ class MasterWriter:
             logging.error(f"[MASTER] Erro crítico ao abrir Planilha Master: {e}")
             self.ultimo_erro = {"tipo": "erro", "msg": str(e)}
             return False
-            
+
+    @staticmethod
+    def _competencia_para_aba(competencia: str) -> str | None:
+        """'AAAA-MM' ou 'MM/AAAA' → nome de aba 'MM.AAAA'. None se inválida."""
+        if not competencia:
+            return None
+        c = str(competencia).strip()
+        if "-" in c and len(c) >= 7:          # AAAA-MM
+            ano, mes = c[:4], c[5:7]
+        elif "/" in c and len(c) >= 7:        # MM/AAAA
+            mes, ano = c[:2], c[3:7]
+        elif "." in c and len(c) >= 7:        # MM.AAAA (já no formato)
+            return c[:7]
+        else:
+            return None
+        if not (ano.isdigit() and mes.isdigit()):
+            return None
+        return f"{mes}.{ano}"
+
+    def _selecionar_aba(self) -> bool:
+        """Seleciona self.ws pela competência. Erro claro se a aba não existir —
+        nunca grava na aba errada silenciosamente."""
+        aba = self._competencia_para_aba(self.competencia)
+        if aba is None:
+            # Sem competência válida: comportamento legado (aba ativa) com aviso.
+            self.ws = self.wb.active
+            logging.warning(
+                f"[MASTER] Sem competência válida ({self.competencia!r}); "
+                f"usando aba ativa '{self.ws.title}'. Verifique a seleção de competência."
+            )
+            return True
+        if aba not in self.wb.sheetnames:
+            msg = (f"A aba da competência {aba} não existe na master. "
+                   f"Abas disponíveis: {', '.join(self.wb.sheetnames)}")
+            logging.error(f"[MASTER] {msg}")
+            self.ultimo_erro = {"tipo": "aba_inexistente", "msg": msg}
+            return False
+        self.ws = self.wb[aba]
+        logging.info(f"[MASTER] Gravando na aba da competência: {aba}")
+        return True
+
     def _mapear_linhas(self):
         """Mapeia os códigos e CNPJs para as linhas correspondentes."""
         self.row_map = {}
