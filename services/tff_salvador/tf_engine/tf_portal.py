@@ -297,16 +297,23 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
     progress_cb(0, f"Iniciando lote de {total} cliente(s)...", "")
 
     # No exe (PyInstaller+pywebview), o main.py seta WindowsSelectorEventLoopPolicy
-    # globalmente. SelectorEventLoop não suporta subprocessos no Windows
-    # (_make_subprocess_transport → NotImplementedError), que é o que o Playwright
-    # usa para lançar node.exe. Solução: instalar um ProactorEventLoop nesta thread
-    # diretamente, sem alterar a policy global (que afetaria o pywebview).
-    import sys as _sys, asyncio as _asyncio
+    # globalmente. O Playwright sync_api cria seu loop via asyncio.new_event_loop(),
+    # que lê a POLICY (não o loop setado manualmente) — e o SelectorEventLoop não
+    # implementa subprocessos no Windows (_make_subprocess_transport →
+    # NotImplementedError) que o Playwright usa p/ lançar node.exe. Provado em teste
+    # isolado: set_event_loop(Proactor) NÃO resolve; só trocar a POLICY resolve.
+    # Como a policy é global ao processo, trocamos para Proactor durante o lote e
+    # restauramos no finally. O pywebview usa winforms (message loop nativo, não
+    # asyncio), então não é afetado pela troca.
+    import asyncio as _asyncio
+    import sys as _sys
+    _policy_anterior = None
     if _sys.platform == "win32":
-        _loop = _asyncio.ProactorEventLoop()
-        _asyncio.set_event_loop(_loop)
+        _policy_anterior = _asyncio.get_event_loop_policy()
+        _asyncio.set_event_loop_policy(_asyncio.WindowsProactorEventLoopPolicy())
 
-    with sync_playwright() as p:
+    try:
+      with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         try:
             for idx, cliente in enumerate(clientes, start=1):
@@ -431,6 +438,9 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
                 browser.close()
             except Exception:
                 pass
+    finally:
+        if _policy_anterior is not None:
+            _asyncio.set_event_loop_policy(_policy_anterior)
 
     cancelado = stop_flag.is_set()
     progress_cb(

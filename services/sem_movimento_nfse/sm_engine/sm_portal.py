@@ -388,12 +388,18 @@ def executar_lote(empresas: list, mes: int, ano: int, pasta_destino: str,
 
     progress_cb(0, f"Iniciando lote de {total} empresa(s)...", "")
 
-    import sys as _sys, asyncio as _asyncio
+    # Ver tf_portal.executar_lote: o Playwright sync precisa de ProactorEventLoop;
+    # o main.py seta SelectorEventLoopPolicy globalmente p/ o pywebview. Trocamos a
+    # policy p/ Proactor durante o lote e restauramos no finally.
+    import asyncio as _asyncio
+    import sys as _sys
+    _policy_anterior = None
     if _sys.platform == "win32":
-        _loop = _asyncio.ProactorEventLoop()
-        _asyncio.set_event_loop(_loop)
+        _policy_anterior = _asyncio.get_event_loop_policy()
+        _asyncio.set_event_loop_policy(_asyncio.WindowsProactorEventLoopPolicy())
 
-    with sync_playwright() as p:
+    try:
+      with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         try:
             for idx, empresa in enumerate(empresas, start=1):
@@ -474,6 +480,9 @@ def executar_lote(empresas: list, mes: int, ano: int, pasta_destino: str,
                 browser.close()
             except Exception:
                 pass
+    finally:
+        if _policy_anterior is not None:
+            _asyncio.set_event_loop_policy(_policy_anterior)
 
     cancelado = stop_flag.is_set()
     progress_cb(100 if not cancelado else None,
