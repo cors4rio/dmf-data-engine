@@ -77,9 +77,16 @@ def abrir_janela_horas(sessao: dict | None = None) -> dict:
         log.error("Falha ao importar o stack ah_*: %s", e)
         return {"ok": False, "erro": f"Falha ao carregar a Automação de Horas: {e}"}
 
-    base_dir   = _HERE
+    # Resolução de caminhos compatível com frozen (PyInstaller):
+    #   - UI (read-only) vem do bundle: _MEIPASS/services/automacao_horas/ui
+    #   - config.json (escrita) fica ao lado do exe (BASE_DIR), não no bundle
+    if getattr(sys, "frozen", False):
+        base_dir      = os.path.dirname(sys.executable)
+        resources_dir = os.path.join(sys._MEIPASS, "services", "automacao_horas")
+    else:
+        base_dir      = _HERE
+        resources_dir = _HERE
     config_file = os.path.join(base_dir, "config.json")
-    resources_dir = _HERE
 
     _config = ConfigManager(config_file)
 
