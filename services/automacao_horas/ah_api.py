@@ -322,10 +322,15 @@ class Api:
 
     def obter_resumo_competencia(self, data_inicio):
         comp = (data_inicio or "")[:7]
+        # Período dos dados fiscais = competência (dropdown) − 2 meses. Mesma
+        # defasagem usada na execução (m_fiscal grava o estado em dropdown−2),
+        # então o estado verificado aqui precisa bater. Ver janelaCompetencia no
+        # front e docs/regras-de-negocio.md (Fiscal = mês − 2).
         try:
-            ano_f, mes_f = int(comp[:4]), int(comp[5:7]) - 1
-            if mes_f == 0:
-                mes_f, ano_f = 12, ano_f - 1
+            ano_f, mes_f = int(comp[:4]), int(comp[5:7]) - 2
+            while mes_f <= 0:
+                mes_f += 12
+                ano_f -= 1
             comp_fiscal = f"{ano_f}-{mes_f:02d}"
         except Exception:
             comp_fiscal = comp
@@ -855,27 +860,35 @@ class Api:
                             {"tipo": "locked", "msg": "Planilha master está aberta no Excel."}) + ")")
                     return
 
-                writer = MasterWriter(master_path)
-                if not writer.carregar():
-                    progresso(0, "Erro: falha ao abrir planilha master")
-                    return
-
                 hoje = datetime.now()
                 mes_alvo = hoje.month - 1
                 ano_alvo = hoje.year
                 if mes_alvo == 0:
                     mes_alvo, ano_alvo = 12, ano_alvo - 1
                 ultimo_dia = monthrange(ano_alvo, mes_alvo)[1]
+                # data_inicio = competência selecionada (dropdown) = ABA DE DESTINO.
                 data_inicio = opcoes.get("data_inicio") or f"{ano_alvo}-{mes_alvo:02d}-01"
                 data_fim = opcoes.get("data_fim") or f"{ano_alvo}-{mes_alvo:02d}-{ultimo_dia:02d}"
+
+                # Grava na aba da competência do dropdown (não na aba ativa).
+                writer = MasterWriter(master_path, competencia=data_inicio[:7])
+                if not writer.carregar():
+                    erro = writer.ultimo_erro or {"msg": "falha ao abrir planilha master"}
+                    progresso(0, f"Erro: {erro.get('msg', 'falha ao abrir master')}")
+                    if win:
+                        win.evaluate_js("window.execucaoFalhou(" + json_safe(erro) + ")")
+                    return
 
                 fiscal_data_inicio = opcoes.get("fiscal_data_inicio")
                 fiscal_data_fim = opcoes.get("fiscal_data_fim")
                 if not fiscal_data_inicio or not fiscal_data_fim:
+                    # Fiscal: dados 2 meses antes da aba (mês − 2). Ver janelaCompetencia
+                    # no front e docs/regras-de-negocio.md.
                     ano_f = int(data_inicio[:4])
-                    mes_f = int(data_inicio[5:7]) - 1
-                    if mes_f == 0:
-                        mes_f, ano_f = 12, ano_f - 1
+                    mes_f = int(data_inicio[5:7]) - 2
+                    while mes_f <= 0:
+                        mes_f += 12
+                        ano_f -= 1
                     ult_f = monthrange(ano_f, mes_f)[1]
                     fiscal_data_inicio = f"{ano_f}-{mes_f:02d}-01"
                     fiscal_data_fim = f"{ano_f}-{mes_f:02d}-{ult_f:02d}"

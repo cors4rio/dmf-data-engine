@@ -2275,24 +2275,24 @@ function montarJanelaMes(ano, mes) {
 }
 
 function janelaCompetencia(modulo) {
-  /* Regra de defasamento (Spec):
-       Contábil / DP / default → mês selecionado (que já é mês_atual - 1 por default).
-       Fiscal                  → mês selecionado - 1 (efetivamente mês_atual - 2).
-     O dropdown global vale como "alvo do Contábil/DP". O Fiscal SEMPRE deriva
-     uma posição a menos para refletir o atraso natural dos lançamentos. */
+  /* O dropdown é a ABA DE DESTINO escolhida pelo usuário (a competência alvo).
+       Contábil / DP / default → período = a própria competência do dropdown.
+       Fiscal                  → período = dropdown − 2 meses (defasagem dos dados
+                                 fiscais). A ABA continua sendo a do dropdown — quem
+                                 grava na aba é competencia_aba (ver executarFiscal). */
   const sel = document.getElementById('competencia-select');
   let ano, mes;
   if (sel && sel.value) {
     [ano, mes] = sel.value.split('-').map(Number);
   } else {
-    // fallback defensivo: mês atual - 1
+    // fallback defensivo: mês atual - 1 (aba típica do Contábil/DP)
     const h = new Date();
     mes = h.getMonth();   // 0..11 → já é "mês atual - 1" em base 1..12
     ano = h.getFullYear();
     if (mes === 0) { mes = 12; ano -= 1; }
   }
   if (modulo === 'fiscal') {
-    return montarJanelaMes(ano, mes - 1);
+    return montarJanelaMes(ano, mes - 2);   // dados 2 meses antes da aba
   }
   return montarJanelaMes(ano, mes);
 }
