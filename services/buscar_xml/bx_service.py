@@ -311,7 +311,16 @@ class BuscarXMLService:
         stop = self._running.get(modulo)
         if stop:
             stop.set()
-            return {"ok": True, "msg": f"{modulo} sendo cancelado..."}
+            # Encerra IMEDIATAMENTE: mata o navegador (Playwright) e o 7-Zip em
+            # andamento. Sem isso, o stop_flag é cooperativo e a thread só para no
+            # próximo checkpoint — durante um download/extração longos ela vira
+            # "fantasma" rodando por minutos. Cirúrgico: só a nossa árvore de processos.
+            try:
+                from bx_engine.bx_playwright_compat import matar_processos_filhos
+                matar_processos_filhos()
+            except Exception as e:
+                logging.warning(f"Falha ao encerrar processos no cancelamento: {e}")
+            return {"ok": True, "msg": f"{modulo} cancelado."}
         return {"ok": False, "msg": f"{modulo} não está em execução"}
 
     def get_status(self):

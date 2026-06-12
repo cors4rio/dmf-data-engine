@@ -29,40 +29,53 @@ _AUTH_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def _candidatos_usuarios_file():
-    """Locais possíveis de usuarios.json, em ordem de prioridade."""
+    """Locais possíveis de usuarios.json, em ordem de prioridade.
+
+    PRIORIDADE: o bundle (_MEIPASS) vem PRIMEIRO — é a fonte da verdade do build
+    atual. A cópia ao lado do exe é só FALLBACK (caso o bundle falhe de ler).
+    Antes a cópia ao lado tinha prioridade, e uma cópia antiga com nome
+    inconsistente ("Icaro" vs "icaro") era usada, causando reset de senha.
+    """
     cands = []
-    # 1) Ao lado do executável (frozen) — permite editar sem rebuildar
     if getattr(sys, "frozen", False):
         exe_dir = os.path.dirname(sys.executable)
-        cands.append(os.path.join(exe_dir, "usuarios.json"))
-        cands.append(os.path.join(exe_dir, "dmf_engine", "usuarios.json"))
-        # 2) Empacotado dentro do bundle (_MEIPASS)
+        # 1) Empacotado no bundle (_MEIPASS) — fonte da verdade do build.
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
             cands.append(os.path.join(meipass, "dmf_engine", "usuarios.json"))
             cands.append(os.path.join(meipass, "usuarios.json"))
+        # 2) Fallback: ao lado do executável (se o bundle não puder ser lido).
+        cands.append(os.path.join(exe_dir, "usuarios.json"))
+        cands.append(os.path.join(exe_dir, "dmf_engine", "usuarios.json"))
     # 3) Ao lado deste módulo (dev: dmf_engine/usuarios.json)
     cands.append(os.path.join(_AUTH_DIR, "usuarios.json"))
     return cands
 
 
 def _persistir_copia_ao_lado_do_exe(dados):
-    """No exe, grava uma cópia de usuarios.json ao lado do executável.
+    """No exe, mantém uma cópia de usuarios.json ao lado do executável (fallback
+    caso o bundle _MEIPASS falhe de ler).
 
-    O bundle (_MEIPASS) é recriado a cada execução e pode falhar de ler por
-    timing/IO; uma cópia persistente ao lado do exe elimina essa dependência e,
-    com a guarda em inicializar_supervisores_padrao, evita o reset de senhas.
-    Só grava se ainda não existir (não sobrescreve edição manual do admin).
+    SINCRONIZA com o conteúdo do build: se a cópia existente for diferente da
+    fonte (ex.: cópia antiga com nome "Icoro"/maiúsculo de um build anterior),
+    sobrescreve. Antes só gravava 'se não existir', e a cópia velha inconsistente
+    persistia para sempre — contribuindo para o reset de senha.
     """
     if not getattr(sys, "frozen", False):
         return
     destino = os.path.join(os.path.dirname(sys.executable), "usuarios.json")
-    if os.path.exists(destino):
-        return
     try:
+        novo = json.dumps(dados, indent=2, ensure_ascii=False)
+        if os.path.exists(destino):
+            try:
+                with open(destino, "r", encoding="utf-8") as _f:
+                    if json.dumps(json.load(_f), indent=2, ensure_ascii=False) == novo:
+                        return  # já idêntico — nada a fazer
+            except Exception:
+                pass  # ilegível/corrompido → reescreve
         with open(destino, "w", encoding="utf-8") as _f:
-            json.dump(dados, _f, indent=2, ensure_ascii=False)
-        logging.info(f"[AUTH] Cópia persistente de usuarios.json criada em: {destino}")
+            _f.write(novo)
+        logging.info(f"[AUTH] usuarios.json ao lado do exe sincronizado: {destino}")
     except Exception as _e:
         logging.warning(f"[AUTH] Não foi possível persistir usuarios.json ao lado do exe: {_e}")
 
@@ -187,7 +200,11 @@ def inicializar_supervisores_padrao(base_dir):
         return
 
     data = _carregar(base_dir)
-    autorizados_nomes = {u["nome"] for u in USUARIOS_AUTORIZADOS}
+    # Normaliza SEMPRE em lowercase. usuarios.json pode ter "Icaro" (maiúsculo) por
+    # cópia antiga ao lado do exe; comparar case-sensitive removia o supervisor já
+    # existente (ex.: "icaro") como "não-autorizado" e o recriava com senha padrão —
+    # ERA O RESET DE SENHA a cada boot/atualização. Tudo minúsculo evita isso.
+    autorizados_nomes = {u["nome"].lower() for u in USUARIOS_AUTORIZADOS}
 
     # Remove não-autorizados
     data["supervisores"] = [
@@ -198,14 +215,16 @@ def inicializar_supervisores_padrao(base_dir):
     for u in USUARIOS_AUTORIZADOS:
         existente = _buscar(data, u["nome"])
         if existente is None:
-            # Cria com senha padrão = nome em minúsculas, primeira_senha=True
+            # Cria com senha padrão = nome em minúsculas, primeira_senha=True.
+            # nome SEMPRE em minúsculas (consistência: login normaliza p/ lower).
+            nome_norm = u["nome"].lower()
             salt_hex = secrets.token_hex(SALT_BYTES)
             data["supervisores"].append({
-                "nome": u["nome"],
+                "nome": nome_norm,
                 "label": u["label"],
                 "papel": u["papel"],
                 "salt": salt_hex,
-                "hash": _hash_senha(u["nome"], salt_hex),
+                "hash": _hash_senha(nome_norm, salt_hex),
                 "maquina": None,
                 "primeira_senha": True,
                 "criado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),

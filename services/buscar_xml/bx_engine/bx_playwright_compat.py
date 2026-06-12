@@ -40,6 +40,45 @@ log = logging.getLogger("BuscarXML.PlaywrightCompat")
 
 _subprocess_patched = False
 
+# PIDs dos processos-filho que NÓS criamos (via subprocess). Usado pelo
+# cancelamento para matar só a nossa árvore (Playwright→node→chrome, 7z),
+# sem tocar em processos alheios (Chrome pessoal do usuário, etc.).
+import threading as _threading
+_pids_filhos = set()
+_pids_lock = _threading.Lock()
+# Popen original (sem o patch que registra PID) — usado pelo próprio taskkill do
+# cancelamento, p/ não re-registrar a si mesmo no set.
+_Popen_real = None
+
+
+def matar_processos_filhos():
+    """Mata imediatamente os processos-filho que criamos e suas árvores.
+
+    Usado no cancelamento para encerrar NA HORA o navegador (chrome-headless-shell
+    via node do Playwright) e o 7-Zip em andamento, em vez de esperar a operação
+    longa terminar. Cirúrgico: só mata PIDs que registramos + descendentes (/T).
+    """
+    if sys.platform != "win32":
+        return
+    import subprocess
+    with _pids_lock:
+        pids = list(_pids_filhos)
+        _pids_filhos.clear()
+    Popen = _Popen_real or subprocess.Popen
+    CNW = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+    for pid in pids:
+        try:
+            # /T mata a árvore (node → chrome); /F força. Usa o Popen original
+            # para o taskkill não se registrar no set de PIDs.
+            proc = Popen(["taskkill", "/F", "/T", "/PID", str(pid)],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         creationflags=CNW)
+            proc.wait(timeout=10)
+        except Exception as e:
+            log.warning(f"Falha ao matar processo filho {pid}: {e}")
+    if pids:
+        log.info(f"Cancelamento: {len(pids)} processo(s) filho encerrado(s) imediatamente.")
+
 
 def suprimir_janelas_subprocess():
     """Faz todo subprocess (7-Zip, unrar, patool, etc.) rodar SEM janela de console.
@@ -52,19 +91,26 @@ def suprimir_janelas_subprocess():
     subprocess futuro, de forma distribuível (a correção viaja no nosso exe).
     Só atua no Windows; no-op em outros SOs.
     """
-    global _subprocess_patched
+    global _subprocess_patched, _Popen_real
     if _subprocess_patched or sys.platform != "win32":
         return
     import subprocess
 
     CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
     _Popen_original = subprocess.Popen
+    _Popen_real = _Popen_original
 
     class _PopenSemJanela(_Popen_original):
         def __init__(self, *args, **kwargs):
             flags = kwargs.get("creationflags", 0)
             kwargs["creationflags"] = flags | CREATE_NO_WINDOW
             super().__init__(*args, **kwargs)
+            # Registra o PID para o cancelamento poder matar a nossa árvore.
+            try:
+                with _pids_lock:
+                    _pids_filhos.add(self.pid)
+            except Exception:
+                pass
 
     subprocess.Popen = _PopenSemJanela  # subprocess.run/call usam Popen internamente
     _subprocess_patched = True
@@ -73,7 +119,12 @@ def suprimir_janelas_subprocess():
 
 def configurar_browsers_path():
     """Aponta PLAYWRIGHT_BROWSERS_PATH para o Chromium correto (empacotado no exe
-    ou ms-playwright do usuário em dev). No-op se a env já estiver definida."""
+    ou ms-playwright do usuário em dev). Também ativa o patch de subprocess, que
+    rastreia os PIDs dos filhos (p/ o cancelamento matar a árvore) e suprime
+    janelas CMD. Chamado por todos os engines antes de abrir o Playwright."""
+    # Garante o rastreamento de PIDs (cancelamento imediato) sempre que um engine
+    # vai usar o navegador — sem precisar editar cada engine.
+    suprimir_janelas_subprocess()
     if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
         return
 
