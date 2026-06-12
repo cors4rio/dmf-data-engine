@@ -134,17 +134,38 @@ TOKAI_CLIENTS_DISPLAY = [
 ]
 
 
+def _garantir_subpasta_nfce(base: str) -> str:
+    """Garante que o caminho termine na subpasta NFCe (a TOKAI sempre grava lá).
+
+    Idempotente: se já terminar em '\\NFCe' (qualquer caixa), retorna como está;
+    senão, anexa. Trata barra final e normaliza. Ex.:
+      'Z:\\#ROTINA AUTOMATICA NF'         -> 'Z:\\#ROTINA AUTOMATICA NF\\NFCe'
+      'Z:\\#ROTINA AUTOMATICA NF\\NFCe'    -> inalterado
+      'Z:\\#ROTINA AUTOMATICA NF\\nfce\\'  -> inalterado (normalizado)
+    """
+    p = os.path.normpath(base.strip().strip('"'))
+    if os.path.basename(p).upper() == "NFCE":
+        return p
+    return os.path.join(p, "NFCe")
+
+
 def _configurar_env(config: dict):
     """Injeta seção 'tokai' do config.json como variáveis de ambiente para o AUTO_TOKAI."""
     c = config.get("tokai", {})
     os.environ["EMAIL_USER"]          = c.get("email_user", "")
     os.environ["SHAREPOINT_BASE_URL"] = c.get("sharepoint_url", "")
     os.environ["GMAIL_LABEL"]         = c.get("gmail_label", "TOKAI - XML")
-    # Só sobrescreve NETWORK_DRIVE_Z se o config.json tiver um valor não-vazio.
-    # Caso contrário, o .env do auto_tokai já define o valor correto via load_dotenv().
-    net_path_cfg = c.get("network_path", "").strip()
+    # NETWORK_DRIVE_Z = destino final dos XMLs. A TOKAI grava SEMPRE na subpasta
+    # NFCe (Z:\#ROTINA AUTOMATICA NF\NFCe\<cliente>\<mês>). O motor monta o caminho
+    # como <NETWORK_DRIVE_Z>\<cliente>\<mês> — ou seja, o NFCe precisa estar JÁ no
+    # NETWORK_DRIVE_Z. O config histórico guarda "Z:\#ROTINA AUTOMATICA NF" SEM o
+    # \NFCe, o que fazia o motor salvar um nível acima (na raiz, não em NFCe).
+    # Garantimos o sufixo \NFCe aqui, de forma idempotente — assim funciona com
+    # config antigo (sem NFCe) e novo, sem depender de editar config.json/.env em
+    # cada máquina. Correção definitiva da "TOKAI salvando fora da pasta NFCe".
+    net_path_cfg = c.get("network_path", "").strip().strip('"')
     if net_path_cfg:
-        os.environ["NETWORK_DRIVE_Z"] = net_path_cfg
+        os.environ["NETWORK_DRIVE_Z"] = _garantir_subpasta_nfce(net_path_cfg)
     os.environ["MAX_EMAIL_AGE_DAYS"]  = str(c.get("max_email_age_days", 35))
     os.environ["HEADLESS_MODE"]       = "True" if c.get("headless_mode", False) else "False"
     os.environ["DEBUG_SCREENSHOTS"]   = "False"
@@ -519,7 +540,9 @@ def compactar_tokai(
         _cb(100, msg)
         return {"ok": False, "msg": msg, "sucessos": 0, "erros": 0, "lista_erros": [msg]}
 
-    net_path = os.path.normpath(net_path)
+    # Compacta no MESMO destino do download (subpasta NFCe). Mesma garantia do
+    # _configurar_env — senão procuraria XMLs um nível acima e não acharia nada.
+    net_path = _garantir_subpasta_nfce(net_path)
     if not os.path.isdir(net_path):
         msg = f"Drive de rede inacessível: '{net_path}'"
         log.error(msg)

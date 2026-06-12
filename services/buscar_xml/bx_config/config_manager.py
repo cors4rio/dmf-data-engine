@@ -57,7 +57,10 @@ DEFAULT_CONFIG = {
         # resolvido por tokai_adapter._resolver_motor_dir, dev e exe). Só preencher para
         # apontar um motor externo customizado (compatibilidade legada).
         "motor_path":         "",
-        "network_path":       r"Z:\#ROTINA AUTOMATICA NF",
+        # TOKAI grava na subpasta NFCe. O destino final é <network_path>\<cliente>\<mês>,
+        # então o NFCe precisa estar AQUI. (O adapter também garante o sufixo, mas o
+        # default já vem correto para novas instalações.)
+        "network_path":       r"Z:\#ROTINA AUTOMATICA NF\NFCe",
         "max_email_age_days": 35,
         "headless_mode":      False,
     },
