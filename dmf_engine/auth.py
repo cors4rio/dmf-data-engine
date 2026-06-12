@@ -46,13 +46,39 @@ def _candidatos_usuarios_file():
     return cands
 
 
+def _persistir_copia_ao_lado_do_exe(dados):
+    """No exe, grava uma cópia de usuarios.json ao lado do executável.
+
+    O bundle (_MEIPASS) é recriado a cada execução e pode falhar de ler por
+    timing/IO; uma cópia persistente ao lado do exe elimina essa dependência e,
+    com a guarda em inicializar_supervisores_padrao, evita o reset de senhas.
+    Só grava se ainda não existir (não sobrescreve edição manual do admin).
+    """
+    if not getattr(sys, "frozen", False):
+        return
+    destino = os.path.join(os.path.dirname(sys.executable), "usuarios.json")
+    if os.path.exists(destino):
+        return
+    try:
+        with open(destino, "w", encoding="utf-8") as _f:
+            json.dump(dados, _f, indent=2, ensure_ascii=False)
+        logging.info(f"[AUTH] Cópia persistente de usuarios.json criada em: {destino}")
+    except Exception as _e:
+        logging.warning(f"[AUTH] Não foi possível persistir usuarios.json ao lado do exe: {_e}")
+
+
 def _carregar_usuarios_autorizados():
     for caminho in _candidatos_usuarios_file():
         if os.path.exists(caminho):
             try:
                 with open(caminho, "r", encoding="utf-8") as _f:
                     dados = json.load(_f)
+                if not dados:
+                    # Arquivo vazio/[] não é fonte da verdade — continua procurando.
+                    logging.warning(f"[AUTH] usuarios.json em {caminho} está vazio; ignorando.")
+                    continue
                 logging.info(f"[AUTH] usuarios.json carregado de: {caminho} ({len(dados)} usuário(s))")
+                _persistir_copia_ao_lado_do_exe(dados)
                 return dados
             except Exception as _e:
                 logging.warning(f"[AUTH] Falha ao ler {caminho}: {_e}")
@@ -145,7 +171,21 @@ def inicializar_supervisores_padrao(base_dir):
     - Remove entradas que não estão mais autorizadas.
     - Atualiza papéis (caso tenhamos mudado a tabela em código).
     - Preserva hash/salt/máquina dos usuários existentes.
+
+    GUARDA CRÍTICA: se USUARIOS_AUTORIZADOS estiver vazio (usuarios.json não foi
+    encontrado/lido neste boot — pode acontecer no exe por timing de _MEIPASS ou
+    falha transitória de IO), NÃO sincroniza. Caso contrário a remoção de
+    não-autorizados zera supervisores.json inteiro (apagando hash/máquina/senha
+    de todo mundo) e no próximo boot tudo é recriado com senha padrão = nome —
+    foi a causa da "senha que reseta sozinha". Em caso de dúvida, preserva.
     """
+    if not USUARIOS_AUTORIZADOS:
+        logging.warning(
+            "[AUTH] USUARIOS_AUTORIZADOS vazio — pulando sincronização para NÃO "
+            "apagar supervisores.json. Verifique se usuarios.json está acessível."
+        )
+        return
+
     data = _carregar(base_dir)
     autorizados_nomes = {u["nome"] for u in USUARIOS_AUTORIZADOS}
 

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  rpa-sharepoint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auto_tokai_bot
+    restart: unless-stopped
+    # Ajuste de timezone para Brasil
+    environment:
+      - TZ=America/Sao_Paulo
+      # O NETWORK_DRIVE_Z passara a apontar para o ponto de montagem interno do container
+      - NETWORK_DRIVE_Z=/mnt/z_drive/#ROTINA AUTOMATICA NF/NFCe
+      # Forcar o Playwright a rodar em Headless no container
+      - HEADLESS_MODE=True
+    volumes:
+      # MAPEAMENTO DE REDE (Host Windows -> Container Linux)
+      # Altere o caminho local caso sua unidade Z: esteja mapeada em um UNC ex: //servidor/compartilhamento
+      - type: bind
+        source: Z:/
+        target: /mnt/z_drive
+        bind:
+          create_host_path: false
+      
+      # MAPEAMENTO DE CREDENCIAIS (Para persistencia dos tokens Google)
+      # Garante que as credenciais n?o sejam perdidas quando o container recriar
+      - ./config/credentials.json:/app/config/credentials.json
+      - ./config/token.json:/app/config/token.json
+      - ./config/playwright_storage.json:/app/config/playwright_storage.json
+
+    network_mode: "host"

@@ -27,6 +27,14 @@ if getattr(sys, "frozen", False):
     BASE_DIR = os.path.dirname(sys.executable)
     RESOURCES_DIR = os.path.join(sys._MEIPASS, "dmf_engine")
     PROJECT_ROOT = BASE_DIR
+    # Fix: PyInstaller frozen exe no Windows usa ProactorEventLoop (IOCP) por padrão.
+    # O pywebview/winforms já ocupa o IOCP do thread principal; quando Playwright
+    # cria um ProactorEventLoop em thread daemon para se comunicar com node.exe via
+    # PIPE, ocorre conflito e o loop bloqueia indefinidamente sem lançar exceção.
+    # SelectorEventLoop não usa IOCP e funciona corretamente em qualquer thread.
+    if sys.platform == "win32":
+        import asyncio as _asyncio
+        _asyncio.set_event_loop_policy(_asyncio.WindowsSelectorEventLoopPolicy())
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     RESOURCES_DIR = BASE_DIR

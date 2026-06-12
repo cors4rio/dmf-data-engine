@@ -122,8 +122,10 @@ class BuscarXMLService:
 
             self._cb("nfe_done", {"ok": True, **resultado})
         except Exception as e:
-            logging.error(f"NF-e falhou: {e}")
-            self._cb("nfe_done", {"ok": False, "msg": str(e)})
+            import traceback as _tb
+            msg = str(e) or f"{type(e).__name__} (sem mensagem)"
+            logging.error(f"NF-e falhou: {msg}\n{_tb.format_exc()}")
+            self._cb("nfe_done", {"ok": False, "msg": msg})
         finally:
             self._running.pop("nfe", None)
 
@@ -209,8 +211,10 @@ class BuscarXMLService:
             )
             self._cb("nfce_done", {"ok": True, **resultado})
         except Exception as e:
-            logging.error(f"NFCe falhou: {e}")
-            self._cb("nfce_done", {"ok": False, "msg": str(e)})
+            import traceback as _tb
+            msg = str(e) or f"{type(e).__name__} (sem mensagem)"
+            logging.error(f"NFCe falhou: {msg}\n{_tb.format_exc()}")
+            self._cb("nfce_done", {"ok": False, "msg": msg})
         finally:
             self._running.pop("nfce", None)
 
@@ -234,8 +238,10 @@ class BuscarXMLService:
             )
             self._cb("sped_done", {"ok": True, **resultado})
         except Exception as e:
-            logging.error(f"SPED falhou: {e}")
-            self._cb("sped_done", {"ok": False, "msg": str(e)})
+            import traceback as _tb
+            msg = str(e) or f"{type(e).__name__} (sem mensagem)"
+            logging.error(f"SPED falhou: {msg}\n{_tb.format_exc()}")
+            self._cb("sped_done", {"ok": False, "msg": msg})
         finally:
             self._running.pop("sped", None)
 
@@ -520,7 +526,11 @@ class BuscarXMLService:
     def listar_lojas(self):
         try:
             from bx_config.lojas import LOJAS_CADASTRO
-        except ImportError:
+        except ImportError as e:
+            # Não engolir silenciosamente: este import falhar no exe (bx_config fora
+            # do _internal) foi a causa da "lista de lojas vazia". Logar sempre.
+            logging.error(f"[BX] listar_lojas: import de bx_config.lojas falhou — "
+                          f"lojas não serão exibidas. Detalhe: {e}")
             return []
         resultado = []
         for codigo, loja in LOJAS_CADASTRO.items():

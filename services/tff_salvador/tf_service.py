@@ -36,7 +36,8 @@ class TffSalvadorService:
 
     # ── API pública ───────────────────────────────────────────────────────────
 
-    def executar(self, clientes: list, ano: int, pasta_destino: str) -> dict:
+    def executar(self, clientes: list, ano: int, pasta_destino: str,
+                 tipo: str = "TFF") -> dict:
         if self._running.get("lote") and not self._running["lote"].is_set():
             return {"ok": False, "erro": "Já existe um lote em execução."}
 
@@ -44,11 +45,12 @@ class TffSalvadorService:
         self._running["lote"] = stop
         self._resultados = []
 
-        cfg = self._config_fn()
+        cfg  = self._config_fn()
+        tipo = (tipo or "TFF").upper()
 
         t = threading.Thread(
             target=self._run_lote,
-            args=(clientes, ano, pasta_destino, stop, cfg),
+            args=(clientes, ano, pasta_destino, stop, cfg, tipo),
             daemon=True,
         )
         t.start()
@@ -67,7 +69,7 @@ class TffSalvadorService:
 
     # ── Thread principal ──────────────────────────────────────────────────────
 
-    def _run_lote(self, clientes, ano, pasta_destino, stop, cfg):
+    def _run_lote(self, clientes, ano, pasta_destino, stop, cfg, tipo="TFF"):
         def progress_cb(pct, msg, cga):
             self._cb("tf_progress", {"pct": pct, "msg": msg, "cga": cga})
 
@@ -98,11 +100,12 @@ class TffSalvadorService:
                 progress_cb=progress_cb,
                 cliente_cb=cliente_cb,
                 cfg=cfg,
+                tipo=tipo,
             )
 
             if self._resultados and not stop.is_set():
                 try:
-                    resumo_arquivo = gerar_resumo(self._resultados, ano, pasta_destino)
+                    resumo_arquivo = gerar_resumo(self._resultados, ano, pasta_destino, tipo)
                 except Exception as e:
                     log.error(f"Erro ao gerar resumo: {e}")
 

@@ -26,6 +26,29 @@ import logging
 
 log = logging.getLogger("SemMovimento.Portal")
 
+
+def _configurar_browsers_path():
+    """
+    Aponta PLAYWRIGHT_BROWSERS_PATH antes de sync_playwright().
+    No exe (frozen): usa o Chromium empacotado em _internal/ms-playwright.
+    Em dev: usa o ms-playwright do usuário. Ver tf_portal._configurar_browsers_path.
+    """
+    import sys
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return
+    if getattr(sys, "frozen", False):
+        bundled = os.path.join(sys._MEIPASS, "ms-playwright")
+        if os.path.isdir(bundled):
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = bundled
+            log.info(f"PLAYWRIGHT_BROWSERS_PATH (empacotado) = {bundled}")
+            return
+        log.warning(f"ms-playwright empacotado não encontrado em {bundled}")
+    user_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ms-playwright")
+    if os.path.isdir(user_dir):
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = user_dir
+        log.info(f"PLAYWRIGHT_BROWSERS_PATH (usuário) = {user_dir}")
+
+
 URL_BASE  = "https://nfse.salvador.ba.gov.br"
 URL_LOGIN = f"{URL_BASE}/default.aspx"
 
@@ -377,14 +400,7 @@ def executar_lote(empresas: list, mes: int, ano: int, pasta_destino: str,
 
     Retorna: {"total": int, "ok": int, "erros": int, "cancelado": bool}
     """
-    # Ver tf_portal.executar_lote: no exe, o Playwright bundled não acha o Chromium
-    # (driver procura em _internal, vazio). Apontamos para o ms-playwright do usuário.
-    if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
-        _browsers_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ms-playwright")
-        if os.path.isdir(_browsers_dir):
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _browsers_dir
-            log.info(f"PLAYWRIGHT_BROWSERS_PATH = {_browsers_dir}")
-
+    _configurar_browsers_path()
     from playwright.sync_api import sync_playwright
 
     total     = len(empresas)

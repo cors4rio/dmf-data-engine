@@ -13,10 +13,96 @@ import zipfile
 import subprocess
 import shutil
 
+from .bx_playwright_compat import (
+    configurar_browsers_path, policy_proactor, suprimir_janelas_subprocess,
+)
+
 log = logging.getLogger("TOKAI")
 
-# Caminho padrão — sobrescrito por config["tokai"]["motor_path"] em runtime
-_DEFAULT_TOKAI_DIR = r"C:\Users\DMF-AUTOMACAO\Documents\PROJETOS\buscador_xml\auto_tokai"
+# Caminho do motor TOKAI. Agora o motor vive DENTRO do projeto (unificado), em
+# services/buscar_xml/tokai_motor/ — irmão de bx_engine/. Resolve em dev e no exe.
+# Ainda pode ser sobrescrito por config["tokai"]["motor_path"] (compat. legado).
+def _resolver_motor_dir() -> str:
+    """Resolve o motor_path. PREGUIÇOSO: a sincronização no exe (cópia para pasta
+    gravável) só acontece quando chamado — não no import do módulo, p/ não pesar o boot."""
+    # Dev: tokai_motor é irmão de bx_engine/ (services/buscar_xml/tokai_motor),
+    # gravável no próprio repo.
+    if not getattr(sys, "frozen", False):
+        aqui = os.path.dirname(os.path.abspath(__file__))       # .../bx_engine
+        cand = os.path.normpath(os.path.join(aqui, "..", "tokai_motor"))
+        if os.path.isdir(cand):
+            return cand
+        # Fallback legado: caminho externo antigo.
+        return r"C:\Users\DMF-AUTOMACAO\Documents\PROJETOS\buscador_xml\auto_tokai"
+
+    # No exe (frozen): o motor é empacotado read-only no _MEIPASS, mas o motor
+    # ESCREVE (token.json, playwright_storage.json, logs). Então sincronizamos o
+    # CÓDIGO para uma pasta gravável ao lado do exe e usamos ela como motor_path.
+    # Arquivos sensíveis/sessão (credenciais, token, storage) que o usuário já
+    # tenha lá são PRESERVADOS (nunca sobrescritos pelo bundle).
+    # Apenas o caminho-alvo (gravável). A cópia real é feita por _preparar_motor()
+    # quando o TOKAI é executado, não aqui (mantém o boot leve).
+    return os.path.join(os.path.dirname(sys.executable), "tokai_motor")
+
+
+def _motor_path_efetivo(config: dict) -> str:
+    """Resolve o motor_path a usar, com migração do caminho legado.
+
+    - motor_path vazio no config → usa o motor unificado (TOKAI_DIR = tokai_motor).
+    - motor_path = caminho externo legado (buscador_xml/auto_tokai) → IGNORA e usa o
+      unificado se este existir. Evita que máquinas com config antigo fiquem presas
+      no motor externo após a unificação.
+    - motor_path customizado (outro caminho) → respeita (compatibilidade).
+    """
+    mp = (config.get("tokai", {}).get("motor_path", "") or "").strip()
+    if not mp:
+        return TOKAI_DIR
+    # Caminho legado conhecido → migra para o unificado.
+    if "buscador_xml" in mp.replace("/", "\\").lower() and os.path.isdir(TOKAI_DIR):
+        log.info(f"motor_path legado ('{mp}') ignorado — usando motor unificado: {TOKAI_DIR}")
+        return TOKAI_DIR
+    return mp
+
+
+def _preparar_motor(tokai_dir: str):
+    """No exe, garante que o código do motor está na pasta gravável `tokai_dir`
+    (sincronizado do bundle _MEIPASS, preservando credenciais). No-op em dev."""
+    if not getattr(sys, "frozen", False):
+        return
+    bundle = os.path.join(sys._MEIPASS, "tokai_motor")
+    _sincronizar_motor(bundle, tokai_dir)
+
+
+# Arquivos que o usuário cria/edita por máquina — NUNCA sobrescrever no update.
+_MOTOR_PRESERVAR = {
+    ".env", "credentials.json", "token.json",
+    "playwright_storage.json", "playwright_storage.json.bak",
+    "config_clientes.json",
+}
+
+
+def _sincronizar_motor(bundle: str, destino: str):
+    """Copia o código do motor (bundle read-only) para a pasta gravável, sem
+    tocar nos arquivos sensíveis/de sessão que o usuário já tenha no destino."""
+    import shutil
+    if not os.path.isdir(bundle):
+        raise RuntimeError(f"Motor empacotado ausente em {bundle}")
+    os.makedirs(destino, exist_ok=True)
+    for raiz, _dirs, arquivos in os.walk(bundle):
+        rel = os.path.relpath(raiz, bundle)
+        dst_dir = destino if rel == "." else os.path.join(destino, rel)
+        os.makedirs(dst_dir, exist_ok=True)
+        for nome in arquivos:
+            dst = os.path.join(dst_dir, nome)
+            # Preserva credenciais/sessão já existentes na máquina.
+            if nome in _MOTOR_PRESERVAR and os.path.exists(dst):
+                continue
+            try:
+                shutil.copy2(os.path.join(raiz, nome), dst)
+            except Exception:
+                pass
+
+_DEFAULT_TOKAI_DIR = _resolver_motor_dir()
 TOKAI_DIR = _DEFAULT_TOKAI_DIR
 
 # (sp_name, codigo_dominio, nome_dominio, regiao)
@@ -112,8 +198,24 @@ def executar_tokai(
 
     _configurar_env(config)
 
+    # O motor usa Playwright internamente (login SharePoint via browser). No exe
+    # é preciso apontar PLAYWRIGHT_BROWSERS_PATH para o Chromium empacotado, senão
+    # o launch trava/falha — mesmo motivo dos engines NF-e/NFCe/SPED.
+    configurar_browsers_path()
+
+    # O motor chama 7-Zip/unrar via subprocess para extrair os ZIPs. No exe windowed
+    # cada chamada abriria uma janela CMD preta. Patch global suprime todas (motor
+    # incluso) sem editar cada subprocess do motor — ver suprimir_janelas_subprocess.
+    suprimir_janelas_subprocess()
+
     # Resolve caminho do motor (config tem precedência sobre o default)
-    tokai_dir = config.get("tokai", {}).get("motor_path", "").strip() or TOKAI_DIR
+    tokai_dir = _motor_path_efetivo(config)
+
+    # No exe: sincroniza o código do motor para a pasta gravável antes de usar.
+    try:
+        _preparar_motor(tokai_dir)
+    except Exception as e:
+        log.warning(f"Não foi possível preparar o motor TOKAI: {e}")
 
     # Garante que AUTO_TOKAI está no sys.path
     if tokai_dir not in sys.path:
@@ -121,13 +223,34 @@ def executar_tokai(
 
     _cb(5, "Carregando motor TOKAI...")
 
+    if not os.path.isdir(tokai_dir):
+        msg = (f"Motor TOKAI não encontrado em '{tokai_dir}'. "
+               f"Instale o auto_tokai nesta máquina ou ajuste 'motor_path' na Config TOKAI.")
+        log.error(msg)
+        _cb(100, msg)
+        return {"ok": False, "msg": msg, "sucessos": 0, "erros": 0}
+
     try:
         from src.application.use_cases.download_sharepoint_files import DownloadSharePointFilesUseCase
         from src.infrastructure.email.gmail_api_service import GmailApiService
+    except ModuleNotFoundError as e:
+        faltante = getattr(e, "name", "") or str(e)
+        if faltante and not str(faltante).startswith("src"):
+            # Falta uma biblioteca Python (ex.: dateutil) — precisa entrar no exe (spec).
+            msg = (f"Dependência Python ausente no executável: '{faltante}'. "
+                   f"Precisa ser empacotada (hiddenimports no dmf_engine.spec).")
+        else:
+            # Falta o próprio motor (pasta src do auto_tokai).
+            msg = (f"Motor TOKAI incompleto em '{tokai_dir}' (módulo '{faltante}'). "
+                   f"Verifique a instalação do auto_tokai.")
+        log.error(f"Falha ao importar motor TOKAI: {msg}")
+        _cb(100, msg)
+        return {"ok": False, "msg": msg, "sucessos": 0, "erros": 0}
     except Exception as e:
-        log.error(f"Falha ao importar motor TOKAI: {e}")
-        _cb(100, f"Erro ao importar motor: {e}")
-        return {"ok": False, "msg": str(e), "sucessos": 0, "erros": 0}
+        msg = str(e) or f"{type(e).__name__} (sem mensagem)"
+        log.error(f"Falha ao importar motor TOKAI: {msg}")
+        _cb(100, f"Erro ao importar motor: {msg}")
+        return {"ok": False, "msg": msg, "sucessos": 0, "erros": 0}
 
     if stop_flag.is_set():
         return {"ok": False, "msg": "Cancelado", "sucessos": 0, "erros": 0}
@@ -153,15 +276,32 @@ def executar_tokai(
     _cb(15, "Obtendo link SharePoint via Gmail API...")
 
     try:
-        os.chdir(TOKAI_DIR)
-        resultado = use_case.execute(
-            allowed_clients_override=clientes if clientes else None,
-            periodo=periodo,
-        )
-    except Exception as e:
-        log.error(f"Execução TOKAI falhou: {e}")
-        _cb(100, f"Erro durante execução: {e}")
-        return {"ok": False, "msg": str(e), "sucessos": 0, "erros": 0}
+        # Usa o motor resolvido do config (não a constante default), senão o cwd
+        # vai para a pasta errada quando motor_path é customizado.
+        os.chdir(tokai_dir)
+        # policy Proactor: o motor abre Chromium via sync_playwright e a nossa thread
+        # herda a WindowsSelectorEventLoopPolicy do main.py (não cria subprocessos).
+        with policy_proactor():
+            resultado = use_case.execute(
+                allowed_clients_override=clientes if clientes else None,
+                periodo=periodo,
+            )
+    except BaseException as e:
+        import traceback as _tb
+        tb = _tb.format_exc()
+        msg = str(e) or f"{type(e).__name__} (sem mensagem)"
+        log.error(f"Execução TOKAI falhou: {msg}\n{tb}")
+        # Grava o traceback completo num arquivo para diagnóstico (erro vem vazio na UI).
+        try:
+            import tempfile
+            p = os.path.join(tempfile.gettempdir(), "dmf_tokai_erro.txt")
+            with open(p, "w", encoding="utf-8") as fh:
+                fh.write(f"motor_path: {tokai_dir}\n\n{tb}")
+            log.error(f"Detalhe do erro TOKAI salvo em: {p}")
+        except Exception:
+            pass
+        _cb(100, f"Erro durante execução: {msg}")
+        return {"ok": False, "msg": msg, "sucessos": 0, "erros": 0}
     finally:
         os.chdir(_orig_cwd)
 
@@ -406,7 +546,11 @@ def compactar_tokai(
         clientes_alvo = [sp for sp, *_ in TOKAI_CLIENTS_DISPLAY]
 
     # Importa o mapeamento sp_name → nome_pasta_rede
-    tokai_dir = config.get("tokai", {}).get("motor_path", "").strip() or TOKAI_DIR
+    tokai_dir = _motor_path_efetivo(config)
+    try:
+        _preparar_motor(tokai_dir)
+    except Exception:
+        pass
     if tokai_dir not in sys.path:
         sys.path.insert(0, tokai_dir)
     try:

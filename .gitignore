@@ -22,6 +22,9 @@ yarn-error.log*
 # (Descomente se tiver algum arquivo de configuração específico que precise subir)
 # !meu_arquivo_de_configuracao.json
 
+# Chromium empacotado para o exe (267 MB, baixado via playwright install) — nunca versionar
+_chromium_bundle/
+
 # Ambiente Python
 __pycache__/
 *.py[cod]
@@ -93,6 +96,24 @@ log_execucao.md
 services/automacao_horas/config.json
 services/automacao_horas/__pycache__/
 services/automacao_horas/ENTRADAS_MANUAIS/
+
+# Motor TOKAI (auto_tokai unificado em tokai_motor/) — SEGREDOS por máquina,
+# NUNCA versionar nem empacotar: credenciais Gmail, token OAuth, sessão logada
+# do SharePoint (.env, credentials.json, token.json, playwright_storage.json).
+services/buscar_xml/tokai_motor/.env
+services/buscar_xml/tokai_motor/**/credentials.json
+services/buscar_xml/tokai_motor/**/token.json
+services/buscar_xml/tokai_motor/**/playwright_storage.json
+services/buscar_xml/tokai_motor/**/playwright_storage.json.bak
+services/buscar_xml/tokai_motor/logs/
+services/buscar_xml/tokai_motor/scratch/
+services/buscar_xml/tokai_motor/debug_*.html
+services/buscar_xml/tokai_motor/debug_*.png
+services/buscar_xml/tokai_motor/erro_automacao_fatal.png
+# Configs de NEGÓCIO do motor (não-sensíveis, necessários p/ rodar) — versionar.
+# A regra global '*.json' acima os bloquearia; reabrimos explicitamente.
+!services/buscar_xml/tokai_motor/config/config_clientes.json
+!services/buscar_xml/tokai_motor/config/sharepoint_map_*.json
 
 # Backups gerados pelo editor / ferramentas
 *.bak

@@ -16,6 +16,7 @@ import threading
 import zipfile
 import requests
 from playwright.async_api import async_playwright
+from .bx_playwright_compat import configurar_browsers_path, policy_proactor
 
 log = logging.getLogger("SPED")
 
@@ -205,8 +206,11 @@ def executar_sped(lojas: list, periodo: dict, stop_flag: threading.Event,
         periodo["competencia"]    = f"{mm}-{yyyy}"   # MM-YYYY (formato ERP)
         periodo["comp_formatada"] = f"{yyyy}{mm}"    # YYYYMM  (nome de arquivo Drive)
 
-    # Login via async Playwright
-    session = asyncio.run(_login_async(config, progress_cb))
+    # Login via async Playwright. No exe é preciso PLAYWRIGHT_BROWSERS_PATH +
+    # policy Proactor (o SelectorEventLoop do main.py não cria subprocessos).
+    configurar_browsers_path()
+    with policy_proactor():
+        session = asyncio.run(_login_async(config, progress_cb))
 
     total = len(lojas)
     suc = err = 0

@@ -9,19 +9,22 @@ import logging
 log = logging.getLogger("TffSalvador.Resumo")
 
 
-def gerar(resultados: list, ano: int, pasta_destino: str) -> str:
+def gerar(resultados: list, ano: int, pasta_destino: str, tipo: str = "TFF") -> str:
     """
     resultados: lista de dicts retornados por cliente_cb:
         {cga, razao_social, cnpj, municipio, status, guias:[{nome,arquivo}], detalhe}
+    tipo: "TFF" ou "TLL" — usado no título da aba e no nome do arquivo.
 
     Retorna o caminho do .xlsx gerado.
     """
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment
 
+    tipo = (tipo or "TFF").upper()
+
     wb = Workbook()
     ws = wb.active
-    ws.title = "Resumo TFF"
+    ws.title = f"Resumo {tipo}"
 
     cabecalho = ["Razão Social", "CNPJ", "Município", "CGA",
                  "Status", "Cotas OK", "Arquivos", "Detalhe"]
@@ -70,7 +73,7 @@ def gerar(resultados: list, ano: int, pasta_destino: str) -> str:
     for i, larg in enumerate(larguras, start=1):
         ws.column_dimensions[_col_letter(i)].width = larg
 
-    nome    = f"resumo_tff_{ano}.xlsx"
+    nome    = f"resumo_{tipo.lower()}_{ano}.xlsx"
     caminho = os.path.join(pasta_destino, nome)
     wb.save(caminho)
     log.info(f"Resumo salvo: {caminho}")

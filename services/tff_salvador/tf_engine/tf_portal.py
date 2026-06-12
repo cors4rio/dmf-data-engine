@@ -20,9 +20,17 @@ Fluxo por cliente:
      - Tabela de cotas presente → emite cada cota
   7. Para cada cota disponível no select#opcCotas:
      - Seleciona a cota
-     - Clica input[name="bt_dam"] → form submete para Servicos_DamTFF_Tunel_Form.asp
-     - Captura popup/nova aba → imprime como PDF → salva
+     - Clica input[name="bt_dam"]
+     - Captura o PDF (modo varia por tipo, ver abaixo) → salva
   8. Retorna lista de {"nome","arquivo"} por cota
+
+TFF vs TLL (mesmo sistema, captura de PDF diferente):
+  - TFF: bt_dam carrega Principal.aspx na MESMA página; o PDF vem embutido como
+    data:Application/pdf;base64,... em <embed id="pdfID"> (iframe filho).
+  - TLL: bt_dam abre uma NOVA ABA (DAMFormTLL.asp) com o DAM renderizado em HTML,
+    sem embed nem download. Capturamos via page.pdf() (imprime a página). O portal
+    pode abrir abas duplicadas do mesmo DAM — fechamos as extras. TLL é cota única.
+    Confirmado por mapeamento ao vivo (2026-06-10, CGA 0105965900258 exercício 2026).
 
 Seletores confirmados por mapeamento ao vivo (2026-06-05):
   Iframe:      servicosweb.sefaz.salvador.ba.gov.br/sistema/dam/TFF/servicos_DamTFF.asp
@@ -43,8 +51,62 @@ import logging
 
 log = logging.getLogger("TffSalvador.Portal")
 
-URL_PORTAL     = "https://www2.sefaz.salvador.ba.gov.br/servico/2-via-tff-tll"
-URL_FRAME_BASE = "servicosweb.sefaz.salvador.ba.gov.br/sistema/dam/TFF/"
+
+def _configurar_browsers_path():
+    """
+    Garante que o Playwright encontre o Chromium antes de sync_playwright().
+
+    No exe (frozen): o Chromium headless é empacotado em _internal/ms-playwright
+    (ver dmf_engine.spec). O Playwright bundled procuraria em
+    _internal/.../.local-browsers (vazio) → chromium.launch() travaria. Apontamos
+    PLAYWRIGHT_BROWSERS_PATH para a pasta empacotada — funciona offline, sem
+    depender de download na máquina de destino.
+
+    Em dev: o site-packages do Playwright resolve o ms-playwright do usuário
+    sozinho; só apontamos como fallback se a env não estiver definida.
+    """
+    import sys
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return
+
+    if getattr(sys, "frozen", False):
+        bundled = os.path.join(sys._MEIPASS, "ms-playwright")
+        if os.path.isdir(bundled):
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = bundled
+            log.info(f"PLAYWRIGHT_BROWSERS_PATH (empacotado) = {bundled}")
+            return
+        log.warning(f"ms-playwright empacotado não encontrado em {bundled}")
+
+    # Fallback (dev ou exe sem bundle): ms-playwright do usuário
+    user_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ms-playwright")
+    if os.path.isdir(user_dir):
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = user_dir
+        log.info(f"PLAYWRIGHT_BROWSERS_PATH (usuário) = {user_dir}")
+
+
+# ── Tipos de guia suportados ────────────────────────────────────────────────
+# TFF e TLL são o MESMO sistema (mesmos seletores, captcha e mensagens); muda só
+# a URL externa e o segmento do iframe (.../dam/TFF/ vs .../dam/TLL/). Confirmado
+# por mapeamento ao vivo (2026-06-10). TLL sempre traz cota única no select#opcCotas.
+TIPOS = {
+    "TFF": {
+        "url":   "https://www2.sefaz.salvador.ba.gov.br/servico/2-via-tff-tll",
+        "frame": "servicosweb.sefaz.salvador.ba.gov.br/sistema/dam/TFF/",
+    },
+    "TLL": {
+        "url":   "https://www2.sefaz.salvador.ba.gov.br/servico/2-via-dam-tll",
+        "frame": "servicosweb.sefaz.salvador.ba.gov.br/sistema/dam/TLL/",
+    },
+}
+
+# Defaults legados (TFF) — mantidos para chamadas antigas sem 'tipo'.
+URL_PORTAL     = TIPOS["TFF"]["url"]
+URL_FRAME_BASE = TIPOS["TFF"]["frame"]
+
+
+def _cfg_tipo(tipo: str) -> dict:
+    """Retorna {url, frame} para o tipo (TFF|TLL). Default TFF se desconhecido."""
+    return TIPOS.get((tipo or "TFF").upper(), TIPOS["TFF"])
 
 # ── Mensagens de retorno do portal ──────────────────────────────────────────
 MSG_PAGO       = "parcelas est"   # "todas as parcelas estão pagas"
@@ -54,17 +116,17 @@ MSG_NAO_EXISTE = "não existe"     # CGA não cadastrado
 
 # ── Helpers de frame ─────────────────────────────────────────────────────────
 
-def _get_frame(page):
-    """Retorna o frame do portal TFF (iframe interno)."""
+def _get_frame(page, frame_base: str = URL_FRAME_BASE):
+    """Retorna o frame do portal (iframe interno) para o tipo dado."""
     for f in page.frames:
-        if URL_FRAME_BASE in f.url:
+        if frame_base in f.url:
             return f
-    raise RuntimeError("Frame do portal TFF não encontrado. Verifique se a página carregou corretamente.")
+    raise RuntimeError("Frame do portal não encontrado. Verifique se a página carregou corretamente.")
 
 
 # ── Consulta principal ────────────────────────────────────────────────────────
 
-def consultar(page, cga: str, ano: int) -> dict:
+def consultar(page, cga: str, ano: int, tipo: str = "TFF") -> dict:
     """
     Navega ao portal, preenche o formulário e retorna o estado da consulta.
 
@@ -77,11 +139,12 @@ def consultar(page, cga: str, ano: int) -> dict:
 
     cotas: [{"value": "0", "label": "ÚNICA"}, {"value": "1", "label": "1"}, ...]
     """
-    log.info(f"[CGA {cga}] Consultando exercício {ano}...")
-    page.goto(URL_PORTAL, wait_until="domcontentloaded", timeout=30_000)
+    cfg_t = _cfg_tipo(tipo)
+    log.info(f"[CGA {cga}] Consultando {tipo} exercício {ano}...")
+    page.goto(cfg_t["url"], wait_until="domcontentloaded", timeout=30_000)
     page.wait_for_timeout(1500)
 
-    frame = _get_frame(page)
+    frame = _get_frame(page, cfg_t["frame"])
 
     # Lê o captcha do campo hidden
     captcha_val = frame.locator('input[name="form2"]').get_attribute("value", timeout=10_000)
@@ -99,7 +162,7 @@ def consultar(page, cga: str, ano: int) -> dict:
     page.wait_for_timeout(2500)
 
     # Lê o frame de resultado (pode ter URL diferente após submit)
-    result_frame = _get_frame(page)
+    result_frame = _get_frame(page, cfg_t["frame"])
 
     # Verifica mensagem de retorno
     try:
@@ -159,7 +222,7 @@ def consultar(page, cga: str, ano: int) -> dict:
 
 # ── Emissão por cota ─────────────────────────────────────────────────────────
 
-def _consultar_frame(page, cga: str, ano: int):
+def _consultar_frame(page, cga: str, ano: int, tipo: str = "TFF"):
     """
     Navega ao portal e submete o formulário. Retorna o result_frame com
     select#opcCotas disponível, ou lança RuntimeError.
@@ -168,10 +231,11 @@ def _consultar_frame(page, cga: str, ano: int):
     o portal navega para Principal.aspx e não tem botão Voltar, então cada
     cota requer uma nova consulta do zero.
     """
-    page.goto(URL_PORTAL, wait_until="domcontentloaded", timeout=30_000)
+    cfg_t = _cfg_tipo(tipo)
+    page.goto(cfg_t["url"], wait_until="domcontentloaded", timeout=30_000)
     page.wait_for_timeout(1500)
 
-    frame = _get_frame(page)
+    frame = _get_frame(page, cfg_t["frame"])
     captcha_val = frame.locator('input[name="form2"]').get_attribute("value", timeout=10_000)
     if not captcha_val:
         raise RuntimeError("Campo form2 (captcha hidden) não encontrado.")
@@ -182,7 +246,7 @@ def _consultar_frame(page, cga: str, ano: int):
     frame.click('input[name="Submit"]')
     page.wait_for_timeout(2500)
 
-    result_frame = _get_frame(page)
+    result_frame = _get_frame(page, cfg_t["frame"])
 
     cotas_el = result_frame.locator("select#opcCotas")
     if cotas_el.count() == 0:
@@ -191,68 +255,122 @@ def _consultar_frame(page, cga: str, ano: int):
     return result_frame
 
 
+def _capturar_pdf_tff(page, caminho: str) -> dict:
+    """TFF: o PDF vem embutido como data:Application/pdf;base64,... em
+    <embed id="pdfID"> num iframe filho da página de resultado (Principal.aspx)."""
+    import base64
+
+    embed_el = None
+    for _ in range(30):  # até 15s
+        page.wait_for_timeout(500)
+        for f in page.frames:
+            try:
+                el = f.locator("embed#pdfID")
+                if el.count() > 0:
+                    embed_el = el
+                    break
+            except Exception:
+                continue
+        if embed_el:
+            break
+
+    if not embed_el:
+        return {"arquivo": None, "detalhe": "embed#pdfID não encontrado após bt_dam"}
+
+    src = embed_el.get_attribute("src", timeout=10_000) or ""
+    if not src.startswith("data:"):
+        return {"arquivo": None, "detalhe": f"src inesperado: {src[:80]}"}
+
+    pdf_bytes = base64.b64decode(src.split(",", 1)[1])
+    with open(caminho, "wb") as fh:
+        fh.write(pdf_bytes)
+    return {"arquivo": caminho, "detalhe": "", "bytes": len(pdf_bytes)}
+
+
+def _capturar_pdf_tll(popup, caminho: str) -> dict:
+    """TLL: o bt_dam abre uma NOVA ABA (DAMFormTLL.asp) com o DAM em HTML —
+    sem embed/download. Captura imprimindo a página como PDF (page.pdf()),
+    que é o "imprimir e salvar" do portal. `popup` é a aba já aberta."""
+    try:
+        popup.wait_for_load_state("networkidle", timeout=20_000)
+    except Exception:
+        pass
+    popup.wait_for_timeout(1500)
+    # page.pdf() exige Chromium headless; o lote roda headless por padrão.
+    try:
+        popup.emulate_media(media="print")
+        popup.pdf(path=caminho, print_background=True)
+    except Exception as e:
+        # page.pdf() não é suportado com janela visível (headful).
+        if "headless" in str(e).lower() or "non-headless" in str(e).lower():
+            return {"arquivo": None,
+                    "detalhe": ("TLL exige modo headless para gerar o PDF. "
+                                "Ative 'Modo headless' na Configuração.")}
+        return {"arquivo": None, "detalhe": f"Falha em page.pdf(): {e}"}
+    tam = os.path.getsize(caminho) if os.path.exists(caminho) else 0
+    if tam <= 0:
+        return {"arquivo": None, "detalhe": "page.pdf() gerou arquivo vazio"}
+    return {"arquivo": caminho, "detalhe": "", "bytes": tam}
+
+
 def emitir_cota(page, cga: str, cota: dict, razao_social: str,
-                ano: int, pasta_destino: str) -> dict:
+                ano: int, pasta_destino: str, tipo: str = "TFF") -> dict:
     """
     Consulta o portal do zero e emite UMA cota como PDF.
 
     O portal não tem botão Voltar após emitir — cada cota exige nova
-    navegação completa (goto + captcha + submit). O PDF está embutido
-    como data:Application/pdf;base64,... no <embed id="pdfID"> da página
-    de resultado (Principal.aspx), dentro de um iframe filho.
+    navegação completa (goto + captcha + submit).
+
+    Captura do PDF difere por tipo:
+      - TFF: <embed id="pdfID"> com data:base64 na própria página (Principal.aspx).
+      - TLL: o bt_dam abre uma NOVA ABA (DAMFormTLL.asp) com o DAM em HTML;
+             capturamos via page.pdf() (imprimir a página).
 
     cota: {"value": "0", "label": "ÚNICA"}
     Retorna: {"nome": str, "arquivo": str|None, "detalhe": str}
     """
-    import base64
-
+    tipo     = (tipo or "TFF").upper()
     label    = cota["label"].strip().upper()
     valor    = cota["value"]
-    nome_arq = _nome_arquivo(cga, razao_social, label, ano)
+    nome_arq = _nome_arquivo(cga, razao_social, label, ano, tipo)
     caminho  = os.path.join(pasta_destino, nome_arq)
 
-    log.info(f"[CGA {cga}] Emitindo cota {label} (nova consulta)...")
+    log.info(f"[CGA {cga}] Emitindo {tipo} cota {label} (nova consulta)...")
 
     try:
-        result_frame = _consultar_frame(page, cga, ano)
+        result_frame = _consultar_frame(page, cga, ano, tipo)
 
-        # Seleciona a cota e clica bt_dam
+        # Seleciona a cota
         result_frame.select_option("select#opcCotas", valor)
         page.wait_for_timeout(500)
-        result_frame.click('input[name="bt_dam"]')
 
-        # Aguarda embed#pdfID em qualquer frame (Principal.aspx carrega em iframe filho)
-        embed_el = None
-        for _ in range(30):  # até 15s
-            page.wait_for_timeout(500)
-            for f in page.frames:
-                try:
-                    el = f.locator("embed#pdfID")
-                    if el.count() > 0:
-                        embed_el = el
-                        break
-                except Exception:
-                    continue
-            if embed_el:
-                break
+        if tipo == "TLL":
+            # bt_dam abre nova aba; capturamos o popup no momento do clique.
+            ctx = page.context
+            with ctx.expect_page(timeout=20_000) as novapag:
+                result_frame.click('input[name="bt_dam"]')
+            popup = novapag.value
+            res = _capturar_pdf_tll(popup, caminho)
+            try:
+                popup.close()
+            except Exception:
+                pass
+            # O portal pode abrir abas duplicadas (mesmo DAM); fecha as extras.
+            for extra in list(ctx.pages):
+                if "DAMFormTLL.asp" in extra.url:
+                    try:
+                        extra.close()
+                    except Exception:
+                        pass
+        else:
+            result_frame.click('input[name="bt_dam"]')
+            res = _capturar_pdf_tff(page, caminho)
 
-        if not embed_el:
+        if not res.get("arquivo"):
             return {"nome": f"Cota {label}", "arquivo": None,
-                    "detalhe": "embed#pdfID não encontrado após bt_dam"}
+                    "detalhe": res.get("detalhe", "Falha ao capturar PDF.")}
 
-        # src = "data:Application/pdf;base64,<B64>"
-        src = embed_el.get_attribute("src", timeout=10_000) or ""
-        if not src.startswith("data:"):
-            return {"nome": f"Cota {label}", "arquivo": None,
-                    "detalhe": f"src inesperado: {src[:80]}"}
-
-        b64_data  = src.split(",", 1)[1]
-        pdf_bytes = base64.b64decode(b64_data)
-
-        with open(caminho, "wb") as fh:
-            fh.write(pdf_bytes)
-
-        log.info(f"[CGA {cga}] Cota {label} salva: {caminho} ({len(pdf_bytes)} bytes)")
+        log.info(f"[CGA {cga}] Cota {label} salva: {caminho} ({res.get('bytes', 0)} bytes)")
         return {"nome": f"Cota {label}", "arquivo": caminho, "detalhe": ""}
 
     except Exception as e:
@@ -260,21 +378,28 @@ def emitir_cota(page, cga: str, cota: dict, razao_social: str,
         return {"nome": f"Cota {label}", "arquivo": None, "detalhe": str(e)}
 
 
-def _nome_arquivo(cga: str, razao_social: str, cota_label: str, ano: int) -> str:
-    """Monta o nome do arquivo: {razao}_{cga}_cota{LABEL}_{ano}.pdf"""
+def _nome_arquivo(cga: str, razao_social: str, cota_label: str, ano: int,
+                  tipo: str = "TFF") -> str:
+    """Monta o nome do arquivo: {razao}_{cga}_{TIPO}_cota{LABEL}_{ano}.pdf
+
+    O tipo (TFF|TLL) entra no nome para evitar que um lote TLL sobrescreva os
+    PDFs de um lote TFF do mesmo CGA/cota/ano na mesma pasta.
+    """
     cota_safe = re.sub(r"\s+", "", cota_label)  # "ÚNICA" → "ÚNICA", "1" → "1"
+    tipo_safe = (tipo or "TFF").upper()
     if razao_social:
         razao_limpa = re.sub(r'[\\/*?:"<>|]', "", razao_social).strip().replace(" ", "_")
         base = f"{razao_limpa}_{cga}"
     else:
         base = cga
-    return f"{base}_cota{cota_safe}_{ano}.pdf"
+    return f"{base}_{tipo_safe}_cota{cota_safe}_{ano}.pdf"
 
 
 # ── Lote ─────────────────────────────────────────────────────────────────────
 
 def executar_lote(clientes: list, ano: int, pasta_destino: str,
-                  stop_flag, progress_cb, cliente_cb, cfg: dict) -> dict:
+                  stop_flag, progress_cb, cliente_cb, cfg: dict,
+                  tipo: str = "TFF") -> dict:
     """
     Processa um lote de clientes sequencialmente.
 
@@ -283,31 +408,21 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
     progress_cb: fn(pct, msg, cga)
     cliente_cb:  fn(cga, razao_social, cnpj, municipio, status, guias, detalhe, indice, total)
     cfg:         dict de configuração
+    tipo:        "TFF" ou "TLL" — define o portal/URL (seletores idênticos)
 
     Retorna: {"total": int, "ok": int, "erros": int, "cancelado": bool}
     """
-    # No exe, o Playwright empacotado não sabe onde está o Chromium: o driver
-    # bundled procura em _internal/.../.local-browsers (vazio). O instalador instala
-    # o Chromium no path PADRÃO do usuário (%LOCALAPPDATA%\ms-playwright). Sem
-    # apontar PLAYWRIGHT_BROWSERS_PATH para lá, chromium.launch() trava esperando um
-    # navegador que nunca encontra. Em dev o site-packages já resolve o path sozinho.
-    if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
-        _browsers_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ms-playwright")
-        if os.path.isdir(_browsers_dir):
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _browsers_dir
-            log.info(f"PLAYWRIGHT_BROWSERS_PATH = {_browsers_dir}")
-        else:
-            log.warning(f"ms-playwright não encontrado em {_browsers_dir} — launch pode falhar.")
-
+    _configurar_browsers_path()
     from playwright.sync_api import sync_playwright
 
+    tipo      = (tipo or "TFF").upper()
     total     = len(clientes)
     ok_count  = 0
     err_count = 0
     headless  = cfg.get("tf_headless", True)
     pausa_s   = float(cfg.get("tf_pausa_entre_clientes_s", 3))
 
-    progress_cb(0, f"Iniciando lote de {total} cliente(s)...", "")
+    progress_cb(0, f"Iniciando lote {tipo} de {total} cliente(s)...", "")
 
     # No exe (PyInstaller+pywebview), o main.py seta WindowsSelectorEventLoopPolicy
     # globalmente. O Playwright sync_api cria seu loop via asyncio.new_event_loop(),
@@ -357,7 +472,7 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
                 guias   = []
 
                 try:
-                    resultado = consultar(page, cga, ano)
+                    resultado = consultar(page, cga, ano, tipo)
                     portal_status = resultado["status"]
 
                     if portal_status == "cotas":
@@ -374,7 +489,7 @@ def executar_lote(clientes: list, ano: int, pasta_destino: str,
                             cota_page = ctx.new_page()
                             cota_page.set_default_timeout(60_000)
                             try:
-                                g = emitir_cota(cota_page, cga, cota, nome_final, ano, pasta_destino)
+                                g = emitir_cota(cota_page, cga, cota, nome_final, ano, pasta_destino, tipo)
                             finally:
                                 try:
                                     cota_page.close()

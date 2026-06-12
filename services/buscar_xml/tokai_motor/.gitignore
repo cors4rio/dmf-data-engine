@@ -1,0 +1,33 @@
+# Python / Node / Generic
+
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.vscode/
+.idea/
+
+# Environment and Credentials (SENSITIVE)
+.env
+credentials.json
+token.json
+storage_state.json
+playwright_storage.json
+
+# Project specific
+logs/
+tmp_downloads/
+TESTE_Z/
+*.log
+*.zip
+*.rar
+
+# Debug artifacts (gerados em modo debug, nao devem ser commitados)
+debug_*.png
+debug_*.html
+erro_automacao_fatal.png
+google_login_error.png
+relatorio_erros_*.json
+
+# NOTA: config_clientes.json e sharepoint_map_*.json SAO versionados (nao estao aqui).
+# Eles sao a fonte da verdade do mapeamento e devem estar no repositorio.

@@ -674,8 +674,8 @@
           <span id="pf-login-sector-name">GESTÃO</span>
         </span>
       </div>
-      <h2 class="login-pf-title">Acesso ao sistema</h2>
-      <p class="login-pf-subtitle">Entre com suas credenciais</p>
+      <h2 class="login-pf-title" id="pf-login-title">Acesso ao sistema</h2>
+      <p class="login-pf-subtitle" id="pf-login-subtitle">Entre com suas credenciais</p>
       <div class="pf-field">
         <label for="pf-usuario">Usuário</label>
         <input type="text" id="pf-usuario" autocomplete="username" placeholder="seu.usuario">
@@ -684,13 +684,29 @@
         <label for="pf-senha">Senha</label>
         <input type="password" id="pf-senha" autocomplete="current-password" placeholder="••••••••">
       </div>
+
+      <!-- BLOCO CRIAR SENHA — expande na própria tela no primeiro acesso -->
+      <div id="pf-criar-senha-bloco" style="display:none">
+        <div style="background:#fef3c7;border:1px solid #fde68a;padding:10px 12px;border-radius:8px;margin:4px 0 14px;font-size:12px;color:#92400e;line-height:1.45">
+          <b>Primeiro acesso.</b> Defina sua senha pessoal. A conta será vinculada a esta máquina.
+        </div>
+        <div class="pf-field">
+          <label for="pf-nova-senha">Nova senha (mínimo 4 caracteres)</label>
+          <input type="password" id="pf-nova-senha" autocomplete="new-password" placeholder="••••••••">
+        </div>
+        <div class="pf-field">
+          <label for="pf-nova-senha2">Confirmar nova senha</label>
+          <input type="password" id="pf-nova-senha2" autocomplete="new-password" placeholder="••••••••">
+        </div>
+      </div>
+
       <label class="pf-remember">
         <input type="checkbox" id="pf-keep-session">
         <span>Manter sessão nesta máquina</span>
       </label>
       <div class="pf-erro" id="pf-login-erro"></div>
-      <button class="btn-pf-primary" onclick="pfDoLogin()">Entrar</button>
-      <button class="pf-back-link" onclick="goToPlatformScreen('screen-sector')">← Voltar para seleção de setor</button>
+      <button class="btn-pf-primary" id="pf-login-btn" onclick="pfDoLogin()">Entrar</button>
+      <button class="pf-back-link" id="pf-login-back" onclick="goToPlatformScreen('screen-sector')">← Voltar para seleção de setor</button>
     </div>
   </div>
 </div>
@@ -2999,10 +3015,15 @@ window.addEventListener('pywebviewready', async () => {
     } catch(e) { /* sem sessão, fica em screen-sector */ }
   }
 
-  /* Tecla Enter nas novas telas de plataforma */
-  ['pf-usuario', 'pf-senha'].forEach(id => {
+  /* Tecla Enter nas novas telas de plataforma.
+     Respeita o modo atual: login normal vs. criar senha (primeiro acesso). */
+  ['pf-usuario', 'pf-senha', 'pf-nova-senha', 'pf-nova-senha2'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') pfDoLogin(); });
+    if (el) el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      if (window._pfModoCriarSenha) pfConfirmarCriarSenha();
+      else pfDoLogin();
+    });
   });
   /* Tecla Enter no formulário de troca de senha (overlay legado) */
   ['troca-nova','troca-nova2'].forEach(id => {
@@ -3198,8 +3219,45 @@ function pfSelectSector(name) {
     label.textContent      = name;
   }
   document.getElementById('pf-login-erro').textContent = '';
+  pfSetModoCriarSenha(false);   /* sempre abre em modo login normal */
+  window._loginPendente = null;
+  const sp = document.getElementById('pf-senha'); if (sp) sp.value = '';
   goToPlatformScreen('screen-login');
   setTimeout(() => { const u = document.getElementById('pf-usuario'); if (u) u.focus(); }, 50);
+}
+
+/* Alterna a tela de login entre o modo normal e o modo "criar senha"
+   (primeiro acesso), expandindo na própria tela — sem overlay/tela extra. */
+function pfSetModoCriarSenha(ativo) {
+  window._pfModoCriarSenha = !!ativo;
+  const bloco = document.getElementById('pf-criar-senha-bloco');
+  const btn   = document.getElementById('pf-login-btn');
+  const back  = document.getElementById('pf-login-back');
+  const title = document.getElementById('pf-login-title');
+  const sub   = document.getElementById('pf-login-subtitle');
+  const inUser = document.getElementById('pf-usuario');
+  const inPwd  = document.getElementById('pf-senha');
+
+  if (ativo) {
+    if (bloco) bloco.style.display = '';
+    if (btn)   { btn.textContent = 'Definir senha e entrar'; btn.setAttribute('onclick', 'pfConfirmarCriarSenha()'); }
+    if (back)  back.style.display = 'none';
+    if (title) title.textContent = 'Defina sua senha';
+    if (sub)   sub.textContent = 'Crie uma senha pessoal para este usuário';
+    if (inUser) inUser.disabled = true;     /* usuário já identificado */
+    if (inPwd)  inPwd.disabled  = true;     /* senha-padrão não é mais editada aqui */
+    setTimeout(() => { const n = document.getElementById('pf-nova-senha'); if (n) n.focus(); }, 50);
+  } else {
+    if (bloco) bloco.style.display = 'none';
+    if (btn)   { btn.textContent = 'Entrar'; btn.setAttribute('onclick', 'pfDoLogin()'); }
+    if (back)  back.style.display = '';
+    if (title) title.textContent = 'Acesso ao sistema';
+    if (sub)   sub.textContent = 'Entre com suas credenciais';
+    if (inUser) inUser.disabled = false;
+    if (inPwd)  inPwd.disabled  = false;
+    const n1 = document.getElementById('pf-nova-senha');  if (n1) n1.value = '';
+    const n2 = document.getElementById('pf-nova-senha2'); if (n2) n2.value = '';
+  }
 }
 
 async function pfDoLogin() {
@@ -3213,13 +3271,9 @@ async function pfDoLogin() {
   const r = await api().login(nome, senha);
 
   if (r.precisa_trocar_senha) {
+    /* Primeiro acesso: expande o bloco de criar senha na própria tela. */
     window._loginPendente = { nome, senha };
-    document.getElementById('pf-senha').value = '';
-    /* Usa overlay legado apenas para troca de senha */
-    document.getElementById('login-overlay').style.display = '';
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('troca-senha-form').style.display = '';
-    goToPlatformScreen(null);
+    pfSetModoCriarSenha(true);
     return;
   }
   if (!r.ok) { erro.textContent = r.erro || 'Falha no login.'; return; }
@@ -3227,6 +3281,35 @@ async function pfDoLogin() {
   document.getElementById('pf-senha').value = '';
   aplicarSessaoNoUI({ nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina });
   toast('Bem-vindo, ' + (r.label || r.nome) + '.', 'success');
+  await pfAtualizarCatalogoDinamico();
+  pfRenderModules();
+  pfNavParaHome();
+  goToPlatformScreen('screen-module');
+}
+
+/* Confirma a criação de senha no primeiro acesso e entra DIRETO no sistema
+   (sem voltar para login nem para a seleção de setor). */
+async function pfConfirmarCriarSenha() {
+  const erro = document.getElementById('pf-login-erro');
+  erro.textContent = '';
+  const s1 = document.getElementById('pf-nova-senha')?.value || '';
+  const s2 = document.getElementById('pf-nova-senha2')?.value || '';
+  if (!s1 || s1.length < 4) { erro.textContent = 'A nova senha precisa ter pelo menos 4 caracteres.'; return; }
+  if (s1 !== s2)            { erro.textContent = 'As senhas não coincidem.'; return; }
+  if (!window._loginPendente) { erro.textContent = 'Sessão expirou. Faça login novamente.'; pfSetModoCriarSenha(false); return; }
+  if (!api()) { erro.textContent = 'Bridge indisponível.'; return; }
+
+  const r = await api().trocar_senha_primeiro_acesso(
+    window._loginPendente.nome, window._loginPendente.senha, s1
+  );
+  if (!r.ok) { erro.textContent = r.erro || 'Falha ao definir a senha.'; return; }
+
+  /* Sessão já fica autenticada no backend (api.trocar_senha_primeiro_acesso). Entra direto. */
+  window._loginPendente = null;
+  pfSetModoCriarSenha(false);
+  const ip = document.getElementById('pf-senha'); if (ip) ip.value = '';
+  aplicarSessaoNoUI({ nome: r.nome, label: r.label, papel: r.papel, maquina: r.maquina });
+  toast('Senha definida. Bem-vindo, ' + (r.label || r.nome) + '.', 'success');
   await pfAtualizarCatalogoDinamico();
   pfRenderModules();
   pfNavParaHome();
@@ -4837,6 +4920,21 @@ async function pfSalvarSenha() {
     outline: none;
   }
   #screen-tff-salvador .tf-select:focus, #screen-tff-salvador .tf-input:focus { border-color: var(--tf-accent); }
+  #screen-tff-salvador .tf-tipo-grid { gap: 12px; }
+  #screen-tff-salvador .tf-tipo-opt {
+    flex: 1; min-width: 200px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    background: var(--tf-card); border: 1.5px solid var(--tf-border); border-radius: var(--tf-r-sm);
+    padding: 12px 14px; cursor: pointer; text-align: left; transition: border-color .15s, background .15s;
+  }
+  #screen-tff-salvador .tf-tipo-opt:hover { background: var(--tf-surface); }
+  #screen-tff-salvador .tf-tipo-opt i { font-size: 20px; color: var(--tf-txt-l); }
+  #screen-tff-salvador .tf-tipo-opt .tf-tipo-nome { font-size: 15px; font-weight: 700; color: var(--tf-txt); }
+  #screen-tff-salvador .tf-tipo-opt .tf-tipo-desc { font-size: 11px; color: var(--tf-txt-m); }
+  #screen-tff-salvador .tf-tipo-opt.active {
+    border-color: var(--tf-accent); background: var(--tf-accent-soft);
+  }
+  #screen-tff-salvador .tf-tipo-opt.active i,
+  #screen-tff-salvador .tf-tipo-opt.active .tf-tipo-nome { color: var(--tf-accent); }
   #screen-tff-salvador .tf-progress-bar-wrap {
     height: 6px; background: var(--tf-border); border-radius: 3px; overflow: hidden; margin-top: 8px;
   }
@@ -4952,6 +5050,23 @@ async function pfSalvarSenha() {
           </div>
         </div>
 
+        <!-- Card: Tipo de guia -->
+        <div class="tf-card">
+          <div class="tf-card-title">Tipo de Guia</div>
+          <div class="tf-row tf-tipo-grid">
+            <button type="button" class="tf-tipo-opt active" data-tipo="TFF" onclick="tfSelecionarTipo('TFF')">
+              <i class="ti ti-file-download"></i>
+              <span class="tf-tipo-nome">TFF</span>
+              <span class="tf-tipo-desc">Taxa de Fiscalização e Funcionamento</span>
+            </button>
+            <button type="button" class="tf-tipo-opt" data-tipo="TLL" onclick="tfSelecionarTipo('TLL')">
+              <i class="ti ti-file-certificate"></i>
+              <span class="tf-tipo-nome">TLL</span>
+              <span class="tf-tipo-desc">Taxa de Licença de Localização (cota única)</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Card: Ano de competência -->
         <div class="tf-card">
           <div class="tf-card-title">Ano de Competência</div>
@@ -5045,11 +5160,24 @@ let _tfClientes        = [];
 let _tfPlanilhaCaminho = '';
 let _tfPastaDestino    = '';
 let _tfRodando         = false;
+let _tfTipo            = 'TFF';   // 'TFF' ou 'TLL'
+
+function tfSelecionarTipo(tipo) {
+  if (_tfRodando) return;   // não troca durante execução
+  _tfTipo = (tipo === 'TLL') ? 'TLL' : 'TFF';
+  document.querySelectorAll('#screen-tff-salvador .tf-tipo-opt').forEach(b => {
+    b.classList.toggle('active', b.dataset.tipo === _tfTipo);
+  });
+  // Atualiza o título da topbar para refletir o tipo selecionado
+  const titulo = document.querySelector('#screen-tff-salvador .tf-tb-title');
+  if (titulo) titulo.innerHTML = `<i class="ti ti-file-download"></i> ${_tfTipo} Salvador`;
+}
 
 // ── Entrada / saída ───────────────────────────────────────────────────────────
 
 async function tfAbrir() {
   goToPlatformScreen('screen-tff-salvador');
+  tfSelecionarTipo('TFF');   // sempre abre no TFF (default)
   tfPopularAnos();
   tfPagina('executar');
   await tfCarregarConfig();
@@ -5162,7 +5290,7 @@ async function tfExecutar() {
   if (!r.total) { toast('Nenhum cliente válido na planilha.', 'warning'); return; }
 
   const ano = parseInt(document.getElementById('tf-ano').value);
-  const res = await api().tf_executar_por_caminho(_tfPlanilhaCaminho, ano, _tfPastaDestino);
+  const res = await api().tf_executar_por_caminho(_tfPlanilhaCaminho, ano, _tfPastaDestino, _tfTipo);
   if (!res.ok) { toast(res.erro || 'Erro ao iniciar execução.', 'error'); return; }
 
   _tfRodando = true;

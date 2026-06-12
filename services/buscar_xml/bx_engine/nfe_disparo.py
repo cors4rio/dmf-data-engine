@@ -12,6 +12,7 @@ import logging
 import threading
 import requests
 from playwright.sync_api import sync_playwright
+from .bx_playwright_compat import configurar_browsers_path, policy_proactor
 
 log = logging.getLogger("NFE_Disparo")
 
@@ -39,7 +40,8 @@ def _capturar_sessao(config: dict, progress_cb) -> requests.Session:
     sessao = requests.Session()
     sessao.headers.update(HEADERS)
 
-    with sync_playwright() as p:
+    configurar_browsers_path()
+    with policy_proactor(), sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx     = browser.new_context(user_agent=HEADERS["User-Agent"])
         page    = ctx.new_page()

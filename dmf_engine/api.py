@@ -1131,8 +1131,8 @@ class Api:
             return {"ok": False, "erro": str(e)}
 
     def tf_executar_por_caminho(self, caminho: str, ano: int,
-                                pasta_destino: str) -> dict:
-        """Recarrega a planilha e inicia o lote."""
+                                pasta_destino: str, tipo: str = "TFF") -> dict:
+        """Recarrega a planilha e inicia o lote. tipo: 'TFF' ou 'TLL'."""
         try:
             if not os.path.isdir(pasta_destino):
                 return {"ok": False, "erro": f"Pasta não encontrada: {pasta_destino}"}
@@ -1141,7 +1141,7 @@ class Api:
             resultado = carregar(caminho)
             if not resultado["clientes"]:
                 return {"ok": False, "erro": "Nenhum cliente válido na planilha."}
-            return self._tf_svc().executar(resultado["clientes"], ano, pasta_destino)
+            return self._tf_svc().executar(resultado["clientes"], ano, pasta_destino, tipo)
         except Exception as e:
             log.error(f"[TF] tf_executar_por_caminho: {e}")
             return {"ok": False, "erro": str(e)}

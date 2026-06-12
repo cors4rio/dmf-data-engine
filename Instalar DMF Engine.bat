@@ -147,6 +147,23 @@ try {
     ie4uinit.exe -show 2>$null
 } catch {}
 
+# 5.2) Verifica o Chromium EMPACOTADO (não baixa mais da internet).
+#      O navegador headless viaja dentro de _internal\ms-playwright (ver dmf_engine.spec).
+#      O app aponta PLAYWRIGHT_BROWSERS_PATH para lá em runtime. Funciona offline,
+#      sem depender de firewall/proxy/internet na máquina de destino.
+Write-Host ""
+Write-Host "Verificando navegador Chromium empacotado..." -ForegroundColor Cyan
+$chromiumDir = Join-Path $destino "_internal\ms-playwright"
+$headlessExe = Get-ChildItem $chromiumDir -Recurse -Filter "chrome-headless-shell.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+
+if ($headlessExe) {
+    Write-Host "✔ Chromium empacotado encontrado: $($headlessExe.Name)" -ForegroundColor Green
+} else {
+    Write-Host "⚠ Chromium empacotado NÃO encontrado em $chromiumDir" -ForegroundColor Yellow
+    Write-Host "  Os módulos de automação web (TFF, Sem Movimento) podem não funcionar." -ForegroundColor Yellow
+    Write-Host "  Refaça o build incluindo a pasta _chromium_bundle." -ForegroundColor Yellow
+}
+
 # 6) Finalização
 Write-Host ""
 Write-Host "====================================================="
@@ -160,3 +177,4 @@ $abrir = [Console]::ReadLine()
 if ($abrir -eq 'S' -or $abrir -eq 's' -or $abrir -eq 'sim' -or $abrir -eq 'Sim') {
     Start-Process -FilePath $exe -WorkingDirectory $destino
 }
+

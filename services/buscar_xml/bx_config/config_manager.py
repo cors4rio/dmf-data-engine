@@ -53,7 +53,10 @@ DEFAULT_CONFIG = {
         "email_user":         "",
         "gmail_label":        "TOKAI - XML",
         "storage_state_path": "",
-        "motor_path":         r"C:\Users\DMF-AUTOMACAO\Documents\PROJETOS\buscador_xml\auto_tokai",
+        # motor_path vazio = usa o motor TOKAI unificado (services/buscar_xml/tokai_motor,
+        # resolvido por tokai_adapter._resolver_motor_dir, dev e exe). Só preencher para
+        # apontar um motor externo customizado (compatibilidade legada).
+        "motor_path":         "",
         "network_path":       r"Z:\#ROTINA AUTOMATICA NF",
         "max_email_age_days": 35,
         "headless_mode":      False,

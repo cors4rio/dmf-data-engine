@@ -1,0 +1,60 @@
+{
+  "_comentario": "FONTE DA VERDADE — Clientes e Regionais do RPA auto_tokai.",
+  "_instrucoes": [
+    "1. Para adicionar um novo cliente: insira o nome no array da regional correta em 'regioes_padrao'.",
+    "2. Para remover um cliente em UM mês específico: use 'overrides' com a chave 'remover'.",
+    "3. Para adicionar um cliente em UM mês específico (ex: empresa nova que entrou em Março): use 'overrides' com a chave 'adicionar'.",
+    "4. Após qualquer alteração, execute: python scripts/generate_map.py --ano 2026",
+    "5. O script regenera o sharepoint_map_{ano}.json com todos os 12 meses automaticamente."
+  ],
+
+  "regioes_padrao": {
+    "REC": [
+      "LOTTI RIO MAR",
+      "MISSKOH RIO MAR",
+      "LMS"
+    ],
+    "BL": [
+      "EAC",
+      "GFD",
+      "RSC"
+    ],
+    "BH": [
+      "MAD",
+      "FMM",
+      "GAD"
+    ],
+    "MN": [
+      "LSM"
+    ],
+    "SSA": [
+      "RSBM",
+      "FMTB",
+      "LOTTI OSTERIA",
+      "ANND",
+      "LAVDF",
+      "MISSKOH",
+      "LOTTI CUCINA",
+      "RSTKI"
+    ]
+  },
+
+  "_comentario_overrides": [
+    "Overrides são EXCEÇÕES ao padrão acima.",
+    "Use 'adicionar' para clientes que ainda NÃO existem na lista padrão naquele mês.",
+    "Use 'remover' para clientes que foram excluídos ou ainda não existiam naquele mês.",
+    "Meses sem override usam 100% a lista padrão.",
+    "Formato da chave: 'MM-AAAA' (ex: '01-2026')"
+  ],
+
+  "overrides": {
+    "2026": {
+      "01-2026": {
+        "REC": {
+          "remover": ["MISSKOH RIO MAR"],
+          "adicionar": []
+        }
+      }
+    }
+  }
+}

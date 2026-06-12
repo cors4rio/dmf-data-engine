@@ -12,6 +12,7 @@ import unicodedata
 import shutil
 import requests
 from playwright.sync_api import sync_playwright
+from .bx_playwright_compat import configurar_browsers_path, policy_proactor
 
 log = logging.getLogger("NFCe")
 
@@ -38,7 +39,8 @@ def _capturar_cookies(config: dict, progress_cb) -> requests.Session:
     progress_cb(8, "Autenticando no portal NFCe...", "")
     cookies_dict = {}
 
-    with sync_playwright() as p:
+    configurar_browsers_path()
+    with policy_proactor(), sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx     = browser.new_context()
         page    = ctx.new_page()
