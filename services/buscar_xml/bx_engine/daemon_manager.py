@@ -14,7 +14,7 @@ class DaemonManager:
     def __init__(self):
         self._reg: dict = {}   # nome -> {thread, stop, started_at, last_activity}
 
-    def start(self, nome: str, config: dict = None, on_idle_cb=None) -> dict:
+    def start(self, nome: str, config: dict = None, on_idle_cb=None, on_error_cb=None) -> dict:
         if nome in self._reg and self._reg[nome]["thread"].is_alive():
             return {"ok": False, "msg": f"'{nome}' já está rodando"}
 
@@ -23,7 +23,8 @@ class DaemonManager:
 
         if nome == "emails":
             from bx_engine.nfe_emails import monitorar_emails
-            target = lambda: monitorar_emails(stop_flag=stop, config=config, on_idle_cb=on_idle_cb)
+            target = lambda: monitorar_emails(stop_flag=stop, config=config,
+                                              on_idle_cb=on_idle_cb, on_error_cb=on_error_cb)
         elif nome == "arquivos":
             from bx_engine.nfe_arquivos import processar_loop
             target = lambda: processar_loop(stop_flag=stop, config=config)

@@ -91,8 +91,16 @@ def _derivar_mes_ano(caminho_zip: str, nome_arq: str) -> str:
 
 
 def _zipar_pasta_mes(caminho_pasta: str, mes_ano: str) -> bool:
-    """Consolida todos os arquivos não-ZIP/não-tmp da pasta em MMYYYY.zip (flat, sem subpastas).
-    Após criar o ZIP, remove os arquivos soltos (mantém só o ZIP final)."""
+    """Consolida os arquivos soltos da pasta em MMYYYY.zip (flat, sem subpastas),
+    MESCLANDO com o conteúdo do ZIP já existente (incremental).
+
+    INCREMENTAL (correção de perda de dados): se já existe um {mes_ano}.zip, seu
+    conteúdo é PRESERVADO e os arquivos soltos novos são SOMADOS. Antes, a função
+    recriava o ZIP só com os soltos e apagava o ZIP antigo — quando XMLs chegavam
+    DEPOIS de a competência já ter sido zipada (ex.: XMLs de notas canceladas, ou um
+    e-mail atrasado reprocessado), as notas que já estavam no ZIP eram perdidas,
+    sobrando só as novas. Agora o ZIP é a UNIÃO; em caso de nome igual, o arquivo
+    NOVO (solto) sobrescreve o que estava no ZIP."""
     nome_zip  = f"{mes_ano}.zip"
     dest_zip  = os.path.join(caminho_pasta, nome_zip)
     tmp_zip   = dest_zip + ".tmp"
@@ -116,14 +124,36 @@ def _zipar_pasta_mes(caminho_pasta: str, mes_ano: str) -> bool:
     if not arquivos:
         return False
 
+    # Nomes dos soltos novos: têm prioridade sobre entradas homônimas do ZIP antigo.
+    novos = {arq for arq in arquivos}
+
     try:
         with zipfile.ZipFile(tmp_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            # 1) Preserva o conteúdo do ZIP existente (menos o que será sobrescrito).
+            preservados = 0
+            if os.path.exists(dest_zip):
+                try:
+                    with zipfile.ZipFile(dest_zip, "r") as zin:
+                        for info in zin.infolist():
+                            base = os.path.basename(info.filename)
+                            if info.is_dir() or base in novos:
+                                continue  # o solto novo (mesmo nome) prevalece
+                            zf.writestr(info, zin.read(info.filename))
+                            preservados += 1
+                except Exception as ex:
+                    # ZIP antigo ilegível/corrompido: não derruba — segue só com os novos,
+                    # mas AVISA alto (não queremos perder dados em silêncio).
+                    log.error(f"ZIP existente '{dest_zip}' ilegível ({ex}); "
+                              f"recriando apenas com os {len(arquivos)} arquivo(s) novo(s).")
+            # 2) Adiciona os arquivos soltos novos.
             for arq in arquivos:
                 zf.write(os.path.join(caminho_pasta, arq), arcname=arq)
+
         if os.path.exists(dest_zip):
             os.remove(dest_zip)
         os.rename(tmp_zip, dest_zip)
-        log.info(f"ZIP criado: {dest_zip} ({len(arquivos)} arquivo(s))")
+        log.info(f"ZIP atualizado: {dest_zip} ({preservados} preservado(s) + "
+                 f"{len(arquivos)} novo(s)).")
 
         # Após zipar com sucesso, remove os arquivos soltos (mantém só o ZIP)
         removidos = 0

@@ -69,21 +69,37 @@ def _decodificar_assunto(raw: str) -> str:
 
 # ── loop principal ───────────────────────────────────────────────────────────
 
-def monitorar_emails(stop_flag: threading.Event, config: dict = None, on_idle_cb=None, download_dir: str = ""):
+def monitorar_emails(stop_flag: threading.Event, config: dict = None, on_idle_cb=None,
+                     download_dir: str = "", on_error_cb=None):
     config     = config or {}
     _dl_dir    = download_dir or config.get("_download_dir") or \
                  os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "downloads")
     _log_file  = os.path.join(_dl_dir, "email_log.json")
     imap_cfg   = config.get("imap", {})
-    servidor   = imap_cfg.get("servidor", "imap.gmail.com")
-    porta      = int(imap_cfg.get("porta", 993))
-    usuario    = imap_cfg.get("usuario", "") or os.getenv("EMAIL_USUARIO", "")
-    senha      = imap_cfg.get("senha",    "") or os.getenv("EMAIL_SENHA",   "")
+    # Fallbacks robustos: usar default mesmo se a chave existir com valor None/vazio
+    # (config antigo podia ter servidor=null e quebrava o IMAP4_SSL).
+    servidor   = imap_cfg.get("servidor") or "imap.gmail.com"
+    porta      = int(imap_cfg.get("porta") or 993)
+    usuario    = (imap_cfg.get("usuario", "") or os.getenv("EMAIL_USUARIO", "") or "").strip()
+    # Senha de app do Gmail tem 16 chars; o Google a exibe em 4 grupos com espaços.
+    # Removemos espaços para aceitar a senha colada "abcd efgh ijkl mnop" (senão vira
+    # 19 chars com espaços e o login falha com Invalid credentials).
+    senha      = (imap_cfg.get("senha", "") or os.getenv("EMAIL_SENHA", "") or "").replace(" ", "")
     idle_max   = int(imap_cfg.get("idle_max_ciclos", 5))
 
     os.makedirs(_dl_dir, exist_ok=True)
     log_proc = _carregar_log(_log_file)
     log.info(f"Daemon emails iniciado. {len(log_proc)} Message-IDs já registrados.")
+
+    # Falha cedo e CLARO se faltar credencial — em vez do críptico
+    # "Not enough arguments provided" do Gmail (login com string vazia).
+    if not usuario or not senha:
+        msg = ("Credenciais de e-mail não configuradas: preencha a Conta Gmail e a "
+               "Senha de App em Buscar XML > Configuração.")
+        log.error(f"IMAP: {msg}")
+        if on_error_cb:
+            on_error_cb(msg)
+        return
 
     idle_ciclos = 0
 
@@ -186,8 +202,22 @@ def monitorar_emails(stop_flag: threading.Event, config: dict = None, on_idle_cb
 
             stop_flag.wait(timeout=60)
 
+    except imaplib.IMAP4.error as e:
+        # Erro de protocolo IMAP — quase sempre credencial recusada pelo Gmail.
+        det = str(e)
+        if "AUTHENTICATIONFAILED" in det or "Invalid credentials" in det:
+            msg = ("Senha de App do Gmail inválida ou expirada. Gere uma nova em "
+                   "myaccount.google.com/apppasswords e atualize em Buscar XML > Configuração.")
+        else:
+            msg = f"Falha de login no e-mail (IMAP): {det}"
+        log.error(f"Daemon emails: {msg}")
+        if on_error_cb:
+            on_error_cb(msg)
     except Exception as e:
-        log.error(f"Daemon emails falhou: {e}")
+        msg = f"Daemon de e-mail falhou: {e}"
+        log.error(msg)
+        if on_error_cb:
+            on_error_cb(msg)
     finally:
         try:
             mail.logout()

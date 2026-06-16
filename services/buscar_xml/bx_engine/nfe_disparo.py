@@ -121,10 +121,13 @@ def _disparar_loja(nome: str, loja_key: str, dt_ini: str, dt_fim: str,
 
 
 def executar_nfe(lojas: list, periodo: dict, stop_flag: threading.Event,
-                 progress_cb, config: dict = None) -> dict:
+                 progress_cb, config: dict = None, apos_loja_cb=None) -> dict:
     """
     lojas: [{"codigo","apelido","id_bluesoft"}, ...]
     periodo: {"data_inicio":"DD/MM/YYYY","data_fim":"DD/MM/YYYY","mes_ano":"MMYYYY"}
+    apos_loja_cb(loja, sessao): callback opcional chamado LOGO APÓS o disparo de cada
+        loja (intercalado), com a sessão autenticada — usado para baixar o XML das
+        notas canceladas daquela loja na hora, sem esperar o fim do lote nem os e-mails.
     """
     config         = config or {}
     email_destino  = config.get("erp", {}).get("email_destino", "dmfautomacoes@gmail.com")
@@ -173,6 +176,15 @@ def executar_nfe(lojas: list, periodo: dict, stop_flag: threading.Event,
             err += 1
             log.error(f"FALHA: {nome} — {e}")
 
+        # Intercalado: baixa as notas canceladas DESTA loja logo após o disparo,
+        # reusando a mesma sessão (não depende dos e-mails). Falha aqui não derruba
+        # o disparo das demais lojas.
+        if apos_loja_cb and not stop_flag.is_set():
+            try:
+                apos_loja_cb(loja, sessao)
+            except Exception as e:
+                log.error(f"Canceladas (intercalado) falhou em {nome}: {e}")
+
         # sleep interrompível: respeita stop_flag de imediato
         if stop_flag.wait(timeout=3):
             progress_cb(None, "Cancelado pelo usuário.", "")
@@ -188,6 +200,9 @@ def executar_nfe(lojas: list, periodo: dict, stop_flag: threading.Event,
         "erros":            err,
         "aguardando_email": True,
         "lojas_aguardando": lojas_aguardando,
+        # Sessão autenticada reaproveitada pela etapa de notas canceladas
+        # (nfe_canceladas), que precisa pesquisar/baixar no mesmo ERP sem novo login.
+        "_sessao":          sessao,
     }
 
 

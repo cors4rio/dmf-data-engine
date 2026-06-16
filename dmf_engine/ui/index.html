@@ -6627,6 +6627,12 @@ function bxOnEvent(evento, dados) {
   }
   // Daemons
   if (evento === 'daemon_idle_stop') bxRefreshDaemons();
+  // Erro do daemon (ex.: senha de app do Gmail inválida) — mostra a CAUSA em vez de
+  // só desmarcar o botão silenciosamente, e reflete o estado real dos toggles.
+  if (evento === 'daemon_error') {
+    toast(dados.msg || 'Falha no daemon de e-mail.', 'error', 9000);
+    bxRefreshDaemons();
+  }
   // Log em tempo real
   if (evento === '_log') {
     const modulo = dados.modulo?.toLowerCase() || '';
@@ -6724,7 +6730,9 @@ async function bxSalvarConfig() {
   const dados = {
     erp:   { usuario: v('bx-cfg-erp-usuario'), senha: v('bx-cfg-erp-senha'), email_destino: v('bx-cfg-erp-email') },
     nfce:  { url_base: v('bx-cfg-nfce-url'), usuario: v('bx-cfg-nfce-usuario'), senha: v('bx-cfg-nfce-senha') },
-    imap:  { usuario: v('bx-cfg-imap-usuario'), senha: v('bx-cfg-imap-senha') },
+    /* Senha de App do Gmail tem 16 chars; o Google a exibe em 4 grupos com espaços.
+       Removemos espaços para evitar 'Invalid credentials' por espaço/lixo colado. */
+    imap:  { usuario: v('bx-cfg-imap-usuario').trim(), senha: v('bx-cfg-imap-senha').replace(/\s/g, '') },
     paths: { base_z: v('bx-cfg-path-base'), nfe: v('bx-cfg-path-nfe'), nfce: v('bx-cfg-path-nfce'), sped: v('bx-cfg-path-sped') },
   };
   const r = await api().bx_salvar_config(dados);

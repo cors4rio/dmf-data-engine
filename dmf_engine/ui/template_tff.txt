@@ -1,0 +1,8 @@
+# Template — TFF Salvador
+# Formato: RAZAO SOCIAL;CNPJ;MUNICIPIO;CGA  (uma empresa por linha)
+# Colunas (nesta ordem): A=Razao Social  B=CNPJ  C=Municipio  D=CGA
+# O CGA pode ter pontuacao ou so numeros (o sistema remove pontos/tracos).
+# Linhas começando com # são ignoradas.
+#
+EMPRESA EXEMPLO LTDA;12345678000195;Salvador;1234567
+OUTRA EMPRESA ME;98765432000111;Salvador;7654321

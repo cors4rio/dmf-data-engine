@@ -104,14 +104,34 @@ class BuscarXMLService:
             self._daemons.start(
                 "emails", cfg,
                 on_idle_cb=lambda: self._cb("daemon_idle_stop", {"nome": "emails"}),
+                on_error_cb=self._email_error_cb(),
             )
             self._daemons.start("arquivos", cfg)
             progress_cb(5, "Daemons 'emails' e 'arquivos' iniciados.", "")
 
+            # Modo INTERCALADO: logo após o disparo de cada loja, baixa o XML das notas
+            # canceladas DELA (não depende dos e-mails — usa a sessão direta do ERP).
+            # Assim o usuário vê as canceladas de cada unidade na hora, sem esperar o
+            # fim do lote nem o aguardo dos ZIPs. Acumula o total para o nfe_done.
+            canc_tot = {"notas_canceladas": 0, "xmls_salvos": 0, "erros": 0}
+            def _apos_loja(loja, sessao):
+                from bx_engine.nfe_canceladas import baixar_canceladas_loja
+                r = baixar_canceladas_loja(
+                    sessao=sessao, loja=loja, periodo=periodo, stop_flag=stop,
+                    progress_cb=progress_cb, download_dir=self._download_dir,
+                )
+                for k in canc_tot:
+                    canc_tot[k] += r.get(k, 0)
+                if r.get("xmls_salvos"):
+                    # Processa já os ZIPs recém-criados para o Z: (daemon arquivos).
+                    self._daemons.start("arquivos", cfg)
+
             resultado = executar_nfe(
                 lojas=lojas, periodo=periodo, stop_flag=stop, config=cfg,
-                progress_cb=progress_cb,
+                progress_cb=progress_cb, apos_loja_cb=_apos_loja,
             )
+            resultado.pop("_sessao", None)
+            resultado["canceladas"] = canc_tot
 
             if resultado.get("aguardando_email") and not stop.is_set():
                 wait_res = self._aguardar_arquivos_nfe(
@@ -153,7 +173,9 @@ class BuscarXMLService:
 
             try:
                 if not self._daemons.get_status("emails").get("alive"):
-                    self._daemons.start("emails", cfg, on_idle_cb=lambda: self._cb("daemon_idle_stop", {"nome": "emails"}))
+                    self._daemons.start("emails", cfg,
+                                        on_idle_cb=lambda: self._cb("daemon_idle_stop", {"nome": "emails"}),
+                                        on_error_cb=self._email_error_cb())
                     progress_cb(None, "↻ Daemon 'emails' reiniciado.", "")
                 if not self._daemons.get_status("arquivos").get("alive"):
                     self._daemons.start("arquivos", cfg)
@@ -328,17 +350,25 @@ class BuscarXMLService:
 
     # ── Daemons ───────────────────────────────────────────────────────────────
 
+    def _email_error_cb(self):
+        """Callback de erro do daemon de e-mail → evento para a UI mostrar a causa
+        real (ex.: senha de app inválida) em vez de só desmarcar o botão."""
+        return lambda msg: self._cb("daemon_error", {"nome": "emails", "msg": msg})
+
     def start_daemon(self, nome: str):
         cfg = self._cfg()
-        idle_cb = (lambda: self._cb("daemon_idle_stop", {"nome": nome})) if nome == "emails" else None
-        return self._daemons.start(nome, cfg, on_idle_cb=idle_cb)
+        idle_cb  = (lambda: self._cb("daemon_idle_stop", {"nome": nome})) if nome == "emails" else None
+        error_cb = self._email_error_cb() if nome == "emails" else None
+        return self._daemons.start(nome, cfg, on_idle_cb=idle_cb, on_error_cb=error_cb)
 
     def stop_daemon(self, nome: str):
         return self._daemons.stop(nome)
 
     def restart_daemon(self, nome: str):
         self._daemons.stop(nome)
-        return self._daemons.start(nome, self._cfg())
+        cfg = self._cfg()
+        error_cb = self._email_error_cb() if nome == "emails" else None
+        return self._daemons.start(nome, cfg, on_error_cb=error_cb)
 
     def get_status_daemons(self):
         return self._daemons.get_all_status()

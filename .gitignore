@@ -80,6 +80,10 @@ desktop.ini
 !dmf_engine/ui/template_sem_movimento.txt
 !dmf_engine/ui/template_sem_movimento.xlsx
 
+# Templates do módulo TFF Salvador (não são dados de cliente)
+!dmf_engine/ui/template_tff.txt
+!dmf_engine/ui/template_tff.xlsx
+
 # Ignorando Dumps de Relatorios em MD
 relatorio_*.md
 calculos_*.md
@@ -89,6 +93,13 @@ calculo_folha_report*.md
 
 # Rascunhos, scripts locais temporários e arquivos de execução
 scratch/
+scratch_*.py
+scratch_*.txt
+scratch_download_*
+# HTML salvo do portal para mapeamento (contém dados reais de cliente)
+visualizar_*.html
+# Comunicados/textos pontuais para a equipe (não fazem parte do código)
+COMUNICADO_*.md
 skills/
 log_execucao.md
 
