@@ -3401,6 +3401,11 @@ async function pfAbrirModulo(modulo) {
     return;
   }
 
+  if (modulo === 'relatorio_pagamento') {
+    rpAbrirModal();
+    return;
+  }
+
   if (modulo === 'buscar_xml') {
     bxAbrir();
     return;
@@ -3652,6 +3657,174 @@ function rfMostrarCfgResultado(tipo, html) {
   };
   el.style.cssText = `display:block;margin-bottom:16px;padding:10px 14px;border-radius:8px;${estilos[tipo] || estilos.info}`;
   el.innerHTML = html;
+}
+
+/* ===================================================================== */
+/* RELATÓRIO DE PAGAMENTO — Modal inline (Padrão 0)                     */
+/* Organiza o extrato de conta corrente (Tokai/Domínio) em             */
+/* Entradas/Saídas + Resumo.                                            */
+/* ===================================================================== */
+
+function rpAbrirModal() {
+  document.getElementById('rp-modal-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rp-modal-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;
+    display:flex;align-items:center;justify-content:center;
+  `;
+  overlay.innerHTML = `
+    <div style="background:#FEFCF3;border:1px solid #DED8C4;border-radius:12px;
+         padding:28px 32px;width:480px;max-width:95vw;
+         box-shadow:0 20px 60px rgba(0,0,0,.2);color:#221E15">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;
+                  border-bottom:1px solid #EDE7D2;padding-bottom:16px">
+        <span style="background:#1E7C5A;border-radius:8px;width:36px;height:36px;flex-shrink:0;
+              display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-cash-banknote" style="color:#fff;font-size:18px"></i>
+        </span>
+        <div>
+          <div style="font-weight:600;font-size:15px;color:#221E15">Relatório de Pagamento</div>
+          <div style="font-size:12px;color:#857060">Extrato de conta corrente — Grupo Tokai</div>
+        </div>
+        <button onclick="document.getElementById('rp-modal-overlay').remove()"
+          style="margin-left:auto;background:none;border:none;color:#857060;cursor:pointer;
+                 font-size:20px;line-height:1;padding:4px">×</button>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">
+          Planilha de extrato
+        </label>
+        <div style="display:flex;gap:8px">
+          <input id="rp-arquivo" type="text" readonly placeholder="Nenhuma planilha selecionada"
+            style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#F8F5ED;color:#221E15;font-size:13px"/>
+          <button onclick="rpEscolherArquivo()"
+            style="padding:8px 14px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#F0EBE0;color:#3A3020;cursor:pointer;font-size:13px;white-space:nowrap">
+            <i class="ti ti-file-search"></i> Escolher
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:22px">
+        <label style="font-size:12px;color:#5C5040;font-weight:500;display:block;margin-bottom:6px">
+          Pasta de saída
+        </label>
+        <div style="display:flex;gap:8px">
+          <input id="rp-output-dir" type="text" readonly placeholder="Downloads"
+            style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#F8F5ED;color:#221E15;font-size:13px"/>
+          <button onclick="rpEscolherPasta()"
+            style="padding:8px 14px;border-radius:6px;border:1px solid #DED8C4;
+                   background:#F0EBE0;color:#3A3020;cursor:pointer;font-size:13px;white-space:nowrap">
+            <i class="ti ti-folder-open"></i> Escolher
+          </button>
+        </div>
+      </div>
+
+      <div id="rp-resultado" style="display:none;margin-bottom:16px;padding:12px;border-radius:8px"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="document.getElementById('rp-modal-overlay').remove()"
+          style="padding:9px 18px;border-radius:7px;border:1px solid #DED8C4;
+                 background:none;color:#3A3020;cursor:pointer;font-size:14px">
+          Cancelar
+        </button>
+        <button id="rp-btn-gerar" onclick="rpGerar()"
+          style="padding:9px 20px;border-radius:7px;border:none;background:#1E7C5A;
+                 color:#fff;cursor:pointer;font-size:14px;font-weight:600">
+          <i class="ti ti-table-export"></i> Gerar Planilha
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function rpEscolherArquivo() {
+  if (!api()) return;
+  const caminho = await api().selecionar_arquivo(["Planilha Excel (*.xlsx;*.xlsm)", "Todos os arquivos (*.*)"]);
+  if (caminho) document.getElementById('rp-arquivo').value = caminho;
+}
+
+async function rpEscolherPasta() {
+  if (!api()) return;
+  const r = await api().abrir_seletor_pasta();
+  if (r && r.caminho) document.getElementById('rp-output-dir').value = r.caminho;
+}
+
+async function rpGerar() {
+  if (!api()) return;
+  const arquivo = (document.getElementById('rp-arquivo')?.value || '').trim();
+  const outDir  = (document.getElementById('rp-output-dir')?.value || '').trim();
+
+  if (!arquivo) { toast('Selecione a planilha de extrato.', 'warning'); return; }
+
+  const btn = document.getElementById('rp-btn-gerar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+  document.getElementById('rp-resultado').style.display = 'none';
+
+  registerModuleHandlers('relatorio_pagamento', {
+    done: function(data) {
+      const b = document.getElementById('rp-btn-gerar');
+      if (b) { b.disabled = false; b.innerHTML = '<i class="ti ti-table-export"></i> Gerar Planilha'; }
+      document.getElementById('progresso-container')?.remove();
+
+      const res = document.getElementById('rp-resultado');
+      if (!res) return;
+      res.style.display = '';
+
+      if (!data.ok) {
+        res.style.cssText = 'display:block;margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(180,30,30,.1);border:1px solid rgba(180,30,30,.3)';
+        res.innerHTML = `<span style="color:#8B1A1A"><i class="ti ti-alert-circle"></i> ${data.erro || 'Falha ao gerar planilha.'}</span>`;
+        return;
+      }
+      if (data.aviso) {
+        res.style.cssText = 'display:block;margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(176,106,0,.1);border:1px solid rgba(176,106,0,.3)';
+        res.innerHTML = `<span style="color:#6B4000"><i class="ti ti-info-circle"></i> ${data.aviso}</span>`;
+        return;
+      }
+
+      const c = data.cliente || {};
+      const fmt = (v) => (v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const nome = data.arquivo ? data.arquivo.split('\\').pop().split('/').pop() : '';
+      res.style.cssText = 'display:block;margin-bottom:16px;padding:14px;border-radius:8px;background:rgba(30,124,90,.1);border:1px solid rgba(30,124,90,.3)';
+      res.innerHTML = `
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="font-size:12px;color:#3A3020;line-height:1.6">
+            <div style="color:#1E5C40;font-weight:600;font-size:13px;margin-bottom:4px">
+              <i class="ti ti-circle-check"></i> Planilha gerada
+            </div>
+            ${c.empresa ? `<div><b>Cliente:</b> ${c.empresa}</div>` : ''}
+            ${c.banco ? `<div><b>Banco/Conta:</b> ${c.banco}</div>` : ''}
+            ${c.periodo ? `<div><b>${c.periodo}</b></div>` : ''}
+            <div style="margin-top:6px">
+              <span style="color:#0066CC">Entradas: ${data.entradas} · ${fmt(data.total_entradas)}</span><br>
+              <span style="color:#CC0000">Saídas: ${data.saidas} · ${fmt(data.total_saidas)}</span><br>
+              <b>Saldo do período: ${fmt(data.saldo)}</b>
+            </div>
+          </div>
+          ${data.arquivo ? `<button onclick="api().abrir_arquivo && api().abrir_arquivo('${data.arquivo.replace(/\\/g, '\\\\')}')"
+            style="padding:6px 12px;border-radius:6px;border:1px solid rgba(30,124,90,.35);
+                   background:rgba(30,124,90,.1);color:#1E5C40;cursor:pointer;font-size:12px;
+                   white-space:nowrap"><i class="ti ti-external-link"></i> Abrir</button>` : ''}
+        </div>
+      `;
+      toast(`Planilha gerada: ${nome}`, 'success', 5000);
+    }
+  });
+
+  const opcoes = { arquivo };
+  if (outDir) opcoes.output_dir = outDir;
+
+  const r = await api().executar_modulo('relatorio_pagamento', opcoes);
+  if (r && !r.ok) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-table-export"></i> Gerar Planilha'; }
+    toast(r.erro || 'Erro ao iniciar módulo.', 'error');
+  }
 }
 
 /* ===================================================================== */
