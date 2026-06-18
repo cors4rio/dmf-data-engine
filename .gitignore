@@ -96,6 +96,9 @@ scratch/
 scratch_*.py
 scratch_*.txt
 scratch_download_*
+# Backups de análise pontual (debug/check/backfill únicos) — histórico local, fora do repo
+ESTRUTURA/
+build_output.txt
 # HTML salvo do portal para mapeamento (contém dados reais de cliente)
 visualizar_*.html
 # Comunicados/textos pontuais para a equipe (não fazem parte do código)
