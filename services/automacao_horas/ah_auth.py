@@ -10,6 +10,7 @@ sofisticado, mas impede que uma pessoa entre na conta da outra mesmo tendo a sen
 """
 
 import os
+import sys
 import json
 import hashlib
 import hmac
@@ -20,18 +21,47 @@ from datetime import datetime
 
 
 # ── Usuários autorizados (carregados de arquivo externo) ──────────────────
+# Este módulo roda dentro do MESMO processo/exe da Central (ah_launcher.py),
+# importado via sys.path a partir do bundle _MEIPASS. O dmf_engine.spec só
+# empacota dmf_engine/usuarios.json — NÃO existe services/automacao_horas/
+# usuarios.json no bundle. Por isso, no frozen, procuramos primeiro em
+# dmf_engine/usuarios.json (fonte real empacotada) antes do caminho ao lado
+# deste módulo (que só existe em dev). Mesmo esquema de prioridade do
+# dmf_engine/auth.py — ver memória reset-senha-case-e-cancelamento.
 _AUTH_DIR = os.path.dirname(os.path.abspath(__file__))
-_USUARIOS_FILE = os.path.join(_AUTH_DIR, "usuarios.json")
 
-USUARIOS_AUTORIZADOS = []
-if os.path.exists(_USUARIOS_FILE):
-    try:
-        with open(_USUARIOS_FILE, "r", encoding="utf-8") as _f:
-            USUARIOS_AUTORIZADOS = json.load(_f)
-    except Exception as _e:
-        logging.warning(f"[AUTH] Não foi possível ler usuarios.json: {_e}")
-else:
-    logging.warning("[AUTH] usuarios.json não encontrado. Copie usuarios_template.json → usuarios.json")
+
+def _candidatos_usuarios_file():
+    cands = []
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            cands.append(os.path.join(meipass, "dmf_engine", "usuarios.json"))
+            cands.append(os.path.join(meipass, "services", "automacao_horas", "usuarios.json"))
+        cands.append(os.path.join(os.path.dirname(sys.executable), "usuarios.json"))
+    cands.append(os.path.join(_AUTH_DIR, "usuarios.json"))
+    return cands
+
+
+def _carregar_usuarios_autorizados():
+    for caminho in _candidatos_usuarios_file():
+        if os.path.exists(caminho):
+            try:
+                with open(caminho, "r", encoding="utf-8") as _f:
+                    dados = json.load(_f)
+                if not dados:
+                    logging.warning(f"[AUTH] usuarios.json em {caminho} está vazio; ignorando.")
+                    continue
+                logging.info(f"[AUTH] usuarios.json carregado de: {caminho} ({len(dados)} usuário(s))")
+                return dados
+            except Exception as _e:
+                logging.warning(f"[AUTH] Falha ao ler {caminho}: {_e}")
+    logging.warning("[AUTH] usuarios.json não encontrado em nenhum local conhecido: "
+                    f"{_candidatos_usuarios_file()}")
+    return []
+
+
+USUARIOS_AUTORIZADOS = _carregar_usuarios_autorizados()
 
 # Quais módulos cada papel pode executar (escrita)
 PERMISSOES_EXECUCAO = {
@@ -114,27 +144,41 @@ def inicializar_supervisores_padrao(base_dir):
     - Remove entradas que não estão mais autorizadas.
     - Atualiza papéis (caso tenhamos mudado a tabela em código).
     - Preserva hash/salt/máquina dos usuários existentes.
-    """
-    data = _carregar(base_dir)
-    autorizados_nomes = {u["nome"] for u in USUARIOS_AUTORIZADOS}
 
-    # Remove não-autorizados
+    GUARDA CRÍTICA: se USUARIOS_AUTORIZADOS estiver vazio (usuarios.json não foi
+    encontrado/lido neste boot), NÃO sincroniza — senão a remoção de não-autorizados
+    zera supervisores.json inteiro e recria tudo com senha padrão no próximo boot.
+    Ver memória reset-senha-case-e-cancelamento.
+    """
+    if not USUARIOS_AUTORIZADOS:
+        logging.warning(
+            "[AUTH] USUARIOS_AUTORIZADOS vazio — pulando sincronização para NÃO "
+            "apagar supervisores.json. Verifique se usuarios.json está acessível."
+        )
+        return
+
+    data = _carregar(base_dir)
+    # Normaliza SEMPRE em lowercase (usuarios.json pode ter case inconsistente
+    # de cópias antigas; comparação case-sensitive removia supervisor existente
+    # como "não-autorizado" e recriava com senha padrão a cada boot).
+    autorizados_nomes = {u["nome"].lower() for u in USUARIOS_AUTORIZADOS}
+
     data["supervisores"] = [
         s for s in data["supervisores"] if s["nome"].lower() in autorizados_nomes
     ]
 
-    nomes_existentes = {s["nome"].lower() for s in data["supervisores"]}
     for u in USUARIOS_AUTORIZADOS:
         existente = _buscar(data, u["nome"])
         if existente is None:
             # Cria com senha padrão = nome em minúsculas, primeira_senha=True
+            nome_norm = u["nome"].lower()
             salt_hex = secrets.token_hex(SALT_BYTES)
             data["supervisores"].append({
-                "nome": u["nome"],
+                "nome": nome_norm,
                 "label": u["label"],
                 "papel": u["papel"],
                 "salt": salt_hex,
-                "hash": _hash_senha(u["nome"], salt_hex),
+                "hash": _hash_senha(nome_norm, salt_hex),
                 "maquina": None,
                 "primeira_senha": True,
                 "criado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
