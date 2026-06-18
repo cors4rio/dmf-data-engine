@@ -9,7 +9,7 @@
 1. [Plugin System — BaseModule, ModuleMeta, ModuleRegistry](#1-plugin-system--basemodule-modulemeta-moduleregistry)
 2. [EventBus — Comunicação Python → JS](#2-eventbus--comunicação-python--js)
 3. [Lock Cooperativo](#3-lock-cooperativo)
-4. [SSO por Token](#4-sso-por-token)
+4. [Sessão Compartilhada (substitui o antigo "SSO por Token")](#4-sessão-compartilhada-substitui-o-antigo-sso-por-token)
 5. [Padrão 0 — Módulo Inline ← DEFAULT](#5-padrão-0--módulo-inline)
 6. [Padrão A — Projeto Python Externo](#6-padrão-a--projeto-python-externo)
 7. [Padrão B — Binário Compilado](#7-padrão-b--binário-compilado)
@@ -60,8 +60,6 @@ sequenceDiagram
     W->>JS: window.__onEvent({ module, event, data })
     JS->>JS: Atualiza barra de progresso na UI
 ```
-![diagrama](img/design_patterns_1.svg)
-
 
 O JS recebe todos os eventos pela mesma função `window.__onEvent`, independente do módulo que os emitiu. O campo `module` identifica a origem.
 
@@ -90,38 +88,28 @@ sequenceDiagram
     A->>FS: liberar_lock() → deleta .dmflock
     Note over B: Usuário B pode tentar novamente
 ```
-![diagrama](img/design_patterns_2.svg)
-
 
 O lock é **sempre liberado no `finally`** — mesmo em caso de exceção. Não liberar o lock bloqueia todos os outros usuários permanentemente.
 
 ---
 
-## 4. SSO por Token
+## 4. Sessão Compartilhada (substitui o antigo "SSO por Token")
 
-A Central DMF e a Automação de Horas são processos separados. Para evitar login duplo, a Central gera um token temporário que transfere a sessão ao processo filho.
-
-O token é um arquivo JSON em `temp/` com validade de 30 segundos. O arquivo é deletado pelo processo filho após consumo — mesmo que o prazo não tenha expirado.
+A Automação de Horas roda **in-process** no mesmo executável 64-bit da Central. Não há mais processos separados nem login duplo: o launcher recebe a sessão já autenticada e a passa diretamente ao serviço.
 
 ```mermaid
 sequenceDiagram
     participant C as Central DMF
-    participant TMP as temp/ (sistema de arquivos)
+    participant L as Launcher (in-process)
     participant A as Automação de Horas
 
     C->>C: Usuário clica em "Automação de Horas"
-    C->>TMP: Cria dmf_session_<token>.json<br/>{ usuario, papel, maquina, expira_em: now+30s }
-    C->>A: subprocess.Popen(py -3-32 main.py --session-token <token>)
-    A->>TMP: Lê dmf_session_<token>.json
-    A->>A: Valida expiração
-    A->>TMP: Deleta arquivo de token
-    A->>A: Sessão ativa — usuário autenticado
-    Note over A: Se token expirado → tela de login manual
+    C->>L: Invoca launcher com a sessão atual (usuario, papel, máquina)
+    L->>A: Inicializa o serviço no mesmo processo 64-bit
+    A->>A: Reaproveita a sessão recebida (sem novo login)
 ```
-![diagrama](img/design_patterns_3.svg)
 
-
-**Por que arquivo e não socket ou pipe?** Arquivos temporários funcionam entre processos sem configuração de rede local. São simples, auditáveis e eliminados pelo sistema operacional se o processo filho nunca iniciar.
+> **Histórico.** Até a unificação 64-bit, a Central lançava a Automação como subprocesso 32-bit e transferia a sessão por um token JSON temporário (válido 30s, deletado após consumo). Esse mecanismo foi **removido** quando o serviço passou a rodar in-process — não há mais token, subprocesso ou janela de expiração. Ver [migracao-64bit.md](legacy/migracao-64bit.md).
 
 ---
 
@@ -131,7 +119,7 @@ sequenceDiagram
 
 **Quando usar:** módulo Python puro que lê/escreve dados e retorna resultado (ODBC queries, geração de Excel, leitura de planilhas, cálculos). Este foi o padrão correto para `relatorio_rendimentos`.
 
-**Quando NÃO usar:** quando o código precisa de Python 64-bit e a Central ainda roda em 32-bit (use Padrão A com subprocess separado), ou quando precisa de UI interativa rica que não cabe no modal da Central.
+**Quando NÃO usar:** quando o código tem arquitetura própria que não compensa reescrever (use Padrão A), quando é um binário em outra linguagem (Padrão B), ou quando precisa de UI interativa rica que não cabe no modal da Central.
 
 ```python
 # dmf_engine/modules/m_meu_modulo.py
@@ -192,7 +180,7 @@ O callback `lambda ev, d` traduz eventos internos do projeto externo para o Even
 
 ---
 
-## 6. Padrão B — Binário Compilado
+## 7. Padrão B — Binário Compilado
 
 **Quando usar:** ferramenta compilada (Go, Rust, Java, C#) chamada como processo externo. O adaptador lança o binário via `subprocess.Popen` e lê o stdout linha a linha.
 
@@ -209,7 +197,7 @@ O adaptador Python traduz cada linha JSON de `stdout` em chamadas `self.progress
 
 ---
 
-## 7. Padrão C — Serviço HTTP Local
+## 8. Padrão C — Serviço HTTP Local
 
 **Quando usar:** daemon que fica rodando em background com API REST própria (Flask, Node, Go HTTP). O frontend JS pode chamar diretamente via `fetch()`, ou um adaptador Python pode intermediar via `requests`.
 
@@ -225,7 +213,7 @@ Para daemons que precisam estar prontos antes de qualquer chamada, o `main.py` d
 
 ---
 
-## 8. Frozen Mode
+## 9. Frozen Mode
 
 Em produção, o PyInstaller empacota o projeto em um único `.exe`. Isso altera a estrutura de diretórios e exige código adaptativo:
 

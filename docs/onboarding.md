@@ -41,34 +41,33 @@ Pular a leitura significa reimplementar padrões que já existem, ou quebrar inv
 
 ## 1. Setup do Ambiente Local
 
-O projeto exige **dois interpretadores Python** em coexistência na mesma máquina.
-
-| Interpretador | Uso | Comando |
-|---|---|---|
-| Python 32-bit (3.x) | Automação de Horas (ODBC Sybase) | `py -3-32` |
-| Python 64-bit (3.x) | Central DMF (plataforma) — futuro | `python` ou `py -3-64` |
+O projeto usa um **único interpretador Python 64-bit** (`py -3-64`). A antiga coexistência 32/64-bit foi eliminada — ver [migracao-64bit.md](legacy/migracao-64bit.md).
 
 ### Instalação das Dependências
 
 ```
-py -3-32 -m pip install pyinstaller pywebview openpyxl pyodbc
-py -3-32 -m pip install --pre pythonnet
+py -3-64 -m pip install pyinstaller pywebview openpyxl pyodbc
+py -3-64 -m pip install --pre pythonnet
 ```
 
 ### Configuração do ODBC
 
-O DSN `Contabil` deve estar configurado em `odbcad32.exe` (ODBC 32-bit) com o driver SQL Anywhere instalado. Esta configuração é feita pela equipe de TI — sem ela, o módulo Fiscal e DP não se conectam ao ERP Domínio.
+O acesso ao ERP Domínio (SQL Anywhere 17) é **DSN-less**: basta o driver **SQL Anywhere 17 (64-bit)** instalado na máquina. Não é necessário registrar DSN em `odbcad32.exe` — a conexão é montada por `DRIVER=SQL Anywhere 17;Host=...;Port=...`. Sem o driver, os módulos Fiscal e DP não se conectam.
 
 ### config.json
 
-Na primeira execução, o app cria `config.json` no diretório de execução. Preencher manualmente após o primeiro boot:
+Na primeira execução, o app cria `config.json` no diretório de execução. Preencher manualmente após o primeiro boot (conexão DSN-less):
 
 ```json
 {
     "master_path": "C:\\OneDrive\\CONTROLE DE HORAS DMF.xlsm",
-    "db_dsn": "Contabil",
-    "db_user": "EXTERNO",
-    "db_password": "<senha_no_ambiente>"
+    "db_driver": "SQL Anywhere 17",
+    "db_server": "<engine/server>",
+    "db_host": "<host>",
+    "db_port": 2638,
+    "db_database": "contabil",
+    "db_uid": "EXTERNO",
+    "db_pwd": "<senha_no_ambiente>"
 }
 ```
 
@@ -81,21 +80,15 @@ A senha **nunca** deve ser versionada.
 ### Central DMF (dev)
 
 ```
-py -3-32 dmf_engine/main.py
+py -3-64 dmf_engine/main.py
 ```
 
-> **Por que 32-bit?** A Central DMF ainda importa de `engine/` (raiz), que usa `pyodbc` com driver Sybase 32-bit. Enquanto essas dependências existirem, o interpretador deve ser 32-bit. Ver [ROADMAP — Seção 3](ROADMAP.md#3-limpeza-das-dependências-residuais-da-central) para quando isso muda.
+A Central e a Automação de Horas rodam no **mesmo interpretador 64-bit**. A Automação é carregada in-process pela Central (sem subprocesso) — ver [arquitetura.md — Seção 3](arquitetura.md#3-comunicação-entre-componentes--sessão-compartilhada).
 
-### Automação de Horas (dev)
-
-```
-py -3-32 services/automacao_horas/main.py
-```
-
-### Automação de Horas via SSO (simular launch da Central)
+### Automação de Horas standalone (dev)
 
 ```
-py -3-32 services/automacao_horas/main.py --session-token <token>
+py -3-64 services/automacao_horas/main.py
 ```
 
 ### Build do executável
@@ -121,8 +114,8 @@ N8N automacao/
 │   └── ui/index.html       SPA frontend (Vanilla JS)
 │
 ├── services/
-│   └── automacao_horas/    Serviço 32-bit (ODBC Sybase)
-│       ├── main.py         Bootstrap standalone + SSO por token
+│   └── automacao_horas/    Serviço in-process (ODBC Sybase, 64-bit)
+│       ├── main.py         Bootstrap standalone (execução direta em dev)
 │       ├── engine/         ODBC, lock, master writer, estado
 │       ├── modules/        Adaptadores Fiscal, DP, Contábil
 │       └── modulos/        Regras de negócio puras
@@ -215,14 +208,12 @@ flowchart TD
     ADAPT["Passo 3: Adaptador modules/m_nome.py\nHerdar BaseModule, preencher ModuleMeta\nEscolher Padrão A, B ou C"]
     REG["Passo 4: Registrar em main.py\nUma linha: registry.register(MeuModulo(...))"]
     UI["Passo 5: UI em index.html\nAdicionar container e bootApp()"]
-    SMOKE["Passo 6: Smoke Test\npy -3-32 dmf_engine/main.py\nChecklist completo"]
+    SMOKE["Passo 6: Smoke Test\npy -3-64 dmf_engine/main.py\nChecklist completo"]
     BUILD["Passo 7: Build e teste do .exe\nbuild.bat + testar sem Python no PATH"]
     DEPLOY["Passo 8: Deploy\nCopiar dist/ para a rede"]
 
     SPEC --> MOD --> ADAPT --> REG --> UI --> SMOKE --> BUILD --> DEPLOY
 ```
-![diagrama](img/onboarding_1.svg)
-
 
 ### Passo 1 — Spec
 
@@ -233,7 +224,7 @@ Antes de escrever código, documentar:
 
 ### Passo 2 — Lógica em `modulos/`
 
-O código de negócio deve funcionar sem UI, sem threading e sem `dmf_engine`. Testar isoladamente com `py -3-32 modulos/meu_modulo.py` antes de integrar.
+O código de negócio deve funcionar sem UI, sem threading e sem `dmf_engine`. Testar isoladamente com `py -3-64 modulos/meu_modulo.py` antes de integrar.
 
 ### Passo 3 — Adaptador em `modules/m_nome.py`
 
@@ -257,7 +248,7 @@ _registry.register(EstagiariosModule(_bus, _config, _sessao_fn))
 ### Passo 6 — Smoke Test
 
 ```
-py -3-32 dmf_engine/main.py
+py -3-64 dmf_engine/main.py
 ```
 
 Checklist:
@@ -349,37 +340,28 @@ class ExemploModule(BaseModule):
 
 ## 9. Como Criar um Novo Serviço
 
-Um serviço é um processo separado (ex: Automação de Horas) lançado pela Central DMF via subprocess + SSO por token. O padrão foi estabelecido no desacoplamento v0.2.0.
+**Default: Padrão 0 (inline).** Um serviço novo roda no mesmo processo 64-bit da Central — um módulo que herda `BaseModule`, registrado com uma linha em `main.py`. Sem subprocesso, sem token de sessão. Use Padrão A/B/C apenas quando houver razão explícita (projeto Python externo com arquitetura própria, binário em outra linguagem, ou daemon HTTP). Ver [design-patterns.md — Árvore de Decisão](design-patterns.md).
 
-### Estrutura mínima de um novo serviço
+### Estrutura típica de um serviço maior
+
+Quando o serviço tem lógica substancial própria (caso da Automação de Horas e do Buscar XML), organize sob `services/` com pacotes de **prefixo exclusivo** para evitar colisão com a raiz da Central:
 
 ```
 services/novo_servico/
-├── main.py          Bootstrap standalone + leitura de --session-token
-├── auth.py          Cópia ou referência da autenticação
-├── compat.py        Exporta db, estado_sh, PROJECT_ROOT
-├── core/            EventBus, ThreadRunner, ConfigManager (cópias locais)
-├── engine/          Infraestrutura específica do serviço
-├── modules/         Adaptadores (herdam BaseModule local)
-└── modulos/         Regras de negócio puras
+├── main.py          Bootstrap standalone (execução direta em dev)
+├── ns_engine/       Infraestrutura específica (prefixo exclusivo)
+├── ns_modules/      Adaptadores (herdam BaseModule)
+└── ns_modulos/      Regras de negócio puras
 ```
 
-### Launcher na Central DMF
+> ⚠️ Não use nomes de pacote genéricos (`engine/`, `config/`, `core/`, `modules/`) dentro de `services/` — eles colidem com a raiz e os imports falham silenciosamente. Ver [design-patterns.md — Padrão A](design-patterns.md#6-padrão-a--projeto-python-externo) e a memória `colisao-pacotes-engine-config`.
 
-Criar `dmf_engine/modules/m_novo_servico.py` implementando o Padrão B (subprocess). O launcher deve:
+### Acoplamento na Central DMF
 
-1. Ler a sessão do usuário logado via `self.sessao()`.
-2. Gerar token temporário (30s) em `tempfile`.
-3. Lançar `py -3-32 services/novo_servico/main.py --session-token <token>`.
+Criar `dmf_engine/modules/m_novo_servico.py` que herda `BaseModule` e injeta o serviço de forma lazy. A sessão do usuário logado vem de `self.sessao()` — não há token nem login separado, pois tudo roda no mesmo processo.
 
-Ver implementação de referência em `dmf_engine/modules/m_automacao_horas.py` e a documentação em [design-patterns.md — SSO por Token](design-patterns.md#4-sso-por-token).
-
-### Leitura do Token no Serviço
-
-O `main.py` do novo serviço deve aceitar `--session-token <token>` como argumento de linha de comando. Se o token estiver presente e válido, carregar a sessão diretamente; caso contrário, exibir tela de login manual.
-
-Ver implementação de referência em `services/automacao_horas/main.py`.
+Ver implementação de referência em `dmf_engine/modules/m_buscar_xml.py` (Padrão A inline) e `dmf_engine/modules/m_automacao_horas.py` (launcher in-process que reaproveita a sessão da Central).
 
 ---
 
-*Última atualização: 2026-05-29*
+*Última atualização: 2026-06-18*

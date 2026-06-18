@@ -106,7 +106,7 @@ A cada mês processado, a coluna N da aba atual recebe o valor da coluna O da ab
 
 O módulo DP calcula o tempo estimado de processamento da folha de pagamento com base no número de empregados ativos de cada cliente.
 
-**Fonte:** Tabela `bethadba.foempregados` + Planilha Carol (`Controle de Empregados MM.xls`).
+**Fonte:** Tabela `bethadba.foempregados` + planilha de Controle de Empregados do DP (entrada manual, `Controle de Empregados MM.xls`).
 
 **Tipos de empregados computados:** funcionários CLT (`vinculo=1`), estagiários (`vinculo=6`) e contribuintes individuais (`vinculo=11`).
 
@@ -128,7 +128,7 @@ O módulo DP opera em duas fases distintas dentro da interface:
 
 | Fase | Ação | Tipo |
 |---|---|---|
-| Fase 1 | Usuário seleciona a planilha Carol (file dialog) | Síncrono |
+| Fase 1 | Usuário seleciona a planilha de Controle de Empregados (file dialog) | Síncrono |
 | Fase 2 | Sistema calcula e injeta coluna Q na master | Thread assíncrona |
 
 A fase 2 só executa se a fase 1 foi concluída com sucesso.
@@ -168,8 +168,6 @@ sequenceDiagram
     S->>M: Injeta coluna P (Horário Contábil)<br/>com lock cooperativo
     S-->>U: Concluído
 ```
-![diagrama](img/regras_de_negocio_1.svg)
-
 
 ### Regra de Lançamentos Contábeis
 
@@ -215,14 +213,12 @@ flowchart TD
     N["Backfill Coluna N\nCopiar col O da aba MM-1 → col N da aba atual\nMatch: código Domínio → CNPJ"]
     O["Preencher Coluna O — Fiscal\nFonte: GELOGUSER sist_log=5\nAdicional 80% sobre tempo bruto\nCompetência: mês -2"]
     P["Preencher Coluna P — Contábil\nFonte: HORAS CONTABEIS.xlsx (fase 5)\nExceção: NAO FAZ CONTABIL → texto\nCompetência: mês -1"]
-    Q["Preencher Coluna Q — DP\nFonte: Domínio foempregados + planilha Carol\nExceção: DP NÃO / 1:30 → texto\nCompetência: mês -1"]
+    Q["Preencher Coluna Q — DP\nFonte: Domínio foempregados + planilha de Controle de Empregados\nExceção: DP NÃO / 1:30 → texto\nCompetência: mês -1"]
     R["Preencher Coluna R — Total\nFórmula: =O+P+Q\nSó se O, P e Q forem numéricos\nFormato: h:mm:ss"]
     SAVE["Salvar e Validar\nSalvar como .xlsm com keep_vba=True\nLog de clientes sem match\nLog de CNPJs duplicados"]
 
     PRE --> N --> O --> P --> Q --> R --> SAVE
 ```
-![diagrama](img/regras_de_negocio_2.svg)
-
 
 **Regra de ouro:** A planilha master sempre é salva como `.xlsm` com `keep_vba=True`. Salvar como `.xlsx` perde as macros. Usar `keep_vba=True` em `.xlsx` corrompe o arquivo.
 

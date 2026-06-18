@@ -1,7 +1,9 @@
 # Guia de Implantação — Migração para 64-bit Unificado
 
-> **Status:** investigado e **comprovado** (2026-06). Pronto para implantar.
-> Não iniciar sem janela segura — o `automacao_horas` está em produção com 5 usuários.
+> **Status: CONCLUÍDA (2026-06).** Documento histórico, preservado como registro da
+> decisão e da implantação. A Central e o `automacao_horas` já rodam em Python 64-bit,
+> no mesmo processo, com conexão DSN-less. O texto abaixo descreve o estado *anterior*
+> à migração e os passos executados — não é mais um plano pendente.
 
 ## Por que esta migração
 

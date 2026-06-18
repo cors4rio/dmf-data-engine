@@ -24,16 +24,16 @@
 
 | Item | Versão | Justificativa |
 |---|---|---|
-| Python 32-bit | 3.x (`py -3-32`) | Driver ODBC do Sybase SQL Anywhere não tem versão 64-bit |
-| PyInstaller | recente | `py -3-32 -m pip install pyinstaller` |
-| pythonnet | 3.1.0rc1+ pré-release | `py -3-32 -m pip install --pre pythonnet` (cp314 disponível apenas em pré-release) |
-| pywebview | recente | `py -3-32 -m pip install pywebview` |
+| Python 64-bit | 3.x (`py -3-64`) | Interpretador único da Central e dos serviços (ver [migracao-64bit.md](legacy/migracao-64bit.md)) |
+| PyInstaller | recente | `py -3-64 -m pip install pyinstaller` |
+| pythonnet | 3.1.0rc1+ pré-release | `py -3-64 -m pip install --pre pythonnet` (cp314 disponível apenas em pré-release) |
+| pywebview | recente | `py -3-64 -m pip install pywebview` |
 | openpyxl, pyodbc | recente | Dependências diretas das regras de negócio |
 
 ### Máquina do Usuário
 
 - Windows 10 ou superior
-- DSN ODBC `Contabil` configurado pelo TI (`odbcad32.exe`, driver SQL Anywhere)
+- Driver **SQL Anywhere 17 (64-bit)** instalado — a conexão é DSN-less (DRIVER+host+porta), sem DSN por máquina
 - Acesso à pasta de rede com o instalador
 - Acesso ao OneDrive corporativo (planilha master sincronizada)
 
@@ -56,8 +56,6 @@ graph TD
     NET -->|"Usuário executa bat"| USR
     USR -->|"robocopy instala"| LOCAL
 ```
-![diagrama](img/operacoes_1.svg)
-
 
 ### Executar o Build
 
@@ -182,7 +180,7 @@ Estrutura simplificada:
 ```json
 {
     "modulo_em_execucao": "fiscal",
-    "usuario": "Carol",
+    "usuario": "<usuario_logado>",
     "iniciado_em": "2026-05-29T14:30:00",
     "progresso": { "pct": 40, "msg": "Conectando ao Domínio..." }
 }
@@ -194,10 +192,10 @@ Estrutura simplificada:
 
 | Sintoma | Causa Provável | Solução |
 |---|---|---|
-| `IM014: data source name not found` | Python 64-bit tentando driver Sybase 32-bit | Verificar se o build usou `py -3-32`; nunca buildar com Python 64-bit |
+| `IM002 / IM014: driver/data source not found` | Driver SQL Anywhere 64-bit ausente, ou string de conexão usando `DSN=` em vez de DSN-less | Instalar o driver **SQL Anywhere 17 (64-bit)**; a conexão deve ser DSN-less (`DRIVER=SQL Anywhere 17;Host=...`) — ver [migracao-64bit.md](legacy/migracao-64bit.md) |
 | `404 NOT FOUND ... index.html` ao abrir o `.exe` | `RESOURCES_DIR` mal configurado em modo frozen | `RESOURCES_DIR` deve usar `sys._MEIPASS/dmf_engine/` — ver `dmf_engine/main.py` |
 | Atalho com ícone genérico do Python | Cache de ícone do Windows + `.lnk` antigo | Reinstalar pelo `.bat` — ele força refresh com `ie4uinit -show` |
-| `ModuleNotFoundError: clr` | Falta `pythonnet` instalado | `py -3-32 -m pip install --pre pythonnet` |
+| `ModuleNotFoundError: clr` | Falta `pythonnet` instalado | `py -3-64 -m pip install --pre pythonnet` |
 | App não abre, nada acontece | Windows Defender/SmartScreen | Botão direito no `.exe` → Propriedades → Desbloquear |
 | OneDrive mostra arquivo como "online-only" | `.xlsm` ou `.dmflock` não sincronizado localmente | Forçar download no Explorer (botão direito → "Manter sempre neste dispositivo") |
 | Planilha master corrompida após gravação | `keep_vba` não configurado corretamente | `.xlsm` → `keep_vba=True` obrigatório; `.xlsx` → omitir ou `keep_vba=False` |

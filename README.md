@@ -1,8 +1,10 @@
-# DMF Engine
+# Central DMF
 
-O **DMF Engine** é uma plataforma desktop interna desenvolvida em Python para automação de produtividade contábil, fiscal e de departamento pessoal. A plataforma conecta-se ao banco Sybase SQL Anywhere (ERP Domínio) via ODBC, processa as regras de negócio de cada setor e alimenta as planilhas mestras de controle de horas.
+A **Central DMF** é a plataforma desktop interna do escritório, desenvolvida em Python. Atende 5 setores — Administrativo, Fiscal, Contábil, Pessoal (DP) e Legalização — hospedando múltiplos módulos (Automação de Horas, Relatório de Rendimentos, Buscar XML, Sem Movimento NFS-e, TFF Salvador). Conecta-se ao banco SAP SQL Anywhere 17 (ERP Domínio) via ODBC 64-bit DSN-less e alimenta as planilhas mestras de controle de horas.
 
-**Status atual:** Teste Piloto em Produção — supervisores operando a interface compilada.
+> O executável e o instalador mantêm o nome de arquivo histórico **`DMF Engine`** (`DMF Engine.exe`, `Instalar DMF Engine.bat`). O nome do produto, em qualquer texto, é **Central DMF**.
+
+**Status atual:** Piloto em produção — interface compilada em uso.
 
 ---
 
@@ -28,7 +30,7 @@ Toda a documentação técnica está centralizada em **[`docs/`](docs/README.md)
 
 ## Guia do Usuário Final
 
-Para operadores do sistema (supervisores), consulte [`GUIA_USUARIO.md`](GUIA_USUARIO.md).
+Para qualquer pessoa da empresa que usa o sistema, consulte [`GUIA_USUARIO.md`](GUIA_USUARIO.md) (uso no dia a dia) e [`docs/guia-instalacao-primeiro-uso.md`](docs/guia-instalacao-primeiro-uso.md) (instalação e primeiro login).
 
 ---
 

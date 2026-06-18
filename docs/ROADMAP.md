@@ -27,8 +27,6 @@ graph TD
 
     NOW --> NEXT --> POST
 ```
-![diagrama](img/ROADMAP_1.svg)
-
 
 O posicionamento como plataforma é a decisão arquitetural mais importante da v0.2.0 — ela define que qualquer novo serviço setorial seguirá o mesmo padrão de launcher + SSO, sem alterar a plataforma central.
 
@@ -63,32 +61,24 @@ O posicionamento como plataforma é a decisão arquitetural mais importante da v
 
 ---
 
-## 3. Limpeza das Dependências Residuais da Central
+## 3. Migração para 64-bit Unificado ✅ CONCLUÍDA (2026-06)
 
-A Central DMF ainda importa de `engine/` (raiz) para as seguintes funcionalidades:
+> Mantido como registro de decisão. A migração foi implantada — a Central e a Automação de Horas rodam em Python 64-bit, no mesmo processo.
 
-| Funcionalidade | Arquivo importado |
-|---|---|
-| Dashboard de estado | `engine/estado_compartilhado.py` |
-| Diagnóstico ODBC | `engine/database.py` |
-| Status do lock | `engine/lock_master.py` |
-| Leitura da master | `engine/excel_parser.py` |
+**Contexto:** acreditava-se que as dependências da Central em `engine/` (raiz) obrigavam Python 32-bit. Investigação (2026-06) provou que era falso: a restrição vinha *apenas* do acesso ao banco via o DSN ODBC "Contabil", registrado como 32-bit no Windows. O SAP SQL Anywhere 17 tem driver 64-bit, e a conexão **DSN-less** (`DRIVER=SQL Anywhere 17;...`) funciona em 64-bit.
 
-Acreditava-se que essas dependências obrigavam a Central a rodar em Python 32-bit. **Isso foi investigado e é falso** (2026-06).
+**O que foi feito:**
+- Camada de banco migrada para DSN-less (DRIVER + host + porta), sem DSN por máquina.
+- Central movida para Python 64-bit.
+- Automação de Horas embutida como launcher **in-process** (Padrão 0) — eliminados subprocesso, token SSO por arquivo e a infra 32-bit triplicada.
 
-**Descoberta:** a restrição de 32-bit vinha *apenas* do acesso ao banco do Domínio via o **DSN ODBC "Contabil"**, registrado como 32-bit no Windows. O banco é **SAP SQL Anywhere 17**, que tem driver 64-bit já instalado. Conexão 64-bit **comprovada** trocando `DSN=Contabil` por connection string **DSN-less** (`DRIVER=SQL Anywhere 17;...`). Nada mais no projeto exige 32-bit.
-
-**Abordagem (revisada — mais simples que API REST/IPC):** migrar a camada de banco para DSN-less, mover a Central para 64-bit, e embutir a Automação de Horas como **módulo inline** (Padrão 0, como o Buscar XML) — eliminando subprocesso, token SSO por arquivo e a infra triplicada de uma vez. Não é mais necessária uma API REST/IPC entre Central e Automação.
-
-➡️ **Guia de implantação passo a passo:** [`docs/migracao-64bit.md`](migracao-64bit.md). Connection string validada e credencial real (UID=`EXTERNO`, não `dba`) estão lá.
-
-Esta limpeza é pré-requisito para qualquer módulo futuro que precise de bibliotecas 64-bit na Central.
+➡️ Detalhes técnicos preservados em [`legacy/migracao-64bit.md`](legacy/migracao-64bit.md).
 
 ---
 
 ## 4. Pós-Piloto — Distribuição
 
-Após o piloto com os 5 usuários reais (Carol, James, Nayane, Jailton, Adriele), avaliar a forma de distribuição.
+Após o piloto com os usuários reais (um por setor + admin), avaliar a forma de distribuição.
 
 ### Opção A — Inno Setup (instalador `.exe` único)
 
@@ -113,9 +103,11 @@ Após o piloto com os 5 usuários reais (Carol, James, Nayane, Jailton, Adriele)
 
 | Módulo | Setor | Status | Notas |
 |---|---|---|---|
-| `automacao_horas` | GESTÃO | Produção (piloto 5 usuários) | Subprocess 32-bit — candidato à migração inline (ver Seção 3) |
-| `relatorio_rendimentos` | CONTÁBIL | Produção | Padrão 0 inline |
-| `sem_movimento_nfse` | FISCAL | Produção | Padrão A, Anti-Captcha, Playwright |
+| `automacao_horas` | Administrativo | Produção (piloto) | Launcher in-process 64-bit (Padrão 0) — migração concluída (ver Seção 3) |
+| `relatorio_rendimentos` | Contábil | Produção | Padrão 0 inline |
+| `buscar_xml` | Fiscal | Produção | Padrão A (projeto externo `bx_*` + motor TOKAI) |
+| `sem_movimento_nfse` | Fiscal | Produção | Padrão A, Anti-Captcha, Playwright |
+| `tff_salvador` | Legalização | Produção | Padrão A, Playwright (4 guias TFF + TLL) |
 
 ---
 
@@ -137,9 +129,9 @@ Cada novo serviço deve seguir o padrão estabelecido: launcher na Central + ser
 |---|---|---|
 | Inno Setup vs `.bat` | Distribuição pós-piloto | Feedback dos 5 usuários do piloto |
 | Repositório único vs separado para novos serviços | Hoje: tudo no mesmo repo | Serviço com ciclo de vida independente → repo separado |
-| Migração para 64-bit unificado | Quando abordar (guia pronto em [`migracao-64bit.md`](migracao-64bit.md)) | Janela segura — `automacao_horas` em produção com 5 usuários |
+| ~~Migração para 64-bit unificado~~ | **Resolvido (2026-06):** implantada — ver Seção 3 e [`legacy/migracao-64bit.md`](legacy/migracao-64bit.md) | — |
 | ~~Exposição da API da Automação~~ | **Resolvido:** com 64-bit unificado a Automação vira módulo inline; não precisa de API entre processos | — |
 
 ---
 
-*Última atualização: 2026-06-04*
+*Última atualização: 2026-06-18*

@@ -1,4 +1,4 @@
-# Guia do Usuário — DMF Engine
+# Guia do Usuário — Central DMF
 
 Este guia foi feito para você usar o sistema no dia a dia. Não precisa de conhecimento técnico — basta seguir as instruções na ordem.
 
@@ -6,52 +6,55 @@ Este guia foi feito para você usar o sistema no dia a dia. Não precisa de conh
 
 ## Sumário
 
-1. [O que é o DMF Engine](#1-o-que-é-o-dmf-engine)
+1. [O que é a Central DMF](#1-o-que-é-a-central-dmf)
 2. [Quem faz o quê](#2-quem-faz-o-quê)
 3. [Abrindo o sistema pela primeira vez](#3-abrindo-o-sistema-pela-primeira-vez)
 4. [Entendendo a tela principal](#4-entendendo-a-tela-principal)
 5. [Como executar cada módulo](#5-como-executar-cada-módulo)
-   - [Fiscal — Nayane](#5a-fiscal--nayane)
-   - [Contábil — James](#5b-contábil--james)
-   - [DP / Folha — Jailton](#5c-dp--folha--jailton)
+   - [Fiscal](#5a-fiscal)
+   - [Contábil](#5b-contábil)
+   - [DP / Folha (Pessoal)](#5c-dp--folha-pessoal)
 6. [Dashboard — o que cada gráfico mostra](#6-dashboard--o-que-cada-gráfico-mostra)
 7. [Relatório consolidado](#7-relatório-consolidado)
 8. [Exceções (clientes que não entram)](#8-exceções-clientes-que-não-entram)
-9. [Painel de administração — só Carol](#9-painel-de-administração--só-carol)
+9. [Painel de administração (perfil admin)](#9-painel-de-administração-perfil-admin)
 10. [Mensagens de erro e o que fazer](#10-mensagens-de-erro-e-o-que-fazer)
 11. [Regras importantes para lembrar](#11-regras-importantes-para-lembrar)
 12. [Quando pedir ajuda](#12-quando-pedir-ajuda)
 
 ---
 
-## 1. O que é o DMF Engine
+## 1. O que é a Central DMF
 
-O DMF Engine é um programa local (roda no seu próprio computador, sem internet obrigatória) que **calcula automaticamente as horas trabalhadas por cliente** e preenche a planilha mestre `CONTROLE DE HORAS DMF.xlsm`.
+A Central DMF é o aplicativo interno do escritório (roda no seu próprio computador, sem internet obrigatória). Ela centraliza as ferramentas de automação das áreas e conecta-se ao sistema Domínio.
 
-Hoje, ele cobre três áreas:
+A plataforma atende **5 setores** — **Administrativo**, **Fiscal**, **Contábil**, **Pessoal** (DP) e **Legalização** — e hospeda vários módulos. Entre eles:
 
-- **Fiscal**: lê o sistema Domínio e calcula as horas gastas em cada cliente.
-- **Contábil**: usa a planilha `HORAS CONTABEIS.xlsx` somada com dados do Domínio para gerar as horas contábeis por cliente.
-- **DP / Folha**: usa a planilha da Carol mais dados do Domínio para gerar as horas de departamento pessoal.
+- **Automação de Horas**: calcula as horas trabalhadas por cliente (Fiscal, Contábil e DP) e preenche a planilha mestre `CONTROLE DE HORAS DMF.xlsm`.
+- **Relatório de Rendimentos** (Contábil), **Buscar XML** (Fiscal), **Sem Movimento NFS-e Salvador** (Fiscal) e **TFF Salvador** (Legalização).
 
-Cada área é operada por uma pessoa diferente. O sistema controla quem pode fazer o quê.
+Novos módulos são adicionados sem mudar o restante do sistema. Este guia foca no fluxo de **Automação de Horas**; os demais módulos têm suas próprias telas dentro do app.
+
+Cada conta tem uma função (papel). O sistema controla quem pode executar o quê — ver a próxima seção.
 
 ---
 
 ## 2. Quem faz o quê
 
-| Pessoa | Função | Acessa | Executa |
-|--------|--------|--------|---------|
-| **Carol** | Gestora (admin) | Tudo | Tudo + administra usuários |
-| **James** | Contábil | Tudo | Só fluxo Contábil |
-| **Nayane** | Fiscal | Tudo | Só Fiscal |
-| **Jailton** | DP / Folha | Tudo | Só DP |
-| **Adriele** | Legalização | Tudo (somente leitura) | Nada — só consulta relatórios |
+O acesso é definido pela **função (papel)** da sua conta, não pela pessoa:
+
+| Função (papel) | Acessa | Executa |
+|--------|--------|---------|
+| **Admin** | Tudo | Tudo + administra usuários |
+| **Contábil** | Tudo | Só o fluxo Contábil |
+| **Fiscal** | Tudo | Só o fluxo Fiscal |
+| **DP / Pessoal** | Tudo | Só o fluxo DP |
+| **Legalização** | Tudo | Fluxo de Legalização (ex.: TFF Salvador) |
 
 **Importante:**
-- Cada um tem sua própria conta com senha pessoal.
+- Cada pessoa tem sua própria conta com senha pessoal.
 - Sua conta fica **vinculada ao seu computador** depois do primeiro acesso. Se você tentar entrar de outra máquina, o sistema bloqueia.
-- Mesmo que você abra a aba de outra pessoa, os botões de execução vão ficar bloqueados com um aviso "Apenas X pode executar".
+- Mesmo que você abra a aba de outro setor, os botões de execução ficam bloqueados com um aviso de que apenas o responsável daquele setor pode executar.
 
 ---
 
@@ -60,16 +63,16 @@ Cada área é operada por uma pessoa diferente. O sistema controla quem pode faz
 ### Passo a passo
 
 1. Na pasta do projeto, **dê dois cliques no arquivo `run.bat`**.
-2. Uma janela preta de terminal abre — **não feche essa janela**, ela é necessária para o sistema funcionar. A janela do DMF Engine vai abrir junto.
+2. Uma janela preta de terminal abre — **não feche essa janela**, ela é necessária para o sistema funcionar. A janela da Central DMF vai abrir junto.
 3. Aparece a tela de login.
 4. No primeiro acesso de cada pessoa:
-   - **Usuário**: seu nome em minúsculas (exemplo: `nayane`)
-   - **Senha**: seu próprio nome em minúsculas também (exemplo: `nayane`)
+   - **Usuário**: seu nome de usuário em minúsculas (exemplo: `seu.nome`)
+   - **Senha**: o mesmo nome de usuário em minúsculas também (exemplo: `seu.nome`)
 5. O sistema vai pedir para você **trocar a senha**. Escolha uma senha sua, confirme, e clique em "Definir senha e entrar".
 6. Pronto — sua conta está vinculada a este computador. Nas próximas vezes, basta entrar com seu nome e a senha que você escolheu.
 
 ### Dica
-- Se você esquecer a senha, peça à **Carol** para resetar pelo Painel de Administração. Sua senha volta para o padrão (seu nome em minúsculas) e você troca de novo no próximo login.
+- Se você esquecer a senha, peça a um **administrador** para resetar pelo Painel de Administração. Sua senha volta para o padrão (seu nome em minúsculas) e você troca de novo no próximo login.
 
 ---
 
@@ -83,14 +86,14 @@ Lista de áreas do sistema:
   - **Dashboard** — visão geral do mês com gráficos
   - **Relatório** — histórico do que foi feito
 - **Parâmetros**
-  - **Fiscal** — área da Nayane
-  - **Contábil** — área do James
-  - **DP / Folha** — área do Jailton
+  - **Fiscal** — fluxo do setor Fiscal
+  - **Contábil** — fluxo do setor Contábil
+  - **DP / Folha** — fluxo do setor Pessoal (DP)
 - **Configuração**
   - **Conexão BD** — credenciais do sistema Domínio
   - **Exceções** — listas de clientes que não entram
   - **Governança** — regras de qualidade
-- **Admin** (só aparece para a Carol) — gestão de usuários
+- **Admin** (só aparece para contas com perfil admin) — gestão de usuários
 
 ### Parte superior
 
@@ -99,7 +102,7 @@ Lista de áreas do sistema:
 
 ### Parte inferior da sidebar
 
-- Nome de quem está logado + função (ex: "Nayane · Fiscal")
+- Nome de quem está logado + função (ex: "usuário · Fiscal")
 - Estado da conexão com o Domínio (verde = conectado, vermelho = falha)
 - Qual planilha master está sendo usada
 - Link "sair" para fazer logout
@@ -124,7 +127,7 @@ O dropdown da competência no topo já vem com o mês correto pré-selecionado. 
 
 ---
 
-### 5a. Fiscal — Nayane
+### 5a. Fiscal
 
 **O que faz:** consulta o Domínio, soma o tempo trabalhado em cada cliente no mês, aplica um acréscimo de 80% (ajustável), e grava na coluna O da planilha master.
 
@@ -144,7 +147,7 @@ O dropdown da competência no topo já vem com o mês correto pré-selecionado. 
 
 ---
 
-### 5b. Contábil — James
+### 5b. Contábil
 
 **O que faz:** o módulo Contábil é diferente dos outros porque tem uma **etapa manual** no meio. São 3 passos.
 
@@ -172,31 +175,31 @@ O dropdown da competência no topo já vem com o mês correto pré-selecionado. 
 
 #### Passo 3 — Lançar na master
 
-1. Quando os valores manuais estiverem na coluna R, volte ao DMF Engine.
+1. Quando os valores manuais estiverem na coluna R, volte à Central DMF.
 2. Aba **Contábil**, no Passo 3, clique em **Lançar na master**.
 3. O sistema lê a coluna R, confere cliente por cliente (código + CNPJ) e grava a coluna P da `CONTROLE DE HORAS DMF.xlsm`.
 4. Aparece resumo: quantas linhas foram gravadas, quantas não bateram com nenhum cliente da master.
 
 ---
 
-### 5c. DP / Folha — Jailton
+### 5c. DP / Folha (Pessoal)
 
-**O que faz:** usa a planilha "Controle de Empregados (CAROL)" mais os dados do Domínio (funcionários, estagiários e sócios ativos) para calcular as horas de DP por empresa, e grava na coluna Q da master.
+**O que faz:** usa a planilha de Controle de Empregados (entrada manual do DP) mais os dados do Domínio (funcionários, estagiários e sócios ativos) para calcular as horas de DP por empresa, e grava na coluna Q da master.
 
 **Passo a passo (2 etapas):**
 
-#### Passo 1 — Importar a planilha Carol
+#### Passo 1 — Importar a planilha de Controle de Empregados
 
 1. Clique na aba **DP / Folha**.
-2. No Passo 1, clique em **Selecionar Carol**.
-3. Aponte para a planilha `Controle de Empregados (CAROL).xls` da competência. O nome pode ter variações (exemplo: `Controle de Empregados 042026.xls`, `05.2026.xls`). O sistema aceita qualquer um, mas avisa se o nome não tem o mês da competência (para evitar erro de competência).
+2. No Passo 1, clique em **Selecionar planilha**.
+3. Aponte para a planilha de Controle de Empregados da competência (o arquivo `.xls` entregue pelo DP). O nome pode ter variações (exemplo: `Controle de Empregados 042026.xls`, `05.2026.xls`). O sistema aceita qualquer um, mas avisa se o nome não tem o mês da competência (para evitar erro de competência).
 4. O sistema lê a planilha e mostra: total de empresas mapeadas, quantas têm funcionários ativos, quantas estão sem ativos.
 5. Badge muda para "mapeada".
 
 #### Passo 2 — Lançar na master
 
 1. Clique em **Lançar na master**.
-2. O sistema cruza a Carol com o Domínio (se conectado), aplica a fórmula em cascata, e grava a coluna Q da master.
+2. O sistema cruza a planilha de Controle de Empregados com o Domínio (se conectado), aplica a fórmula em cascata, e grava a coluna Q da master.
 3. Aparece a mensagem "DP lançado na master com sucesso".
 
 **Fórmula em cascata:**
@@ -272,9 +275,9 @@ Algumas empresas **não devem receber lançamento** em determinados setores. Par
 
 ---
 
-## 9. Painel de administração — só Carol
+## 9. Painel de administração (perfil admin)
 
-A aba **Admin** aparece só para a Carol. Mostra a tabela de todos os 5 usuários com:
+A aba **Admin** aparece apenas para contas com perfil **admin**. Mostra a tabela de todos os usuários com:
 
 - **Nome e função**
 - **Máquina amarrada** — em qual computador a conta foi usada pela primeira vez
@@ -300,7 +303,7 @@ A aba **Admin** aparece só para a Carol. Mostra a tabela de todos os 5 usuário
 ### "Esta conta está vinculada a outra máquina"
 
 **Causa:** sua conta foi usada antes em outro computador. O sistema bloqueia acesso de máquinas diferentes para evitar que alguém entre na sua conta.
-**Solução:** peça à **Carol** para entrar no painel **Admin** e clicar em **Liberar máquina** para o seu usuário. Depois disso, sua próxima entrada vai amarrar a conta a este computador.
+**Solução:** peça a um **administrador** para entrar no painel **Admin** e clicar em **Liberar máquina** para o seu usuário. Depois disso, sua próxima entrada vai amarrar a conta a este computador.
 
 ---
 
@@ -308,9 +311,9 @@ A aba **Admin** aparece só para a Carol. Mostra a tabela de todos os 5 usuário
 
 **Causa:** ou o nome está errado, ou a senha está errada. O sistema não diz qual dos dois, de propósito.
 **Solução:**
-1. Confira se digitou o nome em minúsculas (`nayane`, não `Nayane`).
+1. Confira se digitou o nome de usuário em minúsculas (ex.: `usuario`, não `Usuario`).
 2. Confira a senha (cuidado com Caps Lock).
-3. Se esqueceu mesmo, peça à Carol para resetar.
+3. Se esqueceu mesmo, peça a um administrador para resetar.
 
 ---
 
@@ -320,7 +323,7 @@ A aba **Admin** aparece só para a Carol. Mostra a tabela de todos os 5 usuário
 **Solução:**
 1. Confira se o computador está na **rede do escritório** (algumas conexões fora do escritório não acessam o Domínio).
 2. Abra a aba **Conexão BD** e clique em **Diagnóstico** no canto superior. O diagnóstico mostra detalhes técnicos para o suporte resolver.
-3. Em caso de dúvida persistente, chame a Carol.
+3. Em caso de dúvida persistente, chame um administrador.
 
 ---
 
@@ -333,16 +336,16 @@ A aba **Admin** aparece só para a Carol. Mostra a tabela de todos os 5 usuário
 3. Clique com o **botão direito** sobre ela.
 4. Escolha **"Sempre manter neste dispositivo"**.
 5. Aguarde alguns segundos para o OneDrive baixar o arquivo (o ícone muda para um círculo verde).
-6. Volte ao DMF Engine e tente de novo.
+6. Volte à Central DMF e tente de novo.
 
 ---
 
 ### "Apenas X pode executar este módulo"
 
-**Causa:** você está logado com uma conta que não tem permissão para executar esse setor (por exemplo: James tentando executar Fiscal).
+**Causa:** você está logado com uma conta que não tem permissão para executar esse setor (por exemplo: uma conta do Contábil tentando executar o Fiscal).
 **Solução:**
 - Se for executar uma função alheia ao seu setor, peça à pessoa responsável fazer.
-- Em situação de urgência (a pessoa não está disponível), peça à Carol para entrar com a conta dela (que tem acesso a tudo).
+- Em situação de urgência (a pessoa não está disponível), peça a um administrador para entrar com a conta dela (que tem acesso a tudo).
 
 ---
 
@@ -385,27 +388,27 @@ A aba **Admin** aparece só para a Carol. Mostra a tabela de todos os 5 usuário
 
 ### O botão "Lançar na master" do DP está bloqueado
 
-**Causa:** você ainda não importou a planilha Carol nesta competência.
-**Solução:** execute o Passo 1 primeiro (Selecionar Carol).
+**Causa:** você ainda não importou a planilha de Controle de Empregados nesta competência.
+**Solução:** execute o Passo 1 primeiro (Selecionar planilha).
 
 ---
 
 ## 11. Regras importantes para lembrar
 
 1. **Não compartilhe sua senha.** Cada um tem a sua. Se compartilhar e alguém fizer alguma coisa indevida no seu nome, o sistema vai registrar como se você tivesse feito.
-2. **Sempre feche a planilha master no Excel** antes de executar qualquer módulo no DMF Engine.
-3. **A coluna R da `HORAS CONTABEIS.xlsx` é manual.** O James preenche, salva e fecha. Só depois disso o sistema lança na master.
+2. **Sempre feche a planilha master no Excel** antes de executar qualquer módulo na Central DMF.
+3. **A coluna R da `HORAS CONTABEIS.xlsx` é manual.** O responsável do Contábil preenche, salva e fecha. Só depois disso o sistema lança na master.
 4. **Não mexa em arquivos da pasta `config\nao_faz_setor\`** diretamente. Use a aba Exceções no sistema.
 5. **Não rode o módulo de outro setor** (mesmo que o botão estivesse desbloqueado), porque os cálculos dependem de regras específicas que só quem é da área conhece.
 6. **A competência muda automaticamente** todo mês. Se for o dia 1 de junho, o dropdown já vai mostrar maio (e o Fiscal vai mirar em abril). Não precisa configurar nada.
 7. **Trabalhos fora do horário podem dar problemas** se outras pessoas estiverem acessando os arquivos do OneDrive ao mesmo tempo. Em horário comercial é o ideal.
-8. **A janela preta do terminal não deve ser fechada.** Ela é parte do sistema. Quando você quiser sair, clique no "X" da janela do DMF Engine (não da janela preta).
+8. **A janela preta do terminal não deve ser fechada.** Ela é parte do sistema. Quando você quiser sair, clique no "X" da janela da Central DMF (não da janela preta).
 
 ---
 
 ## 12. Quando pedir ajuda
 
-Chame a **Carol** quando:
+Procure um **administrador** quando:
 - Esqueceu a senha
 - Trocou de computador e precisa liberar a vinculação
 - Apareceu uma mensagem de erro que não está neste guia

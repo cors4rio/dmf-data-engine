@@ -13,7 +13,9 @@
    - [FiscalModule](#fiscalmodule)
    - [DPModule](#dpmodule)
    - [ContabilModule](#contabilmodule)
+   - [BuscarXMLModule](#buscarxmlmodule)
    - [SemMovimentoNfseModule](#semmovimentonfsemodule)
+   - [TffSalvadorModule](#tffsalvadormodule)
 
 ---
 
@@ -45,8 +47,6 @@ graph TD
     DONE --> EVT
     EVT --> BUS
 ```
-![diagrama](img/modulos_1.svg)
-
 
 **Responsabilidades do `ModuleRegistry`:**
 
@@ -67,9 +67,13 @@ A Central DMF e seus serviços acoplados têm registries independentes. A Centra
 
 | ID | Nome | Setor | Papéis | Padrão | Localização |
 |---|---|---|---|---|---|
-| `automacao_horas` | Automação de Horas | GESTÃO | admin, contabil, fiscal, dp | Padrão B (subprocess + SSO) | `dmf_engine/modules/m_automacao_horas.py` |
-| `relatorio_rendimentos` | Relatório de Rendimentos | CONTÁBIL | admin, contabil | Padrão 0 (inline) | `dmf_engine/modules/m_relatorio_rendimentos.py` |
-| `sem_movimento_nfse` | Sem Movimento NFS-e Salvador | FISCAL | admin, fiscal | Padrão A (serviço + thread) | `dmf_engine/modules/m_sem_movimento_nfse.py` |
+| `automacao_horas` | Automação de Horas | Administrativo | admin, contabil, fiscal, dp, legalizacao | Launcher in-process (Padrão 0) | `dmf_engine/modules/m_automacao_horas.py` |
+| `relatorio_rendimentos` | Relatório de Rendimentos | Contábil | admin, contabil | Padrão 0 (inline) | `dmf_engine/modules/m_relatorio_rendimentos.py` |
+| `buscar_xml` | Buscar XML | Fiscal | admin, fiscal | Padrão A (projeto Python externo) | `dmf_engine/modules/m_buscar_xml.py` |
+| `sem_movimento_nfse` | Sem Movimento NFS-e Salvador | Fiscal | admin, fiscal | Padrão A (serviço + thread) | `dmf_engine/modules/m_sem_movimento_nfse.py` |
+| `tff_salvador` | TFF Salvador | Legalização | admin, procuradoria | Padrão A (serviço + Playwright) | `dmf_engine/modules/m_tff_salvador.py` |
+
+> **Setores.** A plataforma cobre 5 setores: **Administrativo**, **Fiscal**, **Contábil**, **Pessoal** (DP) e **Legalização** (também referido como Procuradoria — é o mesmo setor). O papel `admin` é transversal: executa em todos os setores.
 
 ### Módulos da Automação de Horas (Serviço 1)
 
@@ -77,9 +81,9 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 
 | ID | Nome | Setor | Papéis | Padrão | Localização |
 |---|---|---|---|---|---|
-| `fiscal` | Fiscal | FISCAL | admin, fiscal | Padrão A (Python externo) | `services/automacao_horas/modules/m_fiscal.py` |
-| `dp` | Departamento Pessoal | DP | admin, dp | Padrão A (Python externo) | `services/automacao_horas/modules/m_dp.py` |
-| `contabil` | Contábil | CONTABIL | admin, contabil | Padrão A (Python externo) | `services/automacao_horas/modules/m_contabil.py` |
+| `fiscal` | Fiscal | Fiscal | admin, fiscal | Padrão A (Python externo) | `services/automacao_horas/modules/m_fiscal.py` |
+| `dp` | Pessoal (DP) | Pessoal | admin, dp | Padrão A (Python externo) | `services/automacao_horas/modules/m_dp.py` |
+| `contabil` | Contábil | Contábil | admin, contabil | Padrão A (Python externo) | `services/automacao_horas/modules/m_contabil.py` |
 
 > **Nota:** a lógica de negócio de `relatorio_rendimentos` fica em `services/relatorio_rendimentos/modulos/relatorio_rendimentos_isentos.py` e é importada diretamente pelo módulo da Central (sem processo separado).
 
@@ -93,9 +97,9 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 
 **Arquivo:** `dmf_engine/modules/m_automacao_horas.py`
 
-**Propósito:** Lançador da Automação de Horas a partir da Central DMF. Gera token SSO, despacha o processo Python 32-bit e aguarda o encerramento.
+**Propósito:** Abre a janela da Automação de Horas **dentro do processo 64-bit da Central**, reaproveitando a sessão já autenticada. Sem subprocesso e sem token de sessão.
 
-**Padrão aplicado:** Padrão B (subprocess) combinado com SSO por token. Consultar [design-patterns.md — SSO por Token](design-patterns.md#4-sso-por-token) e [design-patterns.md — Padrão B](design-patterns.md#6-padrão-b--binário-compilado).
+**Padrão aplicado:** Launcher in-process (Padrão 0). Consultar [design-patterns.md — Sessão Compartilhada](design-patterns.md#4-sessão-compartilhada-substitui-o-antigo-sso-por-token).
 
 **Entrada (`opcoes`):**
 
@@ -107,24 +111,23 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 
 | Campo | Tipo | Descrição |
 |---|---|---|
-| `ok` | bool | `True` se o processo filho iniciou e encerrou sem erro |
+| `ok` | bool | `True` se a janela de Horas abriu sem erro |
 | `erro` | str | Presente apenas se `ok = False` |
 
 **Dependências:**
 
 | Dependência | Tipo |
 |---|---|
-| `secrets`, `tempfile`, `subprocess` | Biblioteca padrão Python |
-| `services/automacao_horas/main.py` | Processo filho (Python 32-bit) |
+| `services/automacao_horas/ah_launcher.py` | `abrir_janela_horas(sessao=...)` (mesmo processo) |
 | `self.sessao()` | Sessão ativa da Central DMF |
 
 **Fluxo resumido:**
 
-1. Obtém sessão do usuário logado na Central.
-2. Gera token aleatório (`secrets.token_hex(16)`).
-3. Cria arquivo `dmf_session_<token>.json` em `temp/` com expiração de 30 segundos.
-4. Lança `py -3-32 services/automacao_horas/main.py --session-token <token>`.
-5. Retorna `{"ok": True}` quando o processo filho encerra.
+1. Obtém sessão do usuário logado na Central via `self.sessao()`.
+2. Injeta `services/automacao_horas/` no `sys.path`.
+3. Importa `ah_launcher.abrir_janela_horas` (import lazy).
+4. Chama `abrir_janela_horas(sessao=sessao)` — abre a janela no mesmo processo.
+5. Retorna o resultado da abertura (`{"ok": True}` ou `{"ok": False, "erro": ...}`).
 
 ---
 
@@ -173,7 +176,7 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 
 **Arquivo:** `services/automacao_horas/modules/m_dp.py`
 
-**Propósito:** Calcula e injeta horas do Departamento Pessoal na planilha master. Executa em duas fases distintas: importação da planilha Carol e injeção na master.
+**Propósito:** Calcula e injeta horas do Departamento Pessoal na planilha master. Executa em duas fases distintas: importação da planilha de controle de empregados (entrada manual do DP) e injeção na master.
 
 **Padrão aplicado:** Padrão A — regras em `modulos/dp.py`, fluxo multifase controlado por `opcoes["fase"]`.
 
@@ -181,7 +184,7 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 
 | Campo | Tipo | Obrigatório | Descrição |
 |---|---|---|---|
-| `fase` | int | Sim | `1` = importar Carol (file dialog); `2` = injetar master |
+| `fase` | int | Sim | `1` = importar planilha de controle (file dialog); `2` = injetar master |
 | `master_path` | str | Não | Caminho da planilha master (fase 2) |
 | `data_inicio` | str (ISO) | Sim (fase 2) | Início da competência DP (mês -1) |
 | `data_fim` | str (ISO) | Sim (fase 2) | Fim da competência DP |
@@ -191,7 +194,7 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 | Campo | Tipo | Descrição |
 |---|---|---|
 | `ok` | bool | Sucesso da operação |
-| `carol_path` | str | Caminho da planilha Carol selecionada (fase 1, se `ok`) |
+| `carol_path` | str | Caminho da planilha de controle selecionada (fase 1, se `ok`) |
 | `erro` | str | Mensagem de erro (presente se `ok = False`) |
 | `tipo` | str | `"lock"` se lock negado (fase 2) |
 
@@ -199,14 +202,14 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 
 | Dependência | Descrição |
 |---|---|
-| `engine/excel_parser.py` | Leitura da planilha Carol |
+| `engine/excel_parser.py` | Leitura da planilha de controle de empregados |
 | `engine/master_writer.py` | Escrita na coluna Q da master |
 | `engine/lock_master.py` | Lock cooperativo |
 | `modulos/dp.py` | Regras de negócio: fórmula em cascata, exceções |
 
 **Notas:**
 
-- A fase 1 abre um `webview.create_file_dialog()` (síncrono) para o usuário selecionar a planilha Carol.
+- A fase 1 abre um `webview.create_file_dialog()` (síncrono) para o usuário selecionar a planilha de controle de empregados.
 - A fase 2 usa o caminho da planilha selecionada na fase 1.
 - A competência DP é mês -1 em relação ao mês corrente.
 - O papel mínimo é `dp` ou `admin`.
@@ -257,6 +260,23 @@ Registram-se no registry da própria Automação de Horas (`services/automacao_h
 - O papel mínimo é `contabil` ou `admin`.
 
 ---
+
+### BuscarXMLModule
+
+**Arquivo:** `dmf_engine/modules/m_buscar_xml.py`
+**Serviço acoplado:** `services/buscar_xml/`
+
+**Propósito:** Exporta e organiza XMLs fiscais (NF-e, NFCe, SPED e o motor TOKAI), incluindo o download dos XMLs de notas canceladas. Roda como serviço de longa duração com cancelamento cooperativo e eventos via EventBus.
+
+**Setor:** Fiscal · **Papéis:** `admin`, `fiscal`
+
+**Padrão aplicado:** Padrão A — projeto Python externo sob `services/buscar_xml/` com pacotes de prefixo exclusivo (`bx_service`, `bx_engine`, `bx_config`) para evitar colisão com a raiz da Central. O adaptador injeta o caminho no `sys.path` e importa `BuscarXMLService` de forma lazy (ver memória `colisao-pacotes-engine-config`).
+
+**Notas:**
+
+- O serviço é singleton por processo; as operações reais (NF-e, NFCe, SPED, TOKAI) são despachadas via `api.py`.
+- O motor TOKAI vive em `services/buscar_xml/tokai_motor/` e tem segredos por máquina (credenciais, token, sessão) — nunca versionados nem empacotados.
+- O papel mínimo é `fiscal` ou `admin`.
 
 ---
 
@@ -363,4 +383,22 @@ O nome da empresa é extraído automaticamente do `#ddlContribuinte` na tela de 
 
 ---
 
-*Última atualização: 2026-06-04*
+### TffSalvadorModule
+
+**Arquivo:** `dmf_engine/modules/m_tff_salvador.py`
+**Serviço acoplado:** `services/tff_salvador/`
+
+**Propósito:** Download automático das 4 guias de TFF (Taxa de Fiscalização do Funcionamento) de Salvador para um lote de clientes, com suporte ao fluxo TLL (captura por nova aba + `page.pdf`).
+
+**Setor:** Legalização (Procuradoria) · **Papéis:** `admin`, `procuradoria`
+
+**Padrão aplicado:** Padrão A — serviço em `services/tff_salvador/` (pacotes `tf_service`, `tf_engine`) com Playwright para o portal municipal. O adaptador importa `TffSalvadorService` de forma lazy e traduz eventos para o EventBus.
+
+**Notas:**
+
+- Serviço singleton por processo; usa o Chromium empacotado (`PLAYWRIGHT_BROWSERS_PATH` apontado em runtime).
+- O papel mínimo é `procuradoria` ou `admin`.
+
+---
+
+*Última atualização: 2026-06-18*

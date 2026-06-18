@@ -25,6 +25,7 @@ Use a tabela abaixo para navegar do documento legado ao equivalente ativo em `do
 | `Specs_Definitivos/Spec_Contabil.md` | [`docs/regras-de-negocio.md`](../regras-de-negocio.md) | Regras Contábil (3 fases, coluna R) |
 | `Specs_Definitivos/QUERY_*.md` | `docs/legacy/Specs_Definitivos/` (preservado) | Queries SQL — não migradas; consultar aqui para rastreabilidade |
 | `Specs_Definitivos/CT_*.md` | `docs/legacy/Specs_Definitivos/` (preservado) | Casos de teste de tabelas do banco — não migrados |
+| `migracao-64bit.md` | [`docs/arquitetura.md`](../arquitetura.md), [`docs/ROADMAP.md`](../ROADMAP.md) (Seção 3) | Guia da migração 64-bit/DSN-less — **concluída (2026-06)**; preservado como registro da decisão e dos passos executados |
 
 ---
 
